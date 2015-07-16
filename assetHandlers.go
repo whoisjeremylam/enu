@@ -5,8 +5,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vennd/enulib/counterpartyapi"
-	"github.com/vennd/enulib/database"
+	"github.com/vennd/enu/counterpartyapi"
+	"github.com/vennd/enu/database"
 
 	"github.com/gorilla/mux"
 )

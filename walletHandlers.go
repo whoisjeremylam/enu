@@ -10,10 +10,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/vennd/enulib"
-	"github.com/vennd/enulib/counterpartyapi"
-	"github.com/vennd/enulib/counterpartycrypto"
-	"github.com/vennd/enulib/database"
+	"github.com/vennd/enu/counterpartyapi"
+	"github.com/vennd/enu/counterpartycrypto"
+	"github.com/vennd/enu/database"
+	"github.com/vennd/enu/enulib"
 
 	"github.com/gorilla/mux"
 )

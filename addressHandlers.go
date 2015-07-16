@@ -10,9 +10,9 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/vennd/enulib"
-	"github.com/vennd/enulib/bitcoinapi"
-	"github.com/vennd/enulib/database"
+	"github.com/vennd/enu/bitcoinapi"
+	"github.com/vennd/enu/database"
+	"github.com/vennd/enu/enulib"
 )
 
 func CheckAndParseAddress(w http.ResponseWriter, r *http.Request) (int64, string, error) {

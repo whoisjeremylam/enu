@@ -6,8 +6,8 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/vennd/enulib"
-	"github.com/vennd/enulib/database"
+	"github.com/vennd/enu/database"
+	"github.com/vennd/enu/enulib"
 )
 
 func GetBlocks(w http.ResponseWriter, r *http.Request) {

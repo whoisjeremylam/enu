@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vennd/enulib"
-	"github.com/vennd/enulib/database"
+	"github.com/vennd/enu/database"
+	"github.com/vennd/enu/enulib"
 )
 
 func ReturnUnauthorised(w http.ResponseWriter, e error) {

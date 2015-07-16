@@ -12,8 +12,8 @@ import (
 
 	"github.com/gorilla/mux"
 
-	"github.com/vennd/enulib"
-	"github.com/vennd/enulib/database"
+	"github.com/vennd/enu/database"
+	"github.com/vennd/enu/enulib"
 )
 
 func CheckAndParsePayment(w http.ResponseWriter, r *http.Request) (enulib.SimplePayment, int64, string, string, error) {
