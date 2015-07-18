@@ -2,12 +2,9 @@
 package counterpartycrypto
 
 import (
-	"errors"
-	//	"bytes"
 	"encoding/hex"
-	//	"encoding/json"
+	"errors"
 	"fmt"
-	//	"log"
 	"strings"
 
 	"github.com/btcsuite/btcd/chaincfg"
@@ -26,12 +23,6 @@ type CounterpartyAddress struct {
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
 }
-
-//func getHierarchicalKeyFromPassphrase(passphrase string) []byte {
-//	var returnValue []byte
-
-//	return returnValue
-//}
 
 func getAddressFromPassphrase(passphrase string, position uint32) (CounterpartyAddress, error) {
 	var returnValue CounterpartyAddress
@@ -88,51 +79,6 @@ func getAddressFromPassphrase(passphrase string, position uint32) (CounterpartyA
 
 	return returnValue, nil
 }
-
-//func CreateWalletFromSeed_Counterparty(hexString string) (CounterpartyWallet, error) {
-//	var wallet CounterpartyWallet
-//	hexValue, err := hex.DecodeString(hexString)
-
-//	if err != nil {
-//		return wallet, err
-//	}
-
-//	masterKey, err := hdkeychain.NewMaster(hexValue)
-//	if err != nil {
-//		return wallet, err
-//	}
-
-//	log.Printf("Master key: %s", masterKey)
-
-//	// get m/0'/0/0
-//	// Hardened key for account 0. ie 0'
-//	acct0, err := masterKey.Child(hdkeychain.HardenedKeyStart + 0)
-//	if err != nil {
-//		return wallet, err
-//	}
-
-//	// External account for 0'
-//	extAcct0, err := acct0.Child(0)
-//	if err != nil {
-//		return wallet, err
-//	}
-
-//	// Derive extended key (repeat this from 0 to 19)
-//	key, err := extAcct0.Child(0)
-//	if err != nil {
-//		return wallet, err
-//	}
-
-//	// Get the address
-//	address, err := key.Address(&chaincfg.MainNetParams)
-//	if err != nil {
-//		return wallet, err
-//	}
-
-//	log.Printf("Address: %s", address)
-
-//	return wallet, nil
-//}
 
 func CreateWallet() (CounterpartyWallet, error) {
 	var wallet CounterpartyWallet
