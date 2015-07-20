@@ -98,7 +98,7 @@ func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, str
 
 	// If we didn't receive the expected signature then raise a forbidden
 	if calculatedSignature != signature {
-		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s\n", calculatedSignature, signature)
+		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
 		err := errors.New(errorString)
 
 		ReturnUnauthorised(w, err)
