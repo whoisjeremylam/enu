@@ -101,7 +101,6 @@ func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, str
 		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
 		err := errors.New(errorString)
 
-		ReturnUnauthorised(w, err)
 		return nil, accessKey, nonceInt, err
 	}
 
