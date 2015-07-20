@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"io/ioutil"
 	"log"
 	"math/rand"
 	"net/http"
@@ -109,7 +111,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", quotes[number])
 }
 
-func CheckHeader(w http.ResponseWriter, r *http.Request) error {
+func CheckHeaderGeneric(w http.ResponseWriter, r *http.Request) (string, int64, error) {
 	// Pull headers that are necessary
 	accessKey := r.Header.Get("AccessKey")
 	nonce := r.Header.Get("Nonce")
@@ -118,37 +120,84 @@ func CheckHeader(w http.ResponseWriter, r *http.Request) error {
 	//	signatureMethod := r.Header.Get("SignatureMethod")
 	signature := r.Header.Get("Signature")
 	var nonceDB int64
-	var parseError error
+	var err error
 
 	// Headers weren't set properly, return forbidden
 	if accessKey == "" || nonce == "" || signature == "" {
-		log.Printf("Headers set incorrectly: accessKey=%s, nonce=%s, signature=%s\n", accessKey, nonce, signature)
-		parseError = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, none, signature")
-		ReturnUnauthorised(w, parseError)
+		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, none, signature")
 
-		return parseError
+		log.Printf("Headers set incorrectly: accessKey=%s, nonce=%s, signature=%s\n", accessKey, nonce, signature)
+		ReturnUnauthorised(w, err)
+
+		return accessKey, nonceInt, err
 	} else if convertNonceErr != nil {
+		err = errors.New("Invalid nonce value")
 		// Unable to convert the value of nonce in the header to an integer
 		log.Println(convertNonceErr)
-		parseError = errors.New("Invalid nonce value")
-		ReturnUnauthorised(w, parseError)
+		ReturnUnauthorised(w, err)
 
-		return parseError
+		return accessKey, nonceInt, err
 	} else if nonceInt <= database.GetNonceByAccessKey(accessKey) {
+		err = errors.New("Invalid nonce value")
+
 		//Nonce is not greater than the nonce in the DB
 		log.Printf("Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, nonce, nonceDB)
-		parseError = errors.New("Invalid nonce value")
-		ReturnUnauthorised(w, parseError)
+		ReturnUnauthorised(w, err)
 
-		return parseError
+		return accessKey, nonceInt, err
 	} else if database.UserKeyExists(accessKey) == false {
 		// User key doesn't exist
 		log.Printf("Attempt to access API with unknown user key: %s", accessKey)
-		parseError = errors.New("Attempt to access API with unknown user key")
-		ReturnUnauthorised(w, parseError)
+		ReturnUnauthorised(w, errors.New("Attempt to access API with unknown user key"))
 
-		return parseError
+		return accessKey, nonceInt, err
 	}
 
-	return nil
+	return accessKey, nonceInt, nil
+}
+
+func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, string, int64, error) {
+	//	var blockchainId string
+	var payload interface{}
+
+	// Pull headers that are necessary
+	accessKey := r.Header.Get("AccessKey")
+	nonce := r.Header.Get("Nonce")
+	nonceInt, _ := strconv.ParseInt(nonce, 10, 64)
+	//	signatureVersion := r.Header.Get("SignatureVersion")
+	//	signatureMethod := r.Header.Get("SignatureMethod")
+	signature := r.Header.Get("Signature")
+
+	accessKey, nonceInt, err := CheckHeaderGeneric(w, r)
+	if err != nil {
+		return nil, accessKey, nonceInt, err
+	}
+
+	// Limit amount read to 512,000 bytes and parse body
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 512000))
+	if err != nil {
+		panic(err)
+	}
+	if err := r.Body.Close(); err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		ReturnUnprocessableEntity(w, errors.New("Unable to unmarshal body"))
+	}
+	log.Printf("Received: %s", body)
+
+	// Then look up secret and calculate digest
+	calculatedSignature := enulib.ComputeHmac512(body, database.GetSecretByAccessKey(accessKey))
+
+	// If we didn't receive the expected signature then raise a forbidden
+	if calculatedSignature != signature {
+		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
+		err := errors.New(errorString)
+
+		return nil, accessKey, nonceInt, err
+	}
+
+	database.UpdateNonce(accessKey, nonceInt)
+
+	return payload, accessKey, nonceInt, nil
 }
