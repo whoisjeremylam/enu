@@ -65,7 +65,7 @@ func Init() {
 }
 
 // Inserts a payment into the payment database
-func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue int64, paymentTag string) {
+func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue uint64, paymentTag string) {
 	if isInit == false {
 		Init()
 	}
