@@ -7,4 +7,5 @@ var quotes = [...]string{"Here's to the crazy ones. The misfits. The rebels. The
 	"The problem is not the problem; the problem is your attitude about the probem. - Captain Jack Sparrow",
 	"Only dead fish go with the flow.",
 	"A friend is someone with whom you dare to be yourself. - Fran Crane",
+	"Be yourself; everyone else is already taken. - Oscar Wilde",
 }
