@@ -4,7 +4,7 @@ import (
 	//	"log"
 	"testing"
 
-	"github.com/vennd/enulib/counterpartycrypto"
+	"github.com/vennd/enu/counterpartycrypto"	
 )
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
@@ -34,8 +34,8 @@ func TestGetBalances(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	if len(resultGetBalances.Result) != 0 {
-		t.Errorf("Expected: resultGetBalances.Result = [], Got: %+v\n", resultGetBalances.Result)
+	if len(resultGetBalances) != 0 {
+		t.Errorf("Expected: resultGetBalances = [], Got: %+v\n", resultGetBalances)
 	}
 }
 
@@ -48,11 +48,11 @@ func TestGetBalancesByAsset(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	if len(resultGetBalances.Result) != 0 {
-		t.Errorf("Expected: resultGetBalances.Result = [], Got: %s\n", resultGetBalances.Result)
+	if len(resultGetBalances) != 0 {
+		t.Errorf("Expected: resultGetBalances = [], Got: %s\n", resultGetBalances)
 	}
 }
-
+ 
 func TestCreateSend(t *testing.T) {
 	var testData = []struct {
 		From           string
