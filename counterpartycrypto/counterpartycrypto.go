@@ -13,9 +13,9 @@ import (
 )
 
 type CounterpartyWallet struct {
-	Passphrase string   `json:passphrase`
-	HexSeed    string   `json:hexSeed`
-	Addresses  []string `json:addresses`
+	Passphrase string   `json:"passphrase"`
+	HexSeed    string   `json:"hexSeed"`
+	Addresses  []string `json:"addresses"`
 }
 
 type CounterpartyAddress struct {
