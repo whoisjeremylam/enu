@@ -266,7 +266,7 @@ func GetNonceByAccessKey(accessKey string) int64 {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("select nonce from userKeys where accessKey=?")
+	stmt, err := Db.Prepare("select nonce from userkeys where accessKey=?")
 
 	if err != nil {
 		return -1
@@ -287,7 +287,7 @@ func GetSecretByAccessKey(accessKey string) string {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("select secret from userKeys where accessKey=?")
+	stmt, err := Db.Prepare("select secret from userkeys where accessKey=?")
 
 	if err != nil {
 		return ""
@@ -349,7 +349,19 @@ func UpdateNonce(accessKey string, nonce int64) error {
 		Init()
 	}
 
+	stmt, err := Db.Prepare("update userkeys set nonce=? where accessKey=?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(nonce, accessKey)
+	if err2 != nil {
+		return err2
+	}
+
 	return nil
+
 }
 
 func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddress string) (string, string, error) {

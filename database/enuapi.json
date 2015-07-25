@@ -1,9 +1,9 @@
 {
 "localMode": "true",
-"dburl" :"tcp(localhost:3306)",
+"dburl" :"tcp(localhost:3307)",
 "schema" : "vennd",
-"dbuser" : "root",
-"dbpassword" : "password",
+"dbuser" : "api",
+"dbpassword" : "XK4Rf1YGVyZTjb6mn5XHWJCvOPW6Mmf7",
 
 "btchost" : "localhost:8332",
 "btcuser" : "rpc",
