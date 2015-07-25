@@ -34,8 +34,8 @@ func TestGetBalances(t *testing.T) {
 		t.Errorf(err.Error())
 	}
 
-	if len(resultGetBalances) != 0 {
-		t.Errorf("Expected: resultGetBalances = [], Got: %+v\n", resultGetBalances)
+	if len(resultGetBalances) == 0 {
+		t.Errorf("Expected: resultGetBalances to contain value, Got: %+v\n", resultGetBalances) 
 	}
 }
 
@@ -73,7 +73,7 @@ func TestCreateSend(t *testing.T) {
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.From)
 
-		if err != nil {
+		if err != nil && err.Error()!= "Private and public keys not found for address: 1Badaddress" {
 			t.Error(err.Error())
 		}
 
@@ -82,7 +82,7 @@ func TestCreateSend(t *testing.T) {
 		if s.ExpectedResult != resultCreateSend {
 			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateSend, s.CaseDescription)
 
-			if err != nil {
+			if err != nil && err.Error() != "Private and public keys not found for address: 1Badaddress" {
 				t.Error(err.Error())
 			}
 		}
