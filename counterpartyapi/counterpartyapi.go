@@ -18,13 +18,13 @@ import (
 	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/database"
 
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/btcsuite/btcd/txscript"
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/btcsuite/btcutil"
+	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
+	"github.com/btcsuite/btcd/txscript"
+	"github.com/btcsuite/btcd/wire"
+	"github.com/btcsuite/btcutil"
 
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/gorilla/securecookie"
+	"github.com/gorilla/securecookie"
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430
@@ -419,6 +419,8 @@ func CreateSend(sourceAddress string, destinationAddress string, asset string, q
 	if isInit == false {
 		Init()
 	}
+
+	log.Println("In counterpartyapi.CreateSend()")
 
 	// ["source":sourceAddress,"destination":destinationAddress,"asset":asset,"quantity":amount,"allow_unconfirmed_inputs":true,"encoding":counterpartyTransactionEncoding,"pubkey":pubkey]
 	payload.Method = "create_send"

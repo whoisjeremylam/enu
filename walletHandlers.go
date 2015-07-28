@@ -10,7 +10,7 @@ import (
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 
-	"github.com/vennd/enu/Godeps/_workspace/src/github.com/gorilla/mux"
+	"github.com/gorilla/mux"
 )
 
 func WalletCreate(w http.ResponseWriter, r *http.Request) {
