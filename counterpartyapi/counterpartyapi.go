@@ -18,13 +18,13 @@ import (
 	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/database"
 
-	"github.com/btcsuite/btcd/btcec"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
 
-	"github.com/gorilla/securecookie"
+	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430

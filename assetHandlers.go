@@ -8,7 +8,7 @@ import (
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/database"
 
-	"github.com/gorilla/mux"
+	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 )
 
 func AssetCreate(w http.ResponseWriter, r *http.Request) {

@@ -7,7 +7,7 @@ import (
 	"crypto/sha512"
 	"encoding/hex"
 
-	"github.com/gorilla/securecookie"
+	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
 )
 
 func ComputeHmac512(message []byte, secret string) string {

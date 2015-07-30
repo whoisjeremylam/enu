@@ -12,7 +12,7 @@ import (
 
 	"github.com/vennd/enu/enulib"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/vennd/enu/internal/github.com/go-sql-driver/mysql"
 )
 
 var Db *sql.DB

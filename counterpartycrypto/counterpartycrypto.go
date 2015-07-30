@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil/hdkeychain"
-	"github.com/vennd/mneumonic"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/vennd/enu/internal/github.com/vennd/mneumonic"
 )
 
 type CounterpartyWallet struct {

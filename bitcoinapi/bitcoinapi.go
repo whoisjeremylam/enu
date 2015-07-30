@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcrpcclient"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
 )
 
 // Globals

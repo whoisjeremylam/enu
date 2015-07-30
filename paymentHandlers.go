@@ -6,7 +6,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/gorilla/mux"
+	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
