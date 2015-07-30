@@ -25,17 +25,17 @@ func TestGetBalance(t *testing.T) {
 
 }
 
--func TestGetGetBlockCount(t *testing.T) {
--	result, err := GetBlockCount()
--
--	if err != nil {
--		t.Errorf(err.Error())
--	}
--
--	// 
--	
--	if result < 367576  { 
--		t.Errorf("Expected: block height > 367576, received: %d\n", result)
--		
--	}
--}
+func TestGetGetBlockCount(t *testing.T) {
+	result, err := GetBlockCount()
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	// 
+	
+	if result < 367576  { 
+		t.Errorf("Expected: block height > 367576, received: %d\n", result)
+		
+	}
+}
