@@ -138,3 +138,27 @@ func SendRawTransaction(txHexString string) (string, error) {
 
 	return fmt.Sprintf("%s", result.String()), nil
 }
+
+func GetBalance(account string) (float64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Notice the notification parameter is nil since notifications are
+	// not supported in HTTP POST mode.
+	client, err := btcrpcclient.New(&config, nil)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+	defer client.Shutdown()
+
+	// Get the current balance
+	amount, err := client.GetBalance(account)
+	if err != nil {
+		log.Println(err)
+		return 0, err
+	}
+	var unit btcutil.AmountUnit = 0
+	return amount.ToUnit(unit), nil
+}
