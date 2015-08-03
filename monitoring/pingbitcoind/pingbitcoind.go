@@ -27,9 +27,10 @@ func main() {
 	c1 := make(chan int64, 1)
 	go func() {
 		ourBlockHeight, err := bitcoinapi.GetBlockCount()
-		
+
 		if err != nil {
 			log.Println("Error retrieving our block height")
+			log.Println(err)
 			os.Exit(-1)
 		}
 		c1 <- ourBlockHeight
@@ -53,6 +54,7 @@ func main() {
 
 		if err != nil {
 			log.Println("Error reading from blockchain.info")
+			log.Println(err)
 			os.Exit(-2)
 		}
 
@@ -60,6 +62,7 @@ func main() {
 
 		if err2 != nil {
 			log.Println("Error reading from blockchain.info")
+			log.Println(err2)
 			os.Exit(-2)
 		}
 
