@@ -206,6 +206,28 @@ type Issuance struct {
 	Status      string `json:"status"`
 }
 
+type payloadGetRunningInfo struct {
+	Method  string `json:"method"`
+	Jsonrpc string `json:"jsonrpc"`
+	Id      uint32 `json:"id"`
+}
+
+type ResultGetRunningInfo struct {
+	Jsonrpc string      `json:"jsonrpc"`
+	Id      uint32      `json:"id"`
+	Result  RunningInfo `json:"result"`
+}
+
+type RunningInfo struct {
+	DbCaughtUp           bool   `json:"db_caught_up"`
+	BitCoinBlockCount    uint64 `json:"bitcoin_block_count"`
+	CounterPartyDVersion string `json:"counterpartyd_version"`
+	LastMessageIndex     uint64 `json:"last_message_index"`
+	RunningTestnet       bool   `json:"running_testnet"`
+	DbVersionMajor       uint64 `json:"db_version_major"`
+	DbVersionMinor       uint64 `json:"db_version_minor"`
+}
+
 // Globals
 var isInit bool = false // set to true only after the init sequence is complete
 var counterpartyHost string
@@ -921,4 +943,38 @@ func DelegatedCreateDividend(passphrase string, sourceAddress string, asset stri
 
 	return txId, nil
 	//	return "good", nil
+}
+
+func GetRunningInfo() (RunningInfo, error) {
+	var payload payloadGetRunningInfo
+	var result ResultGetRunningInfo
+
+	if isInit == false {
+		Init()
+	}
+
+	payload.Method = "get_running_info"
+	payload.Jsonrpc = "2.0"
+	payload.Id = generateId()
+
+	payloadJsonBytes, err := json.Marshal(payload)
+
+	//	log.Println(string(payloadJsonBytes))
+
+	if err != nil {
+		return result.Result, err
+	}
+
+	responseData, _, err := postAPI(payloadJsonBytes)
+	if err != nil {
+		return result.Result, err
+	}
+
+	//	log.Println(string(responseData))
+
+	if err := json.Unmarshal(responseData, &result); err != nil {
+		return result.Result, errors.New("Unable to unmarshal responseData")
+	}
+
+	return result.Result, nil
 }

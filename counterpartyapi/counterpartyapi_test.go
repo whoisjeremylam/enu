@@ -4,7 +4,7 @@ import (
 	//	"log"
 	"testing"
 
-	"github.com/vennd/enu/counterpartycrypto"	
+	"github.com/vennd/enu/counterpartycrypto"
 )
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
@@ -35,7 +35,7 @@ func TestGetBalances(t *testing.T) {
 	}
 
 	if len(resultGetBalances) == 0 {
-		t.Errorf("Expected: resultGetBalances to contain value, Got: %+v\n", resultGetBalances) 
+		t.Errorf("Expected: resultGetBalances to contain value, Got: %+v\n", resultGetBalances)
 	}
 }
 
@@ -52,7 +52,7 @@ func TestGetBalancesByAsset(t *testing.T) {
 		t.Errorf("Expected: resultGetBalances = [], Got: %s\n", resultGetBalances)
 	}
 }
- 
+
 func TestCreateSend(t *testing.T) {
 	var testData = []struct {
 		From           string
@@ -73,7 +73,7 @@ func TestCreateSend(t *testing.T) {
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.From)
 
-		if err != nil && err.Error()!= "Private and public keys not found for address: 1Badaddress" {
+		if err != nil && err.Error() != "Private and public keys not found for address: 1Badaddress" {
 			t.Error(err.Error())
 		}
 
@@ -233,4 +233,18 @@ func TestCreateDividend(t *testing.T) {
 
 	}
 
+}
+
+func TestGetRunningInfo(t *testing.T) {
+	var result RunningInfo
+	Init()
+
+	result, err := GetRunningInfo()
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	if result.DbCaughtUp != true {
+		t.Errorf("DbCaughtUp expected: true, Got: false\n")
+	}
 }
