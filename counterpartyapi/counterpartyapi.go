@@ -218,14 +218,20 @@ type ResultGetRunningInfo struct {
 	Result  RunningInfo `json:"result"`
 }
 
+type LastBlock struct {
+	BlockIndex uint64 `json:"block_index"`
+	BlockHash  string `json:"block_hash"`
+}
+
 type RunningInfo struct {
-	DbCaughtUp           bool   `json:"db_caught_up"`
-	BitCoinBlockCount    uint64 `json:"bitcoin_block_count"`
-	CounterPartyDVersion string `json:"counterpartyd_version"`
-	LastMessageIndex     uint64 `json:"last_message_index"`
-	RunningTestnet       bool   `json:"running_testnet"`
-	DbVersionMajor       uint64 `json:"db_version_major"`
-	DbVersionMinor       uint64 `json:"db_version_minor"`
+	DbCaughtUp           bool      `json:"db_caught_up"`
+	BitCoinBlockCount    uint64    `json:"bitcoin_block_count"`
+	CounterpartydVersion string    `json:"counterpartyd_version"`
+	LastMessageIndex     uint64    `json:"last_message_index"`
+	RunningTestnet       bool      `json:"running_testnet"`
+	DbVersionMajor       uint64    `json:"db_version_major"`
+	DbVersionMinor       uint64    `json:"db_version_minor"`
+	LastBlock            LastBlock `json:"last_block"`
 }
 
 // Globals
@@ -442,7 +448,7 @@ func CreateSend(sourceAddress string, destinationAddress string, asset string, q
 		Init()
 	}
 
-	log.Println("In counterpartyapi.CreateSend()")
+	//	log.Println("In counterpartyapi.CreateSend()")
 
 	// ["source":sourceAddress,"destination":destinationAddress,"asset":asset,"quantity":amount,"allow_unconfirmed_inputs":true,"encoding":counterpartyTransactionEncoding,"pubkey":pubkey]
 	payload.Method = "create_send"
@@ -973,6 +979,7 @@ func GetRunningInfo() (RunningInfo, error) {
 	//	log.Println(string(responseData))
 
 	if err := json.Unmarshal(responseData, &result); err != nil {
+		log.Println(string(responseData))
 		return result.Result, errors.New("Unable to unmarshal responseData")
 	}
 
