@@ -1,3 +1,5 @@
 *.exe
 *.exe~
 *.out
+monitoring/pingbitcoind/enuapi.json
+monitoring/pingcounterpartyd/enuapi.json
