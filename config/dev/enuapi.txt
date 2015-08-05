@@ -1,0 +1,16 @@
+{
+"localMode": "true",
+"dburl" :"tcp(localhost:3306)",
+"schema" : "vennd",
+"dbuser" : "root",
+"dbpassword" : "password",
+
+"btchost" : "localhost:8332",
+"btcuser" : "rpc",
+"btcpassword" : "rpcpw1234",
+
+"counterpartyhost" : "http://localhost:4000",
+"counterpartyuser" : "rpc",
+"counterpartypassword" : "1234",
+"counterpartytransactionencoding" : "auto"
+}
