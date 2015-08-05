@@ -3,3 +3,4 @@
 *.out
 monitoring/pingbitcoind/enuapi.json
 monitoring/pingcounterpartyd/enuapi.json
+enuapi.json
