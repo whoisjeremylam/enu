@@ -15,7 +15,7 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/payment/{paymentId}", Logger(GetPayment, "GetPayment")).Methods("GET")
 	router.HandleFunc("/payment/status/{paymentId}", Logger(PaymentRetry, "PaymentRetry")).Methods("POST")
 
-	router.HandleFunc("/asset", AssetCreate).Methods("POST")
+	router.HandleFunc("/asset", Logger(AssetCreate, "AssetCreate")).Methods("POST")
 	router.HandleFunc("/asset/balances/{asset}", Logger(AssetBalance, "AssetBalance")).Methods("GET")
 	router.HandleFunc("/asset/dividend", Logger(DividendCreate, "DividendCreate")).Methods("POST")
 	router.HandleFunc("/asset/issuances/{asset}", Logger(AssetIssuances, "AssetIssuances")).Methods("GET")

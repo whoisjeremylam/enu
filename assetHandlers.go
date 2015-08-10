@@ -12,7 +12,13 @@ import (
 )
 
 func AssetCreate(w http.ResponseWriter, r *http.Request) {
+
 	payload, accessKey, nonce, err := CheckAndParseJson(w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+
+		return
+	}
 
 	m := payload.(map[string]interface{})
 
