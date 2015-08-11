@@ -92,8 +92,10 @@ func ReturnServerError(w http.ResponseWriter, e error) {
 	var returnCode enulib.ReturnCode
 
 	if e == nil {
+		log.Printf("Unspecified server error.\n")
 		returnCode = enulib.ReturnCode{Code: -10000, Description: "Unspecified server error. Please contact Vennd.io support."}
 	} else {
+		log.Printf("Server error: %s\n", e.Error())
 		returnCode = enulib.ReturnCode{Code: -10000, Description: e.Error()}
 	}
 
