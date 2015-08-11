@@ -4,7 +4,7 @@ import "testing"
 
 func TestUpdateNonceByAccesKey(t *testing.T) {
 	// Code to test update nonce
-	
+
 	nonce := int64(100000)
 
 	accessKey := "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16"
@@ -12,14 +12,14 @@ func TestUpdateNonceByAccesKey(t *testing.T) {
 	err := UpdateNonce(accessKey, nonce)
 
 	if err != nil {
-			t.Errorf(err.Error())
-		}
-}	
+		t.Errorf(err.Error())
+	}
+}
 
 func TestGetNonceByAccesKey(t *testing.T) {
 	// Code to test nonce check
 
-	// non existing acessKey	
+	// non existing acessKey
 	//nonce := GetNonceByAccessKey("73a7b844c80c3c5cf532d1dd843321b1c733c0c67e5b5ab162ca283da4cfc182")
 	nonce := GetNonceByAccessKey("71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16")
 
@@ -28,5 +28,15 @@ func TestGetNonceByAccesKey(t *testing.T) {
 	}
 }
 
+func TestUserKeyExists(t *testing.T) {
+	exists := UserKeyExists("71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16")
+	notExists := UserKeyExists("narebeko")
 
-	
+	if exists == false {
+		t.Errorf("User test key doesn't exist. Expected: true, got: %t\n", exists)
+	}
+
+	if notExists == true {
+		t.Errorf("User test key doesn't exist. Expected: false, got: %t\n", exists)
+	}
+}

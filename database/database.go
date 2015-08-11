@@ -448,7 +448,7 @@ func UserKeyExists(accessKey string) bool {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("select count(*) from userKeys where accessKey=?")
+	stmt, err := Db.Prepare("select count(*) from userkeys where accesskey=?")
 
 	if err != nil {
 		return false
