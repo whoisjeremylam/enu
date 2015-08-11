@@ -146,11 +146,12 @@ func CheckHeaderGeneric(w http.ResponseWriter, r *http.Request) (string, int64, 
 
 		return accessKey, nonceInt, err
 	} else if database.UserKeyExists(accessKey) == false {
+		returnErr := errors.New("Attempt to access API with unknown user key")
 		// User key doesn't exist
 		log.Printf("Attempt to access API with unknown user key: %s", accessKey)
-		ReturnUnauthorised(w, errors.New("Attempt to access API with unknown user key"))
+		ReturnUnauthorised(w, returnErr)
 
-		return accessKey, nonceInt, err
+		return accessKey, nonceInt, returnErr
 	}
 
 	return accessKey, nonceInt, nil
