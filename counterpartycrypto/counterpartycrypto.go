@@ -190,7 +190,8 @@ func GetPublicPrivateKey(passphrase string, address string) (CounterpartyAddress
 		generatedAddress, err := getAddressFromPassphrase(passphrase, uint32(i))
 
 		if err != nil {
-			return result, err
+			errorMessage := fmt.Sprintf("Error with passphrase value: %s\n", err)
+			return result, errors.New(errorMessage)
 		}
 
 		if generatedAddress.Value == address {
