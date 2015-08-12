@@ -29,3 +29,7 @@ func GeneratePaymentId() string {
 func GenerateAssetId() string {
 	return hex.EncodeToString(securecookie.GenerateRandomKey(16))
 }
+
+func GenerateDividendId() string {
+	return hex.EncodeToString(securecookie.GenerateRandomKey(16))
+}

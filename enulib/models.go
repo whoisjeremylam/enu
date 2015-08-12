@@ -62,3 +62,14 @@ type ReturnCode struct {
 	Code        int64  `json:"code"`
 	Description string `json:"description"`
 }
+
+type Dividend struct {
+	Passphrase   		string	`json:"passphrase"`
+	SourceAddress 		string	`json:"sourceAddress"`
+	DividendId          string 	`json:"dividendId"`	
+	Asset         		string	`json:"asset"`
+	DividendAsset 		string	`json:"dividendAsset"`
+	QuantityPerUnit		uint64	`json:"quantityPerUnit"`
+	Status         		string	`json:"status"`	
+	ErrorMessage  		string	`json:"errorMessage`	
+}

@@ -902,13 +902,18 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateDividend(passphrase string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64) (string, error) {
+func DelegatedCreateDividend(accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64) (string, error) {
 	if isInit == false {
 		Init()
 	}
 
+	// Write the dividend with the generated dividend id to the database
+	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
+
+
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
+		log.Printf("Error: %s\n", err)		
 		return "", err
 	}
 

@@ -86,21 +86,27 @@ func DividendCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	result, err := counterpartyapi.DelegatedCreateDividend(passphrase, sourceAddress, asset, dividendAsset, quantityPerUnit)
 
-	if err != nil {
-		ReturnServerError(w, err)
+	// Generate an assetId
+	dividendId := enulib.GenerateDividendId()
+	log.Printf("Generated dividendId: %s", dividendId)
 
-		return
-	}
-
-	log.Printf("Sent txid: %s\n", result)
-
+	// Return to the client the assetId and unblock the client
+	var dividendStruct enulib.Dividend
+	dividendStruct.DividendId = dividendId
+	
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
-	if err = json.NewEncoder(w).Encode(result); err != nil {
+	if err = json.NewEncoder(w).Encode(dividendStruct); err != nil {
 		panic(err)
+	} else {
+		log.Println(err)
 	}
+
+//	result, err := counterpartyapi.DelegatedCreateDividend(passphrase, sourceAddress, asset, dividendAsset, quantityPerUnit)
+	go counterpartyapi.DelegatedCreateDividend(accessKey, passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
+
+
 }
 
 func AssetBalance(w http.ResponseWriter, r *http.Request) {

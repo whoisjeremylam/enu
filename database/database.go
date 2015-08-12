@@ -157,6 +157,98 @@ func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescri
 }
 
 
+// Inserts a dividend into the dividends database
+func InsertDividend(accessKey string, dividendId string, sourceAddressValue string, assetValue string, dividendAssetValue string, quantityPerUnitValue uint64) {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("insert into dividends(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit) values(?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		log.Println("Failed to prepare statement. Reason: ")
+		panic(err.Error())
+	}
+	defer stmt.Close()
+
+	// Perform the insert
+	_, err = stmt.Exec(accessKey, dividendId, sourceAddressValue, assetValue, dividendAssetValue, quantityPerUnitValue)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer stmt.Close()
+}
+
+
+func GetDividendByDividendId(accessKey string, dividendId string) enulib.Dividend {
+	if isInit == false {
+		Init()
+	}
+
+	//	 Query DB
+	stmt, err := Db.Prepare("select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, errorDescription from dividends where dividendId=? and accessKey=?")
+	if err != nil {
+		log.Println("Failed to prepare statement. Reason: ")
+		panic(err.Error())
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	row := stmt.QueryRow(dividendId, accessKey)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var rowId string
+	var sourceAddress string
+	var asset string
+	var dividendAsset string
+	var quantityPerUnit uint64
+	var status string
+	var errorMessage string
+	var dividendStruct enulib.Dividend
+
+	if err := row.Scan(&rowId, &dividendId, &sourceAddress, &asset, &dividendAsset, &quantityPerUnit, &status, &errorMessage); err == sql.ErrNoRows {
+		dividendStruct = enulib.Dividend{}
+		if err.Error() == "sql: no rows in result set" {
+			dividendStruct.DividendId = dividendId
+			dividendStruct.Status = "Not found"
+		}
+	} else {
+		dividendStruct = enulib.Dividend{SourceAddress: sourceAddress, Asset: asset, DividendAsset: dividendAsset, QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: status, ErrorMessage: errorMessage}
+	}
+
+	return dividendStruct
+}
+
+
+func UpdateDividendWithErrorByDividendId(accessKey string, dividendId string, errorDescription string) error {
+	if isInit == false {
+		Init()
+	}
+
+	dividend := GetDividendByDividendId(accessKey, dividendId)
+
+	if dividend.DividendId == "" {
+		errorString := fmt.Sprintf("Dividend does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	stmt, err := Db.Prepare("update dividends set status='error', errorDescription=? where accessKey=? and dividendId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(errorDescription, accessKey, dividendId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+
 
 // Inserts a payment into the payment database
 func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue uint64, paymentTag string) {
