@@ -64,6 +64,100 @@ func Init() {
 	isInit = true
 }
 
+// Inserts an asset into the assets database
+func InsertAsset(accessKey string, assetId string, sourceAddressValue string, assetValue string, descriptionValue string, quantityValue uint64, divisibleValue bool) {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("insert into assets(accessKey, assetId, sourceAddress, asset, description, quantity, divisible) values(?, ?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		log.Println("Failed to prepare statement. Reason: ")
+		panic(err.Error())
+	}
+	defer stmt.Close()
+
+	// Perform the insert
+	_, err = stmt.Exec(accessKey, assetId, sourceAddressValue, assetValue, descriptionValue, quantityValue, divisibleValue)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer stmt.Close()
+}
+
+
+func GetAssetByAssetId(accessKey string, assetId string) enulib.Asset {
+	if isInit == false {
+		Init()
+	}
+
+	//	 Query DB
+	stmt, err := Db.Prepare("select rowId, assetId, sourceAddress, asset, description, quantity, divisible, errorDescription from assets where assetId=? and accessKey=?")
+	if err != nil {
+		log.Println("Failed to prepare statement. Reason: ")
+		panic(err.Error())
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	row := stmt.QueryRow(assetId, accessKey)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	var rowId string
+	var sourceAddress string
+	var asset string
+	var description string
+	var quantity uint64
+	var divisible bool
+	var status string
+	var errorMessage string
+	var assetStruct enulib.Asset
+
+	if err := row.Scan(&rowId, &assetId, &sourceAddress, &asset, &description, &quantity,  &divisible, &status, &errorMessage); err == sql.ErrNoRows {
+		assetStruct = enulib.Asset{}
+		if err.Error() == "sql: no rows in result set" {
+			assetStruct.AssetId = assetId
+			assetStruct.Status = "Not found"
+		}
+	} else {
+		assetStruct = enulib.Asset{SourceAddress: sourceAddress, Asset: asset, Description: description, Quantity: quantity, AssetId: assetId, Status: status, ErrorMessage: errorMessage}
+	}
+
+	return assetStruct
+}
+
+
+func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescription string) error {
+	if isInit == false {
+		Init()
+	}
+
+	asset := GetAssetByAssetId(accessKey, assetId)
+
+	if asset.AssetId == "" {
+		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	stmt, err := Db.Prepare("update assets set status='error', errorDescription=? where accessKey=? and assetId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(errorDescription, accessKey, assetId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+
+
 // Inserts a payment into the payment database
 func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue uint64, paymentTag string) {
 	if isInit == false {

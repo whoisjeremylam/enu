@@ -45,6 +45,18 @@ type Address struct {
 	PrivateKey string `json:"privateKey"`
 }
 
+type Asset struct {
+	Passphrase	       string `json:"passphrase"`
+	SourceAddress      string `json:"sourceAddress"`
+	AssetId            string `json:"assetId"`
+	Asset              string `json:"asset"`
+	Description 	   string `json:"description"`
+	Quantity           uint64 `json:"quantity"`
+	Divisible          bool	  `json:"divisible"`
+	Status             string `json:"status"`	
+	ErrorMessage       string `json:"errorMessage`	
+}
+
 type ReturnCode struct {
 	RequestId   string `json:"requestId"`
 	Code        int64  `json:"code"`

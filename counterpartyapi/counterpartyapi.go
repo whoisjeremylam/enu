@@ -839,13 +839,18 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(passphrase string, sourceAddress string, asset string, description string, quantity uint64, divisible bool) (string, error) {
+func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress string, assetId string, asset string, description string, quantity uint64, divisible bool) (string, error) {
 	if isInit == false {
 		Init()
 	}
 
+	// Write the asset with the generated asset id to the database
+	go database.InsertAsset(accessKey, assetId, sourceAddress, asset, description, quantity, divisible)
+
+
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
+		log.Printf("Error: %s\n", err)
 		return "", err
 	}
 
@@ -872,6 +877,8 @@ func DelegatedCreateIssuance(passphrase string, sourceAddress string, asset stri
 	// Create the issuance
 	createResult, err := CreateIssuance(sourceAddress, asset, description, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
+		log.Printf("Err in CreateIssuance(): %s\n", err.Error())
+		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
 		return "", err
 	}
 

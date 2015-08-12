@@ -25,3 +25,7 @@ func GenerateKey() string {
 func GeneratePaymentId() string {
 	return hex.EncodeToString(securecookie.GenerateRandomKey(16))
 }
+
+func GenerateAssetId() string {
+	return hex.EncodeToString(securecookie.GenerateRandomKey(16))
+}
