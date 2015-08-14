@@ -22,6 +22,14 @@ import (
 // Returns -3 if there is a different > 5 blocks between internal and blockchain.info
 func main() {
 	var result1, result2 int64
+	
+	// Check if path to config file has been specified and file exists
+	// then attempt to init with the file
+	if len(os.Args) > 1 {
+		if _, err := os.Stat(os.Args[1]); err == nil {
+			bitcoinapi.InitWithConfigPath(os.Args[1])
+		}
+	}
 
 	// First check the internal block height via our API
 	c1 := make(chan int64, 1)

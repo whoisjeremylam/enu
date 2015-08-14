@@ -278,6 +278,7 @@ func InitWithConfigPath(configFilePath string) {
 	}
 
 	// Read configuration from file
+		log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
