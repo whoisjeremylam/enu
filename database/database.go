@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"strings"
 	"os"
+	"strings"
 
 	"github.com/vennd/enu/enulib"
 
@@ -37,11 +37,13 @@ func Init() {
 			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 		} else {
-					if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
-			configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
-			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
+				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
+				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
-		}
+			} else {
+				log.Fatalln("Cannot find enuapi.json")
+			}
 		}
 	}
 
@@ -56,7 +58,7 @@ func InitWithConfigPath(configFilePath string) {
 	}
 
 	// Read configuration from file
-		log.Printf("Reading %s\n", configFilePath)
+	log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
@@ -114,7 +116,6 @@ func InsertAsset(accessKey string, assetId string, sourceAddressValue string, as
 	defer stmt.Close()
 }
 
-
 func GetAssetByAssetId(accessKey string, assetId string) enulib.Asset {
 	if isInit == false {
 		Init()
@@ -144,7 +145,7 @@ func GetAssetByAssetId(accessKey string, assetId string) enulib.Asset {
 	var errorMessage string
 	var assetStruct enulib.Asset
 
-	if err := row.Scan(&rowId, &assetId, &sourceAddress, &asset, &description, &quantity,  &divisible, &status, &errorMessage); err == sql.ErrNoRows {
+	if err := row.Scan(&rowId, &assetId, &sourceAddress, &asset, &description, &quantity, &divisible, &status, &errorMessage); err == sql.ErrNoRows {
 		assetStruct = enulib.Asset{}
 		if err.Error() == "sql: no rows in result set" {
 			assetStruct.AssetId = assetId
@@ -156,7 +157,6 @@ func GetAssetByAssetId(accessKey string, assetId string) enulib.Asset {
 
 	return assetStruct
 }
-
 
 func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescription string) error {
 	if isInit == false {
@@ -185,7 +185,6 @@ func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescri
 	return nil
 }
 
-
 // Inserts a dividend into the dividends database
 func InsertDividend(accessKey string, dividendId string, sourceAddressValue string, assetValue string, dividendAssetValue string, quantityPerUnitValue uint64) {
 	if isInit == false {
@@ -206,7 +205,6 @@ func InsertDividend(accessKey string, dividendId string, sourceAddressValue stri
 	}
 	defer stmt.Close()
 }
-
 
 func GetDividendByDividendId(accessKey string, dividendId string) enulib.Dividend {
 	if isInit == false {
@@ -249,7 +247,6 @@ func GetDividendByDividendId(accessKey string, dividendId string) enulib.Dividen
 	return dividendStruct
 }
 
-
 func UpdateDividendWithErrorByDividendId(accessKey string, dividendId string, errorDescription string) error {
 	if isInit == false {
 		Init()
@@ -276,8 +273,6 @@ func UpdateDividendWithErrorByDividendId(accessKey string, dividendId string, er
 
 	return nil
 }
-
-
 
 // Inserts a payment into the payment database
 func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue uint64, paymentTag string) {

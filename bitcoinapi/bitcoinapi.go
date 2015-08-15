@@ -33,11 +33,12 @@ func Init() {
 			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 		} else {
-					if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
-			configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
-			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
-
-		}
+			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
+				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
+				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+			} else {
+				log.Fatalln("Cannot find enuapi.json")
+			}
 		}
 	}
 

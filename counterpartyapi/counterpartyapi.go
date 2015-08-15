@@ -10,10 +10,10 @@ import (
 	"log"
 	"math/big"
 	"net/http"
+	"os"
 	"strconv"
 	"sync"
 	"time"
-	"os"
 
 	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/counterpartycrypto"
@@ -259,11 +259,12 @@ func Init() {
 			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 		} else {
-					if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
-			configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
-			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
-
-		}
+			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
+				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
+				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+			} else {
+				log.Fatalln("Cannot find enuapi.json")
+			}
 		}
 	}
 
@@ -278,7 +279,7 @@ func InitWithConfigPath(configFilePath string) {
 	}
 
 	// Read configuration from file
-		log.Printf("Reading %s\n", configFilePath)
+	log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
@@ -773,7 +774,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 
 	payloadJsonBytes, err := json.Marshal(payload)
 
-	//	log.Println(string(payloadJsonBytes))
+//		log.Println(string(payloadJsonBytes))
 
 	if err != nil {
 		return result.Result, err
@@ -784,7 +785,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 		return result.Result, err
 	}
 
-	//	log.Println(string(responseData))
+		log.Println(string(responseData))
 
 	if err := json.Unmarshal(responseData, &result); err != nil {
 		return result.Result, errors.New("Unable to unmarshal responseData")
@@ -876,7 +877,6 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 	// Write the asset with the generated asset id to the database
 	go database.InsertAsset(accessKey, assetId, sourceAddress, asset, description, quantity, divisible)
 
-
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
 		log.Printf("Error: %s\n", err)
@@ -939,10 +939,9 @@ func DelegatedCreateDividend(accessKey string, passphrase string, dividendId str
 	// Write the dividend with the generated dividend id to the database
 	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
 
-
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		log.Printf("Error: %s\n", err)		
+		log.Printf("Error: %s\n", err)
 		return "", err
 	}
 
