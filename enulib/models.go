@@ -36,7 +36,7 @@ type SimplePayment struct {
 	BroadcastTxId      string `json:"broadcastTxId"`
 	PaymentTag         string `json:"paymentTag"`
 	Status             string `json:"status"`
-	ErrorMessage       string `json:"errorMessage`
+	ErrorMessage       string `json:"errorMessage"`
 }
 
 type Address struct {
@@ -54,7 +54,8 @@ type Asset struct {
 	Quantity           uint64 `json:"quantity"`
 	Divisible          bool	  `json:"divisible"`
 	Status             string `json:"status"`	
-	ErrorMessage       string `json:"errorMessage`	
+	ErrorMessage       string `json:"errorMessage"`	
+	RequestId	       string `json:"requestId"`			
 }
 
 type ReturnCode struct {
@@ -71,5 +72,5 @@ type Dividend struct {
 	DividendAsset 		string	`json:"dividendAsset"`
 	QuantityPerUnit		uint64	`json:"quantityPerUnit"`
 	Status         		string	`json:"status"`	
-	ErrorMessage  		string	`json:"errorMessage`	
+	ErrorMessage  		string	`json:"errorMessage"`	
 }

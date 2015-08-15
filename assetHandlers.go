@@ -41,6 +41,11 @@ func AssetCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Generate an requestId
+	requestId := enulib.GenerateRequestId()
+	log.Printf("Generated requestId: %s", requestId)
+
+
 	// Generate an assetId
 	assetId := enulib.GenerateAssetId()
 	log.Printf("Generated assetId: %s", assetId)
@@ -48,6 +53,7 @@ func AssetCreate(w http.ResponseWriter, r *http.Request) {
 	// Return to the client the assetId and unblock the client
 	var assetStruct enulib.Asset	
 	assetStruct.AssetId = assetId
+	assetStruct.RequestId = requestId
 	
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
@@ -58,7 +64,7 @@ func AssetCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 //	result, err := counterpartyapi.DelegatedCreateIssuance(passphrase, sourceAddress, asset, description, quantity, divisible)
-	go counterpartyapi.DelegatedCreateIssuance(accessKey, passphrase, sourceAddress, assetId, asset, description, quantity, divisible)
+	go counterpartyapi.DelegatedCreateIssuance(accessKey, passphrase, sourceAddress, assetId, asset, description, quantity, divisible, requestId)
 
 
 }

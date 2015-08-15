@@ -868,7 +868,7 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress string, assetId string, asset string, description string, quantity uint64, divisible bool) (string, error) {
+func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress string, assetId string, asset string, description string, quantity uint64, divisible bool, requestId string) (string, error) {
 	if isInit == false {
 		Init()
 	}
