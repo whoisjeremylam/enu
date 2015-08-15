@@ -28,8 +28,13 @@ launchProcess.sh restart enu
 
 # This doesn't update service monitoring or scripts used for monitoring
 
+# Restore execute permissions on scripts
+chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingcounterpartyd/pingcounterpartyd.sh
+chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/pingbitcoind.sh
+chmod u+x /home/api/api/src/github.com/vennd/enu/deploy.sh
+chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/restartAndAlertBitcoin.sh
+chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingcounterpartyd/restartAndAlertCounterparty.sh
 
-# Alert
 # Alert
 curl -s \
   --form-string "token=ah1GHznmo7xUxqVrcqP59TeD1h6CS8" \
