@@ -12,5 +12,7 @@
 "counterpartyhost" : "http://localhost:4000",
 "counterpartyuser" : "rpc",
 "counterpartypassword" : "1234",
-"counterpartytransactionencoding" : "auto"
+"counterpartytransactionencoding" : "auto",
+
+"fluentHost" : "http://localhost:8888"
 }
