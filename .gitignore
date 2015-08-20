@@ -4,3 +4,5 @@
 monitoring/pingbitcoind/enuapi.json
 monitoring/pingcounterpartyd/enuapi.json
 enuapi.json
+.idea
+enu.iml
