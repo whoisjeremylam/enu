@@ -11,8 +11,8 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/nytlabs/gojsonexplode"
-	"golang.org/x/net/context"
+	"github.com/vennd/enu/internal/github.com/nytlabs/gojsonexplode"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 // Globals
@@ -20,9 +20,9 @@ var isInit bool = false // set to true only after the init sequence is complete
 var fluentHost string
 
 type logObject struct {
-	Tag string `json:"tag"`
-	ErrorString  string `json:"errorString"`
-	Object interface{}
+	Tag         string `json:"tag"`
+	ErrorString string `json:"errorString"`
+	Object      interface{}
 }
 
 // Initialises global variables and database connection for all handlers
@@ -94,13 +94,17 @@ func Printf(format string, a ...interface{}) {
 // Serialises the given object into JSON and then sends to Fluent via the HTTP forwarder
 func Object(tag string, object interface{}, errorString string) {
 	var LogObject logObject
+<<<<<<< .merge_file_a24480
 	var payloadJsonBytes []byte
 	var err error
 	
+=======
+
+>>>>>>> .merge_file_a25632
 	LogObject.ErrorString = errorString
 	LogObject.Tag = tag
 	LogObject.Object = object
-	
+
 	if isInit == false {
 		Init()
 	}
