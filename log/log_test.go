@@ -4,6 +4,10 @@ import (
 	"testing"
 )
 
+func TestPrintf(t *testing.T) {
+	Printf("TestPrintf. %s x %d", "two", 2)
+}
+
 func TestObject(t *testing.T) {
 	type amount struct {
 		Address  string `json:"address"`

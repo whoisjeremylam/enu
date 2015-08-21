@@ -84,9 +84,18 @@ func InitWithConfigPath(configFilePath string) {
 	isInit = true
 }
 
+// Compatibility function with existing logger. Sends to fluent instead using a default tag of 'enu'
+func Printf(format string, a ...interface{}) {
+	errorString := fmt.Sprintf(format, a)
+	
+	Object("enu", nil, errorString)
+}
+
 // Serialises the given object into JSON and then sends to Fluent via the HTTP forwarder
 func Object(tag string, object interface{}, errorString string) {
 	var LogObject logObject
+	var payloadJsonBytes []byte
+	var err error
 	
 	LogObject.ErrorString = errorString
 	LogObject.Tag = tag
@@ -96,7 +105,12 @@ func Object(tag string, object interface{}, errorString string) {
 		Init()
 	}
 
-	payloadJsonBytes, err := json.Marshal(LogObject)
+	if object == nil {
+		payloadJsonBytes = make([]byte, 0)
+	} else {
+		payloadJsonBytes, err = json.Marshal(LogObject)
+	}
+	
 
 	if err != nil {
 		logString := fmt.Sprintf("log.go: Unable to marshall to json: %s", object)
