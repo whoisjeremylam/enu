@@ -4,7 +4,6 @@ package log
 import (
 	"bytes"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -86,21 +85,28 @@ func InitWithConfigPath(configFilePath string) {
 
 // Compatibility function with existing logger. Sends to fluent instead using a default tag of 'enu'
 func Printf(format string, a ...interface{}) {
-	errorString := fmt.Sprintf(format, a)
+	errorString := fmt.Sprintf(format, a...)
 	
-	Object("enu", nil, errorString)
+	env := os.Getenv("ENV")
+	hostname, err := os.Hostname()
+	
+	if err != nil {
+		hostname = "unknown"
+	} 
+	
+	if env == "" {
+		env = "unknown"
+	}
+	
+	Object("enu." + env + "." + hostname, nil, errorString)
 }
 
 // Serialises the given object into JSON and then sends to Fluent via the HTTP forwarder
 func Object(tag string, object interface{}, errorString string) {
 	var LogObject logObject
-<<<<<<< .merge_file_a24480
 	var payloadJsonBytes []byte
 	var err error
-	
-=======
 
->>>>>>> .merge_file_a25632
 	LogObject.ErrorString = errorString
 	LogObject.Tag = tag
 	LogObject.Object = object
@@ -115,17 +121,16 @@ func Object(tag string, object interface{}, errorString string) {
 		payloadJsonBytes, err = json.Marshal(LogObject)
 	}
 	
-
 	if err != nil {
-		logString := fmt.Sprintf("log.go: Unable to marshall to json: %s", object)
+		logString := fmt.Sprintf("log.go: Fatal error - unable to marshall to json: %s", object)
 		log.Println(logString)
 	}
 
 	_, err2 := sendToFluent(fluentHost+"/"+tag, payloadJsonBytes)
 
 	if err2 != nil {
-		logString := fmt.Sprintf("log.go: Unable to send to fluentd: %s", err2.Error())
-		log.Println(logString)
+		log.Println("log.go: Fatal error - failed to send to fluentd")
+		log.Printf("\"%s\",\"%s\",\"%s\"\n", errorString, tag, string(payloadJsonBytes))	// fallback to printing to stdout
 	}
 }
 
@@ -135,15 +140,29 @@ func ContextAndObject(tag string, context context.Context, object interface{}) {
 }
 
 func sendToFluent(url string, postData []byte) (int64, error) {
-	flattenedPostData, err := gojsonexplode.Explodejson(postData, ".")
+	var flattenedPostData []byte
+	var err error
+	var postDataJson string
+	
+	if len(postData) != 0 {
+		flattenedPostData, err = gojsonexplode.Explodejson(postData, ".")
+	} else {
+		flattenedPostData = make([]byte, 0)
+	}
+	
 
 	if err != nil {
-		logString := fmt.Sprintf("log.go: Unable to flatten json: %s", string(flattenedPostData))
+		logString := fmt.Sprintf("log.go: Fatal error - unable to flatten json: %s", string(flattenedPostData))
 		log.Println(logString)
-		return -1, errors.New(logString)
+		return -1, err
 	}
 
-	postDataJson := string(flattenedPostData)
+ 	if flattenedPostData != nil {
+		postDataJson = string(flattenedPostData)
+	} else {
+		postDataJson = ""
+	}
+	
 
 	// Set headers
 	req, err := http.NewRequest("POST", url, bytes.NewBufferString(postDataJson))
@@ -151,6 +170,10 @@ func sendToFluent(url string, postData []byte) (int64, error) {
 
 	clientPointer := &http.Client{}
 	resp, err := clientPointer.Do(req)
+	
+	if err != nil {
+		return -1, err
+	}
 
 	return int64(resp.StatusCode), nil
 }
