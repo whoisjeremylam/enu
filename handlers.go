@@ -207,7 +207,7 @@ func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, str
 }
 
 
-func CheckAndParseJsonCTX(w http.ResponseWriter, r *http.Request, c context.Context) (interface{}, error) {
+func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	//	var blockchainId string
 	var payload interface{}
 

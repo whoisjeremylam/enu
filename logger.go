@@ -37,7 +37,7 @@ func Logger(fn http.HandlerFunc, name string) http.HandlerFunc {
 	}
 }
 
-type ctxHandler func(http.ResponseWriter, *http.Request, context.Context) *appError
+type ctxHandler func(context.Context, http.ResponseWriter, *http.Request) *appError
 
 func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
@@ -69,7 +69,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
  //       }
 
 		// run function
-        if e := fn(w, r, ctx); e != nil { // e is *appError, not os.Error.
+        if e := fn(ctx, w, r); e != nil { // e is *appError, not os.Error.
                 http.Error(w, e.Message, e.Code)
         }
 

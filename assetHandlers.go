@@ -14,14 +14,14 @@ import (
 
 )
 
-func AssetCreate(w http.ResponseWriter, r *http.Request, c context.Context) *appError {
+func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var assetStruct enulib.Asset	
 	requestId := c.Value(requestIdKey).(string)
 	assetStruct.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	
-	payload, err := CheckAndParseJsonCTX(w, r, c)
+	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		ReturnServerError(w, err)
 		return nil
