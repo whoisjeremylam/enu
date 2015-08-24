@@ -6,18 +6,25 @@ import (
 	"net/http"
 
 	"github.com/vennd/enu/counterpartyapi"
+	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
+	"golang.org/x/net/context"
+
 )
 
-func AssetCreate(w http.ResponseWriter, r *http.Request) {
+func AssetCreate(w http.ResponseWriter, r *http.Request, c context.Context) *appError {
 
-	payload, accessKey, nonce, err := CheckAndParseJson(w, r)
+	var assetStruct enulib.Asset	
+	requestId := c.Value(requestIdKey).(string)
+	assetStruct.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	
+	payload, err := CheckAndParseJsonCTX(w, r, c)
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
 	m := payload.(map[string]interface{})
@@ -31,42 +38,49 @@ func AssetCreate(w http.ResponseWriter, r *http.Request) {
 
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, description: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, description, quantity, divisible, accessKey)
+	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, description: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, description, quantity, divisible, c.Value(accessKeyKey).(string))
 
-	database.UpdateNonce(accessKey, nonce)
-
+	database.UpdateNonce(c.Value(accessKeyKey).(string), c.Value(nonceIntKey).(int64))
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
-	// Generate an requestId
-	requestId := enulib.GenerateRequestId()
-	log.Printf("Generated requestId: %s", requestId)
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
+	if err != nil {
+		log.Printf("Error: %s\n", err)		
+		w.WriteHeader(http.StatusBadRequest)
+
+		returnCode := enulib.ReturnCode{RequestId: requestId ,Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+	}
 
 
+
+	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
+	
+	
 	// Generate an assetId
 	assetId := enulib.GenerateAssetId()
 	log.Printf("Generated assetId: %s", assetId)
 
 	// Return to the client the assetId and unblock the client
-	var assetStruct enulib.Asset	
+
 	assetStruct.AssetId = assetId
-	assetStruct.RequestId = requestId
 	
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+//	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(assetStruct); err != nil {
 		panic(err)
-	} else {
-		log.Println(err)
 	}
 
 //	result, err := counterpartyapi.DelegatedCreateIssuance(passphrase, sourceAddress, asset, description, quantity, divisible)
-	go counterpartyapi.DelegatedCreateIssuance(accessKey, passphrase, sourceAddress, assetId, asset, description, quantity, divisible, requestId)
+	go counterpartyapi.DelegatedCreateIssuance(c.Value(accessKeyKey).(string), passphrase, sourceAddress, assetId, asset, description, quantity, divisible, requestId)
 
-
+	return nil
 }
 
 func DividendCreate(w http.ResponseWriter, r *http.Request) {

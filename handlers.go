@@ -14,6 +14,7 @@ import (
 
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
+	"golang.org/x/net/context"
 )
 
 func ReturnUnauthorised(w http.ResponseWriter, e error) {
@@ -203,4 +204,42 @@ func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, str
 	database.UpdateNonce(accessKey, nonceInt)
 
 	return payload, accessKey, nonceInt, nil
+}
+
+
+func CheckAndParseJsonCTX(w http.ResponseWriter, r *http.Request, c context.Context) (interface{}, error) {
+	//	var blockchainId string
+	var payload interface{}
+
+	signature := r.Header.Get("Signature")
+
+	// Limit amount read to 512,000 bytes and parse body
+	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 512000))
+	if err != nil {
+		panic(err)
+	}
+	if err := r.Body.Close(); err != nil {
+		panic(err)
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		ReturnUnprocessableEntity(w, errors.New("Unable to unmarshal body"))
+	}
+	log.Printf("Received: %s", body)
+
+
+	// Then look up secret and calculate digest
+	accessKey := c.Value(accessKeyKey).(string)
+	calculatedSignature := enulib.ComputeHmac512(body, database.GetSecretByAccessKey(accessKey))
+
+	// If we didn't receive the expected signature then raise a forbidden
+	if calculatedSignature != signature {
+		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
+		err := errors.New(errorString)
+
+		return nil, err
+	}
+
+//	database.UpdateNonce(c.Value(accessKeyKey).(string), c.Value(nonceIntKey).(int64))
+
+	return payload, nil
 }
