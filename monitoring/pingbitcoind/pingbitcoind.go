@@ -22,7 +22,7 @@ import (
 // Returns -3 if there is a different > 5 blocks between internal and blockchain.info
 func main() {
 	var result1, result2 int64
-	
+
 	// Check if path to config file has been specified and file exists
 	// then attempt to init with the file
 	if len(os.Args) > 1 {

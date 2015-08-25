@@ -7,7 +7,7 @@ const Satoshi = 100000000 // Default divisibility for Counterparty assets which 
 const RequestIdKey key = 0
 const AccessKeyKey key = 1
 const NonceIntKey key = 2
-const BlockchainIdKey key = 2
+const BlockchainIdKey key = 3
 
 const CounterpartyBlockchainId string = "counterparty"
 const RippleBlockchainId string = "ripple"

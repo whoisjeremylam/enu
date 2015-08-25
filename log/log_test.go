@@ -5,7 +5,7 @@ import (
 )
 
 func TestPrintf(t *testing.T) {
-	Printf("TestPrintf. %s x %d", "two", 2)
+	Printf("TestPrintf. %s x %d = %f", "two", 2, 4.0)
 }
 
 func TestObject(t *testing.T) {
@@ -32,6 +32,6 @@ func TestObject(t *testing.T) {
 
 	assetBalances.Balances = append(assetBalances.Balances, balance1)
 	assetBalances.Balances = append(assetBalances.Balances, balance2)
-	
-	Object("enu", assetBalances, "Testing fluentd logger")
+
+	object("enu", assetBalances, "Testing fluentd logger", false)
 }

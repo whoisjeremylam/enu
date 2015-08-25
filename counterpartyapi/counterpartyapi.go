@@ -774,7 +774,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 
 	payloadJsonBytes, err := json.Marshal(payload)
 
-//		log.Println(string(payloadJsonBytes))
+	//		log.Println(string(payloadJsonBytes))
 
 	if err != nil {
 		return result.Result, err
@@ -785,7 +785,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 		return result.Result, err
 	}
 
-		log.Println(string(responseData))
+	log.Println(string(responseData))
 
 	if err := json.Unmarshal(responseData, &result); err != nil {
 		return result.Result, errors.New("Unable to unmarshal responseData")

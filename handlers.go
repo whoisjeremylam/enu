@@ -12,9 +12,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
-	"golang.org/x/net/context"
+
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 func ReturnUnauthorised(w http.ResponseWriter, e error) {
@@ -206,7 +208,6 @@ func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, str
 	return payload, accessKey, nonceInt, nil
 }
 
-
 func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	//	var blockchainId string
 	var payload interface{}
@@ -226,9 +227,8 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	}
 	log.Printf("Received: %s", body)
 
-
 	// Then look up secret and calculate digest
-	accessKey := c.Value(accessKeyKey).(string)
+	accessKey := c.Value(consts.AccessKeyKey).(string)
 	calculatedSignature := enulib.ComputeHmac512(body, database.GetSecretByAccessKey(accessKey))
 
 	// If we didn't receive the expected signature then raise a forbidden
@@ -239,7 +239,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 
-//	database.UpdateNonce(c.Value(accessKeyKey).(string), c.Value(nonceIntKey).(int64))
+	//	database.UpdateNonce(c.Value(accessKeyKey).(string), c.Value(nonceIntKey).(int64))
 
 	return payload, nil
 }
