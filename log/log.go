@@ -109,6 +109,14 @@ func Fluentf(tag string, format string, a ...interface{}) {
 	fluentf(tag, false, format, a...)
 }
 
+// Log string to Fluent.
+// It is suggested that 'tag' be set to the name of the source file. eg "log.go"
+// Otherwise, 'tag' can be set to an empty string if the default tag of 'enu.$ENV.$HOSTNAME' is sufficient
+// Use this function whenever doing general logging which doesn't require the context to be logged
+func Fluentln(tag string, a string) {
+	fluentf(tag, false, "%s", a)
+}
+
 func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}) {
 	errorString := fmt.Sprintf(format, a...)
 

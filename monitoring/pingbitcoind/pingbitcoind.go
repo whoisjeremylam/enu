@@ -2,14 +2,16 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/vennd/enu/bitcoinapi"
+	"github.com/vennd/enu/log"
 )
+
+const sourceFilename = "pingbitcoind.go"
 
 // This application is to be used for monitoring purposes of bitcoind or btcd.
 //
@@ -37,8 +39,8 @@ func main() {
 		ourBlockHeight, err := bitcoinapi.GetBlockCount()
 
 		if err != nil {
-			log.Println("Error retrieving our block height")
-			log.Println(err)
+			log.Fluentln(sourceFilename, "Error retrieving our block height")
+			log.Fluentln(sourceFilename, err.Error())
 			os.Exit(-1)
 		}
 		c1 <- ourBlockHeight
@@ -46,9 +48,9 @@ func main() {
 
 	select {
 	case result1 = <-c1:
-		log.Printf("Our block height: %d\n", result1)
+		log.Fluentf(sourceFilename, "Our block height: %d\n", result1)
 	case <-time.After(time.Second * 10):
-		log.Println("Timeout when retrieving our block height")
+		log.Fluentln(sourceFilename, "Timeout when retrieving our block height")
 		os.Exit(-1)
 	}
 
@@ -61,16 +63,16 @@ func main() {
 		response, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
-			log.Println("Error reading from blockchain.info")
-			log.Println(err)
+			log.Fluentln(sourceFilename, "Error reading from blockchain.info")
+			log.Fluentln(sourceFilename, err.Error())
 			os.Exit(-2)
 		}
 
 		result, err2 := strconv.ParseInt(string(response), 10, 64)
 
 		if err2 != nil {
-			log.Println("Error reading from blockchain.info")
-			log.Println(err2)
+			log.Fluentln(sourceFilename, "Error reading from blockchain.info")
+			log.Fluentln(sourceFilename, err2.Error())
 			os.Exit(-2)
 		}
 
@@ -79,9 +81,9 @@ func main() {
 
 	select {
 	case result2 = <-c2:
-		log.Printf("Blockchain.info block height: %d\n", result2)
+		log.Fluentf(sourceFilename, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
-		log.Println("Timeout when retrieving blockchain.info block height")
+		log.Fluentf(sourceFilename, "Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
 	}
 
