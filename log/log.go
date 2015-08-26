@@ -35,17 +35,17 @@ func Init() {
 	}
 
 	if _, err := os.Stat("./enuapi.json"); err == nil {
-		log.Println("Found and using configuration file ./enuapi.json")
+		//		log.Println("Found and using configuration file ./enuapi.json")
 		configFilePath = "./enuapi.json"
 	} else {
 		if _, err := os.Stat(os.Getenv("GOPATH") + "/bin/enuapi.json"); err == nil {
 			configFilePath = os.Getenv("GOPATH") + "/bin/enuapi.json"
-			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+			//			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 		} else {
 			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
 				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
-				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+				//				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 			} else {
 				log.Fatalln("Cannot find enuapi.json")
 			}
@@ -63,7 +63,7 @@ func InitWithConfigPath(configFilePath string) {
 	}
 
 	// Read configuration from file
-	log.Printf("Reading %s\n", configFilePath)
+	//	log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
@@ -91,6 +91,14 @@ func InitWithConfigPath(configFilePath string) {
 // Note: If unable to forward to Fluent, this function will NOT raise errors with respect to Fluent
 func Printf(format string, a ...interface{}) {
 	fluentf("", true, format, a...)
+}
+
+// Compatibility function with existing logger.
+// Writes a copy of the string to format to stdout but also sends a copy to Fluent
+// Uses a default tag of 'enu.$ENV.$HOSTNAME'
+// Note: If unable to forward to Fluent, this function will NOT raise errors with respect to Fluent
+func Println(a string) {
+	fluentf("", true, "%s", a)
 }
 
 // Log a formatted string to Fluent.
@@ -179,11 +187,7 @@ func object(tag string, object interface{}, errorString string, suppressErrors b
 		Init()
 	}
 
-	if object == nil {
-		payloadJsonBytes = make([]byte, 0)
-	} else {
-		payloadJsonBytes, err = json.Marshal(LogObject)
-	}
+	payloadJsonBytes, err = json.Marshal(LogObject)
 
 	if err != nil {
 		logString := fmt.Sprintf("log.go: Fatal error - unable to marshall to json: %s", object)
