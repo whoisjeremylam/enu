@@ -275,7 +275,7 @@ func UpdateDividendWithErrorByDividendId(accessKey string, dividendId string, er
 }
 
 // Inserts a payment into the payment database
-func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue uint64, paymentTag string) {
+func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string, sourceAddressValue string, destinationAddressValue string, outAssetValue string, outAmountValue uint64, statusValue string, lastUpdatedBlockIdValue int64, txFeeValue uint64, paymentTag string, requestId string) {
 	if isInit == false {
 		Init()
 	}
@@ -624,7 +624,7 @@ func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddr
 	return key, secret, nil
 }
 
-func CreateSecondaryAddress(accessKey string, newAddress string) error {
+func CreateSecondaryAddress(accessKey string, newAddress string, requestId string) error {
 	if isInit == false {
 		Init()
 	}

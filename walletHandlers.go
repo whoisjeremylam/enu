@@ -54,6 +54,8 @@ func WalletCreate(w http.ResponseWriter, r *http.Request) {
 func WalletSend(w http.ResponseWriter, r *http.Request) {
 	var paymentTag string
 
+	requestId := ""
+
 	payload, accessKey, nonce, err := CheckAndParseJson(w, r)
 
 	m := payload.(map[string]interface{})
@@ -92,7 +94,7 @@ func WalletSend(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 	}
 
-	go counterpartyapi.DelegatedSend(accessKey, passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag)
+	go counterpartyapi.DelegatedSend(accessKey, passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
 }
 
 func WalletBalance(w http.ResponseWriter, r *http.Request) {

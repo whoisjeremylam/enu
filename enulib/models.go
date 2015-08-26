@@ -22,6 +22,7 @@ type Payment struct {
 	OutAmount          int64  `json:"outAmount"`
 	Status             string `json:"status"`
 	LastUpdatedBlockId int64  `json:"lastUpdatedblockId"`
+	RequestId          string `json:"requestId"`		
 }
 
 type Payments []Payment
@@ -37,12 +38,14 @@ type SimplePayment struct {
 	PaymentTag         string `json:"paymentTag"`
 	Status             string `json:"status"`
 	ErrorMessage       string `json:"errorMessage"`
+	RequestId          string `json:"requestId"`	
 }
 
 type Address struct {
 	Value      string `json:"value"`
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
+	RequestId  string `json:"requestId"`	
 }
 
 type Asset struct {
@@ -73,4 +76,5 @@ type Dividend struct {
 	QuantityPerUnit uint64 `json:"quantityPerUnit"`
 	Status          string `json:"status"`
 	ErrorMessage    string `json:"errorMessage"`
+	RequestId       string `json:"requestId"`	
 }

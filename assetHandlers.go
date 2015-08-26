@@ -67,7 +67,6 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 	
 // Return to the client the assetId and unblock the client
-	//	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(assetStruct); err != nil {
 		panic(err)
@@ -79,9 +78,21 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	return nil
 }
 
-func DividendCreate(w http.ResponseWriter, r *http.Request) {
-	payload, accessKey, nonce, err := CheckAndParseJson(w, r)
+func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
+	var dividendStruct enulib.Dividend
+	requestId := c.Value(consts.RequestIdKey).(string)
+	dividendStruct.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+
+// check generic args and parse	
+	payload, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
+	}
+	
 	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
@@ -90,37 +101,42 @@ func DividendCreate(w http.ResponseWriter, r *http.Request) {
 	dividendAsset := m["dividendAsset"].(string)
 	quantityPerUnit := uint64(m["quantityPerUnit"].(float64))
 
+	log.Printf("DividendCreate: received request sourceAddress: %s, asset: %s, dividendAsset: %s, quantityPerUnit: %d from accessKey: %s\n", sourceAddress, asset, dividendAsset, quantityPerUnit, c.Value(consts.AccessKeyKey).(string))
+
+// check function specific args
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("DividendCreate: received request sourceAddress: %s, asset: %s, dividendAsset: %s, quantityPerUnit: %d from accessKey: %s\n", sourceAddress, asset, dividendAsset, quantityPerUnit, accessKey)
-
-	database.UpdateNonce(accessKey, nonce)
-
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		ReturnServerError(w, err)
+		log.Printf("Error: %s\n", err)
+		w.WriteHeader(http.StatusBadRequest)
 
-		return
+		returnCode := enulib.ReturnCode{RequestId: requestId, Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
 	}
+	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
 
-	// Generate an assetId
+
+
+// Generate a dividendId
 	dividendId := enulib.GenerateDividendId()
 	log.Printf("Generated dividendId: %s", dividendId)
-
-	// Return to the client the assetId and unblock the client
-	var dividendStruct enulib.Dividend
 	dividendStruct.DividendId = dividendId
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(dividendStruct); err != nil {
 		panic(err)
-	} else {
-		log.Println(err)
 	}
 
-	//	result, err := counterpartyapi.DelegatedCreateDividend(passphrase, sourceAddress, asset, dividendAsset, quantityPerUnit)
-	go counterpartyapi.DelegatedCreateDividend(accessKey, passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
+// Start dividend creation in async mode
+	go counterpartyapi.DelegatedCreateDividend(c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, requestId)
 
+	return nil
 }
 
 func AssetBalance(w http.ResponseWriter, r *http.Request) {

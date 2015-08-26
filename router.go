@@ -10,15 +10,15 @@ func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
 	router.HandleFunc("/", Logger(Index, "Index")).Methods("GET")
-	router.HandleFunc("/payment", Logger(PaymentCreate, "PaymentCreate")).Methods("POST")
-	router.HandleFunc("/payment/address", Logger(AddressCreate, "AddressCreate")).Methods("POST")
+	router.Handle("/payment", ctxHandler(PaymentCreate)).Methods("POST")
+	router.Handle("/payment/address", ctxHandler(AddressCreate)).Methods("POST")
 	router.HandleFunc("/payment/{paymentId}", Logger(GetPayment, "GetPayment")).Methods("GET")
 	router.HandleFunc("/payment/status/{paymentId}", Logger(PaymentRetry, "PaymentRetry")).Methods("POST")
 
-	//	router.HandleFunc("/asset", Logger(AssetCreate, "AssetCreate")).Methods("POST")
+
 	router.Handle("/asset", ctxHandler(AssetCreate)).Methods("POST")
 	router.HandleFunc("/asset/balances/{asset}", Logger(AssetBalance, "AssetBalance")).Methods("GET")
-	router.HandleFunc("/asset/dividend", Logger(DividendCreate, "DividendCreate")).Methods("POST")
+	router.Handle("/asset/dividend", ctxHandler(DividendCreate)).Methods("POST")
 	router.HandleFunc("/asset/issuances/{asset}", Logger(AssetIssuances, "AssetIssuances")).Methods("GET")
 	router.HandleFunc("/asset/ledger/{asset}", Logger(AssetLedger, "AssetLedger")).Methods("GET")
 
