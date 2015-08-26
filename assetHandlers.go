@@ -22,12 +22,14 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetStruct.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+
+
+// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		ReturnServerError(w, err)
 		return nil
 	}
-
 	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
@@ -37,15 +39,12 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	quantity := uint64(m["quantity"].(float64))
 	divisible := m["divisible"].(bool)
 
-	//	**** Need to check all the types are as expected and all required parameters received
-
 	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, description: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, description, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
 
-	database.UpdateNonce(c.Value(consts.AccessKeyKey).(string), c.Value(consts.NonceIntKey).(int64))
-	if err != nil {
-		ReturnServerError(w, err)
-		return nil
-	}
+
+// check function specific args
+//	**** Need to check all the types are as expected and all required parameters received
+
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -58,24 +57,23 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		}
 		return nil
 	}
-
 	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
 
-	// Generate an assetId
+
+// Generate an assetId
 	assetId := enulib.GenerateAssetId()
 	log.Printf("Generated assetId: %s", assetId)
-
-	// Return to the client the assetId and unblock the client
-
 	assetStruct.AssetId = assetId
 
+	
+// Return to the client the assetId and unblock the client
 	//	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(assetStruct); err != nil {
 		panic(err)
 	}
 
-	//	result, err := counterpartyapi.DelegatedCreateIssuance(passphrase, sourceAddress, asset, description, quantity, divisible)
+// Start asset creation in async mode
 	go counterpartyapi.DelegatedCreateIssuance(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, description, quantity, divisible, requestId)
 
 	return nil

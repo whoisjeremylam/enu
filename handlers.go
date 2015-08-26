@@ -239,7 +239,5 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 
-	//	database.UpdateNonce(c.Value(accessKeyKey).(string), c.Value(nonceIntKey).(int64))
-
 	return payload, nil
 }

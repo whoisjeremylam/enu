@@ -26,6 +26,7 @@ import (
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
+
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430
