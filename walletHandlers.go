@@ -5,50 +5,48 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"	
 )
 
-func WalletCreate(w http.ResponseWriter, r *http.Request) {
-	var wallet counterpartycrypto.CounterpartyWallet
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
+func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+	
+	var wallet counterpartycrypto.CounterpartyWallet
+	requestId := c.Value(consts.RequestIdKey).(string)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	wallet.RequestId = requestId
+
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)	
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
-	}
-
-	err2 := database.UpdateNonce(accessKey, nonce)
-	if err2 != nil {
-		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
 	// Create the wallet
 	wallet, err = counterpartycrypto.CreateWallet()
 	if err != nil {
 		log.Printf("Unable to create a Counterparty wallet. Error: %s\n", err.Error())
-
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
-	log.Printf("Created a new wallet with first address: %s for access key: %s\n", wallet.Addresses[0], accessKey)
+	log.Printf("Created a new wallet with first address: %s for access key: %s\n (requestID: %s)", wallet.Addresses[0], c.Value(consts.AccessKeyKey).(string), requestId)
 
 	// Return the wallet
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	wallet.RequestId = requestId
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(wallet); err != nil {
 		panic(err)
-	} else {
-		log.Println(err)
-	}
+	} 
+	
+	return nil
 }
 
 func WalletSend(w http.ResponseWriter, r *http.Request) {
@@ -150,7 +148,5 @@ func WalletBalance(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(walletBalances); err != nil {
 		panic(err)
-	} else {
-		log.Println(err)
 	}
 }
