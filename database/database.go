@@ -9,8 +9,10 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"strings"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/enulib"
 
 	_ "github.com/vennd/enu/internal/github.com/go-sql-driver/mysql"
@@ -574,9 +576,19 @@ func UpdateNonce(accessKey string, nonce int64) error {
 
 }
 
-func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddress string) (string, string, error) {
+func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddress string, parentAccessKey string) (string, string, error) {
 	if isInit == false {
 		Init()
+	}
+
+	// blockchainId must be in the list of blockchains that we support
+	supportedBlockchains := consts.SupportedBlockchains
+	sort.Strings(supportedBlockchains)
+
+	if sort.SearchStrings(supportedBlockchains, blockchainId) == 0 {
+		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
+
+		return "", "", errors.New(e)
 	}
 
 	key := enulib.GenerateKey()
@@ -589,13 +601,13 @@ func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddr
 	}
 
 	// Insert into userKeys table first
-	stmt, err := Db.Prepare("insert into userKeys(userId, accessKey, secret, nonce, assetId, blockchainId) values(?, ?, ?, ?, ?, ?)")
+	stmt, err := Db.Prepare("insert into userkeys(userId, parentAccessKey, accessKey, secret, nonce, assetId, blockchainId, status) values(?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		//		log.Println("Failed to prepare statement. Reason: ")
 		tx.Rollback()
 		return "", "", err
 	}
-	_, err = stmt.Exec(userId, key, secret, 0, assetId, blockchainId)
+	_, err = stmt.Exec(userId, parentAccessKey, key, secret, 0, assetId, blockchainId, consts.AccessKeyValidStatus)
 	if err != nil {
 		tx.Rollback()
 		return "", "", err
@@ -675,4 +687,45 @@ func UserKeyExists(accessKey string) bool {
 	}
 
 	return true
+}
+
+func UpdateUserKeyStatus(accessKey string, status string) error {
+	if isInit == false {
+		Init()
+	}
+
+	// status must be a supported access key status
+	statuses := consts.AccessKeyStatuses
+	sort.Strings(statuses)
+
+	x := sort.SearchStrings(statuses, status)
+	statusValid := x < len(statuses) && statuses[x] == status
+	if statusValid == false {
+		e := fmt.Sprintf("Attempt to update status to an invalid value: %s. Valid values: %s", status, strings.Join(statuses, ", "))
+
+		return errors.New(e)
+	}
+
+	// Check accessKey exists
+	if UserKeyExists(accessKey) != true {
+		log.Println("Call to UpdateUserKeyStatus() with an invalid access key")
+
+		return errors.New("Call to UpdateUserKeyStatus() with an invalid access key")
+	}
+
+	stmt, err := Db.Prepare("update userkeys set status=? where accessKey=?")
+	if err != nil {
+		//		log.Println("Failed to prepare statement. Reason: ")
+		return err
+	}
+
+	// Perform the update
+	_, err = stmt.Exec(status, accessKey)
+	if err != nil {
+		return err
+	}
+
+	defer stmt.Close()
+
+	return nil
 }
