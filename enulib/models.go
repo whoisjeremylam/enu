@@ -9,6 +9,31 @@ type Block struct {
 
 type Blocks []Block
 
+type Amount struct {
+	Asset    string `json:"asset"`
+	Quantity uint64 `json:"quantity"`
+
+}
+
+type AddressAmount struct {
+    Address           string  `json:"address"`
+    Quantity          uint64  `json:"quantity"`
+    PercentageHolding float64 `json:"percentageHolding"`
+}
+
+
+type AssetBalances struct {
+	Asset        string          `json:"asset"`
+	Locked       bool            `json:"locked"`
+	Divisible    bool            `json:"divisible"`
+	Divisibility uint64          `json:"divisibility"`
+	Description  string          `json:"description"`
+	Supply       uint64          `json:"quantity"`
+	Balances     []AddressAmount `json:"balances"`
+	RequestId	 string 		 `json:"requestId`		
+}
+
+
 type PaymentId struct {
 	PaymentId string `json:"paymentId"`
 }
@@ -46,6 +71,12 @@ type Address struct {
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
 	RequestId  string `json:"requestId"`	
+}
+
+type AddressBalances struct {
+	Address  string        `json:"address"`
+	Balances []Amount 		`json:"balances"`
+	RequestId string       `json:"requestId`		
 }
 
 type Asset struct {

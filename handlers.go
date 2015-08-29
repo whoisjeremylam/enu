@@ -190,7 +190,7 @@ func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, str
 	if err := json.Unmarshal(body, &payload); err != nil {
 		ReturnUnprocessableEntity(w, errors.New("Unable to unmarshal body"))
 	}
-	log.Printf("Received: %s", body)
+	log.Printf("Request received: %s", body)
 
 	// Then look up secret and calculate digest
 	calculatedSignature := enulib.ComputeHmac512(body, database.GetSecretByAccessKey(accessKey))
@@ -225,7 +225,9 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if err := json.Unmarshal(body, &payload); err != nil {
 		ReturnUnprocessableEntity(w, errors.New("Unable to unmarshal body"))
 	}
-	log.Printf("Received: %s", body)
+	log.Printf("Request received: %s", body)
+
+
 
 	// Then look up secret and calculate digest
 	accessKey := c.Value(consts.AccessKeyKey).(string)

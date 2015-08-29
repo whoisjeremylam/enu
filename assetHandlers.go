@@ -139,49 +139,39 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
-func AssetBalance(w http.ResponseWriter, r *http.Request) {
-	type amount struct {
-		Address  string `json:"address"`
-		Quantity uint64 `json:"quantity"`
-	}
-	var assetBalances struct {
-		Asset     string   `json:"asset"`
-		Divisible bool     `json:"divisible"`
-		Balances  []amount `json:"balances"`
+
+func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var assetBalances enulib.AssetBalances
+
+	requestId := c.Value(consts.RequestIdKey).(string)
+	assetBalances.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
 	}
 
 	vars := mux.Vars(r)
 	asset := vars["asset"]
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
-
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("AssetBalance: received request asset: %s from accessKey: %s\n", asset, accessKey)
-
-	database.UpdateNonce(accessKey, nonce)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
+	log.Printf("AssetBalance: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
 	result, err := counterpartyapi.GetBalancesByAsset(asset)
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
 	// Iterate and gather the balances to return
 	assetBalances.Asset = asset
 	for _, item := range result {
-		var balance amount
+		var balance enulib.AddressAmount
 
 		balance.Address = item.Address
 		balance.Quantity = item.Quantity
@@ -189,11 +179,11 @@ func AssetBalance(w http.ResponseWriter, r *http.Request) {
 		assetBalances.Balances = append(assetBalances.Balances, balance)
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
 		panic(err)
 	}
+	return nil
 }
 
 func AssetIssuances(w http.ResponseWriter, r *http.Request) {
@@ -285,55 +275,38 @@ func AssetIssuances(w http.ResponseWriter, r *http.Request) {
 }
 
 // Recommended call which summarises the ledger for a particular asset
-func AssetLedger(w http.ResponseWriter, r *http.Request) {
-	type amount struct {
-		Address           string  `json:"address"`
-		Quantity          uint64  `json:"quantity"`
-		PercentageHolding float64 `json:"percentageHolding"`
-	}
-	var assetBalances struct {
-		Asset        string   `json:"asset"`
-		Locked       bool     `json:"locked"`
-		Divisible    bool     `json:"divisible"`
-		Divisibility uint64   `json:"divisibility"`
-		Description  string   `json:"description"`
-		Supply       uint64   `json:"quantity"`
-		Balances     []amount `json:"balances"`
+func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var assetBalances enulib.AssetBalances
+
+	requestId := c.Value(consts.RequestIdKey).(string)
+	assetBalances.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
 	}
 
 	vars := mux.Vars(r)
 	asset := vars["asset"]
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
-
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("AssetLedger: received request asset: %s from accessKey: %s\n", asset, accessKey)
-
-	database.UpdateNonce(accessKey, nonce)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
+	log.Printf("AssetLedger: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
 	result, err := counterpartyapi.GetBalancesByAsset(asset)
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
 	resultIssuances, err := counterpartyapi.GetIssuances(asset)
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
 	// Summarise asset information
@@ -370,7 +343,7 @@ func AssetLedger(w http.ResponseWriter, r *http.Request) {
 	//	assetBalances.Locked = locked
 	//	assetBalances.Description = description
 	for _, item := range result {
-		var balance amount
+		var balance enulib.AddressAmount
 		var percentage float64
 
 		percentage = float64(item.Quantity) / float64(assetBalances.Supply) * 100
@@ -382,9 +355,10 @@ func AssetLedger(w http.ResponseWriter, r *http.Request) {
 		assetBalances.Balances = append(assetBalances.Balances, balance)
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
 		panic(err)
 	}
+	return nil
 }

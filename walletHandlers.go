@@ -15,7 +15,6 @@ import (
 	"github.com/vennd/enu/internal/golang.org/x/net/context"	
 )
 
-
 func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 	
 	var wallet counterpartycrypto.CounterpartyWallet
@@ -95,58 +94,53 @@ func WalletSend(w http.ResponseWriter, r *http.Request) {
 	go counterpartyapi.DelegatedSend(accessKey, passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
 }
 
-func WalletBalance(w http.ResponseWriter, r *http.Request) {
-	type amount struct {
-		Asset    string `json:"asset"`
-		Quantity uint64 `json:"quantity"`
-	}
-	var walletBalances struct {
-		Address  string   `json:"address"`
-		Balances []amount `json:"balances"`
+
+func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var walletbalance enulib.AddressBalances
+	
+	requestId := c.Value(consts.RequestIdKey).(string)
+	walletbalance.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
 	}
 
 	vars := mux.Vars(r)
 	address := vars["address"]
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
 
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("WalletBalance: received request address: %s from accessKey: %s\n", address, accessKey)
+	log.Printf("WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))
 
-	err = database.UpdateNonce(accessKey, nonce)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
 
 	result, err := counterpartyapi.GetBalancesByAddress(address)
 	if err != nil {
 		ReturnServerError(w, err)
-
-		return
+		return nil
 	}
 
 	// Iterate and gather the balances to return
-	walletBalances.Address = address
+	walletbalance.Address = address
 	for _, item := range result {
-		var balance amount
+		var balance enulib.Amount
 
 		balance.Asset = item.Asset
 		balance.Quantity = item.Quantity
 
-		walletBalances.Balances = append(walletBalances.Balances, balance)
+		walletbalance.Balances = append(walletbalance.Balances, balance)
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
 	w.WriteHeader(http.StatusOK)
-	if err = json.NewEncoder(w).Encode(walletBalances); err != nil {
+	if err = json.NewEncoder(w).Encode(walletbalance); err != nil {
 		panic(err)
 	}
+	
+	return nil
 }
