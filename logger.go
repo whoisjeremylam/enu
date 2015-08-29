@@ -63,25 +63,43 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		return
 	}
-
 	// Determine blockchain this request is acting upon
+	usersDefaultBlockchain := database.GetBlockchainIdByUserKey(accessKey)
 	p := strings.Split(r.URL.Path, "/")
-	blockchainId := p[1]
+	requestBlockchainId := p[1]
 
 	supportedBlockchains := consts.SupportedBlockchains
 	sort.Strings(supportedBlockchains)
 
-	i := sort.Search(len(supportedBlockchains), func(i int) bool { return supportedBlockchains[i] == blockchainId })
-	if i == 0 {
+	// Search if the first part of the path after the "/" is the blockchain name. ie "/counterparty" or "/ripple"
+	i := sort.SearchStrings(supportedBlockchains, requestBlockchainId)
+	blockchainValid := i < len(supportedBlockchains) && supportedBlockchains[i] == requestBlockchainId
+
+	// Search if the user has a valid default associated with their access key
+	i = sort.SearchStrings(supportedBlockchains, usersDefaultBlockchain)
+	userBlockchainIdValid := i < len(supportedBlockchains) && supportedBlockchains[i] == usersDefaultBlockchain
+
+	// If the blockchain specified in the path isn't valid and a default blockchainId isn't set in the userkey then fail
+	if blockchainValid == false && userBlockchainIdValid == false {
 		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 		ReturnServerError(ctx, w, errors.New(e))
 
 		return
 	}
 
-	// Add accessKey and nonce to the context
+	var blockchainId string
+	if blockchainValid == true {
+		blockchainId = requestBlockchainId
+	} else {
+		blockchainId = usersDefaultBlockchain
+	}
+
+	log.Printf("Operating on blockchain: %s\n", blockchainId)
+
+	// Add accessKey and blockchainId to the context - nonce has been dropped from context since it has already been updated in the DB
 	ctx1 := context.WithValue(ctx, consts.AccessKeyKey, accessKey)
-	ctx = context.WithValue(ctx1, consts.NonceIntKey, nonceInt)
+	//	ctx = context.WithValue(ctx1, consts.NonceIntKey, nonceInt)
+	ctx = context.WithValue(ctx1, consts.BlockchainIdKey, blockchainId)
 
 	// run function
 	if e := fn(ctx, w, r); e != nil { // e is *appError, not os.Error.
