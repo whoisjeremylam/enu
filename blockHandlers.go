@@ -6,12 +6,21 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
+			
 )
 
-func GetBlocks(w http.ResponseWriter, r *http.Request) {
+
+func GetBlocks(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var blocks enulib.Blocks
+	requestId := c.Value(consts.RequestIdKey).(string)
+	blocks.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
 
 	//	 Query DB
 	database.Init()
@@ -30,7 +39,7 @@ func GetBlocks(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Iterate through last 10 blocks and return
-	var blocks enulib.Blocks
+
 	i := 1
 	for rows.Next() {
 		var rowId int64
@@ -46,7 +55,7 @@ func GetBlocks(w http.ResponseWriter, r *http.Request) {
 
 		log.Printf("Blockid: %d, Status: %s, Duration: %d\n", block.BlockId, block.Status, block.Duration)
 
-		blocks = append(blocks, block)
+		blocks.Allblocks = append(blocks.Allblocks, block)
 
 		// Maximum of 10 rows
 		i++
@@ -59,4 +68,5 @@ func GetBlocks(w http.ResponseWriter, r *http.Request) {
 	if err = json.NewEncoder(w).Encode(blocks); err != nil {
 		panic(err)
 	}
+	return nil
 }

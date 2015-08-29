@@ -8,7 +8,7 @@ import (
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
-	"github.com/vennd/enu/database"
+
 	"github.com/vennd/enu/enulib"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
@@ -48,12 +48,22 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	return nil
 }
 
-func WalletSend(w http.ResponseWriter, r *http.Request) {
+func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var walletPayment enulib.WalletPayment
 	var paymentTag string
 
-	requestId := ""
 
-	payload, accessKey, nonce, err := CheckAndParseJson(w, r)
+	requestId := c.Value(consts.RequestIdKey).(string)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	walletPayment.RequestId = requestId
+
+// check generic args and parse
+	payload, err := CheckAndParseJsonCTX(c, w, r)	
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
+	}
 
 	m := payload.(map[string]interface{})
 
@@ -62,36 +72,29 @@ func WalletSend(w http.ResponseWriter, r *http.Request) {
 	destinationAddress := m["destinationAddress"].(string)
 	asset := m["asset"].(string)
 	quantity := uint64(m["quantity"].(float64))
-
+		
 	if m["paymentTag"] != nil {
 		paymentTag = m["paymentTag"].(string)
 	}
 
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("WalletSend: received request sourceAddress: %s, destinationAddress: %s, asset: %s, quantity: %d, paymentTag: %s from accessKey: %s\n", sourceAddress, destinationAddress, asset, quantity, accessKey, paymentTag)
+	log.Printf("WalletSend: received request sourceAddress: %s, destinationAddress: %s, asset: %s, quantity: %d, paymentTag: %s from accessKey: %s\n", sourceAddress, destinationAddress, asset, quantity, c.Value(consts.AccessKeyKey).(string), paymentTag)
 
-	err = database.UpdateNonce(accessKey, nonce)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
 
 	// Generate a paymentId
 	paymentId := enulib.GeneratePaymentId()
 	log.Printf("Generated paymentId: %s", paymentId)
 
 	// Return to the client the paymentId and unblock the client
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(paymentId); err != nil {
 		panic(err)
-	} else {
-		log.Println(err)
-	}
+	} 
+	
+	go counterpartyapi.DelegatedSend(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
 
-	go counterpartyapi.DelegatedSend(accessKey, passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
+    return nil
 }
 
 

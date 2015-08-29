@@ -109,11 +109,12 @@ func ReturnServerError(w http.ResponseWriter, e error) {
 	}
 }
 
-func Index(w http.ResponseWriter, r *http.Request) {
+func Index(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 	rand.Seed(time.Now().UnixNano())
 	number := rand.Intn(len(quotes))
 
 	fmt.Fprintf(w, "%s\n", quotes[number])
+	return nil
 }
 
 func CheckHeaderGeneric(w http.ResponseWriter, r *http.Request) (string, int64, error) {

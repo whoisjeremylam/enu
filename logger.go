@@ -18,13 +18,9 @@ type appError struct {
 	Code    int
 }
 
-//type key int
 
-//const requestIdKey key = 0
-//const accessKeyKey key = 1
-//const nonceIntKey key = 2
 
-func Logger(fn http.HandlerFunc, name string) http.HandlerFunc {
+/*func Logger(fn http.HandlerFunc, name string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		fn(w, r)    // Call the real handler
@@ -37,11 +33,13 @@ func Logger(fn http.HandlerFunc, name string) http.HandlerFunc {
 		)
 	}
 }
+*/
 
 type ctxHandler func(context.Context, http.ResponseWriter, *http.Request) *appError
 
 func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
+	start := time.Now()
 	// Generate an requestId
 	requestId := enulib.GenerateRequestId()
 	log.Printf("Generated requestId: %s", requestId)
@@ -70,5 +68,13 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if e := fn(ctx, w, r); e != nil { // e is *appError, not os.Error.
 		http.Error(w, e.Message, e.Code)
 	}
+	
+	log.Printf( // Log how long it took
+	"%s,%s,%s,%s",
+	r.Method,
+	r.RequestURI,
+	time.Since(start),
+)
+
 
 }

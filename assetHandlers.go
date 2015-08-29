@@ -8,7 +8,6 @@ import (
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
-	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
@@ -186,51 +185,37 @@ func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	return nil
 }
 
-func AssetIssuances(w http.ResponseWriter, r *http.Request) {
-	type issuance struct {
-		BlockIndex uint64 `json:"block_index"`
-		Quantity   uint64 `json:"quantity"`
-		Issuer     string `json:"issuer"`
-		Transfer   bool   `json:"transfer"`
-	}
-	var issuanceForAsset struct {
-		Asset        string     `json:"asset"`
-		Divisible    bool       `json:"divisible"`
-		Divisibility uint64     `json:"divisibility"`
-		Description  string     `json:"description"`
-		Locked       bool       `json:"locked"`
-		Issuances    []issuance `json:"issuances"`
-	}
+func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
+
+	var issuanceForAsset enulib.AssetIssuances
+
+	requestId := c.Value(consts.RequestIdKey).(string)
+	issuanceForAsset.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
+	}	
+	
 	vars := mux.Vars(r)
 	asset := vars["asset"]
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
 
 	//	**** Need to check all the types are as expected and all required parameters received
 
-	log.Printf("AssetIssuances: received request asset: %s from accessKey: %s\n", asset, accessKey)
-
-	database.UpdateNonce(accessKey, nonce)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
+	log.Printf("AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
 	result, err := counterpartyapi.GetIssuances(asset)
 	if err != nil {
 		ReturnServerError(w, err)
 
-		return
+		return nil
 	}
 
-	//	log.Println(result)
 
 	// Iterate and gather the balances to return
 	issuanceForAsset.Asset = asset
@@ -257,7 +242,7 @@ func AssetIssuances(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, item := range result {
-		var issuance issuance
+		var issuance enulib.Issuance
 
 		issuance.BlockIndex = item.BlockIndex
 		issuance.Issuer = item.Issuer
@@ -267,11 +252,13 @@ func AssetIssuances(w http.ResponseWriter, r *http.Request) {
 		issuanceForAsset.Issuances = append(issuanceForAsset.Issuances, issuance)
 	}
 
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(issuanceForAsset); err != nil {
 		panic(err)
 	}
+	
+	return nil
 }
 
 // Recommended call which summarises the ledger for a particular asset

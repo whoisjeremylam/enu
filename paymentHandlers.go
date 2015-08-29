@@ -55,12 +55,10 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	}
 
 
-	if err == nil {
-		database.InsertPayment(c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag, requestId)
-//		ReturnCreated(w)
-	} else {
-		log.Println(err)
-	}
+	database.InsertPayment(c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag, requestId)
+// errorhandling here!!
+
+
 	
 // Return to the client the paymentId 
 	w.WriteHeader(http.StatusCreated)
@@ -71,79 +69,93 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	return nil
 }
 
-func PaymentRetry(w http.ResponseWriter, r *http.Request) {
+
+func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+
+	var payment enulib.SimplePayment
+	requestId := c.Value(consts.RequestIdKey).(string)
+	payment.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
+	}
+
 	//	var simplePayment enulib.SimplePayment
 
 	vars := mux.Vars(r)
 	paymentId := vars["paymentId"]
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
-	if err != nil {
-		ReturnServerError(w, err)
-
-		return
-	}
-
 	log.Printf("PaymentRetry called for paymentId %s\n", paymentId)
 
-	if err == nil {
-		payment := database.GetPaymentByPaymentId(accessKey, paymentId)
+	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)
 
-		// Payment not found
-		if payment.Status == "Not found" || payment.Status == "" {
-			log.Printf("PaymentId: %s not found", paymentId)
+	// Payment not found
+	if payment.Status == "Not found" || payment.Status == "" {
+		log.Printf("PaymentId: %s not found", paymentId)
 
-			ReturnNotFound(w)
-			return
-		}
-
-		// Payment isn't in an error state or manual state
-		if payment.Status != "error" && payment.Status != "manual" {
-			errorString := fmt.Sprintf("PaymentId: %s is not in an 'error' or 'manual' state. It is in '%s' state.", paymentId, payment.Status)
-			log.Println(errorString)
-
-			ReturnNotFoundWithCustomError(w, errorString)
-			return
-		}
-
-		err = database.UpdatePaymentStatusByPaymentId(accessKey, paymentId, "authorized")
-
-		if err != nil {
-			log.Println(err.Error())
-			ReturnUnprocessableEntity(w, err)
-		}
-
-		database.UpdateNonce(accessKey, nonce)
-		ReturnOK(w)
-	} else {
-		log.Println(err)
+		ReturnNotFound(w)
+		return nil
 	}
+
+	// Payment isn't in an error state or manual state
+	if payment.Status != "error" && payment.Status != "manual" {
+		errorString := fmt.Sprintf("PaymentId: %s is not in an 'error' or 'manual' state. It is in '%s' state.", paymentId, payment.Status)
+		log.Println(errorString)
+
+		ReturnNotFoundWithCustomError(w, errorString)
+		return nil
+	}
+
+	err = database.UpdatePaymentStatusByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId, "authorized")
+
+	if err != nil {
+		log.Println(err.Error())
+		ReturnUnprocessableEntity(w, err)
+	}
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(payment); err != nil {
+		panic(err)
+	}
+	
+	return nil
 }
 
-func GetPayment(w http.ResponseWriter, r *http.Request) {
+
+func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+
+	var payment enulib.SimplePayment
+	requestId := c.Value(consts.RequestIdKey).(string)
+	payment.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	
+// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		ReturnServerError(w, err)
+		return nil
+	}
+
 	vars := mux.Vars(r)
 	paymentId := vars["paymentId"]
 
-	_, accessKey, nonce, err := CheckAndParseJson(w, r)
-	if err != nil {
-		ReturnServerError(w, err)
+	log.Printf("GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
 
-		return
+	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)
+// errorhandling here!!
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(payment); err != nil {
+		panic(err)
 	}
-
-	log.Printf("GetPayment called for '%s' by '%s'\n", paymentId, accessKey)
-
-	database.UpdateNonce(accessKey, nonce)
-
-	if err == nil {
-		payment := database.GetPaymentByPaymentId(accessKey, paymentId)
-
-		w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-		w.WriteHeader(http.StatusOK)
-		if err = json.NewEncoder(w).Encode(payment); err != nil {
-			panic(err)
-		}
-	} else {
-		log.Println(err)
-	}
+	
+	return nil
 }
