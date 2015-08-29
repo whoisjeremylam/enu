@@ -12,3 +12,11 @@ const BlockchainIdKey key = 3
 const CounterpartyBlockchainId string = "counterparty"
 const RippleBlockchainId string = "ripple"
 const ColoredCoinsBlockchainId string = "coloredcoins"
+
+var SupportedBlockchains = []string{CounterpartyBlockchainId, RippleBlockchainId, ColoredCoinsBlockchainId}
+
+const AccessKeyValidStatus = "valid"       // normal status
+const AccessKeyInvalidStatus = "invalid"   // the access key has been made revoked and can no longer be used
+const AccessKeyDisabledStatus = "disabled" // the access key has been disabled - eg temporarily made unavailable. This can be used when maintenance is occuring on the Enu application
+
+var AccessKeyStatuses = []string{AccessKeyValidStatus, AccessKeyInvalidStatus, AccessKeyDisabledStatus}

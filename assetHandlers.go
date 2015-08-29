@@ -21,12 +21,10 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetStruct.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-
-
-// check generic args and parse
+	// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
 	m := payload.(map[string]interface{})
@@ -40,10 +38,8 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, description: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, description, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
 
-
-// check function specific args
-//	**** Need to check all the types are as expected and all required parameters received
-
+	// check function specific args
+	//	**** Need to check all the types are as expected and all required parameters received
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -58,20 +54,18 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	}
 	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
 
-
-// Generate an assetId
+	// Generate an assetId
 	assetId := enulib.GenerateAssetId()
 	log.Printf("Generated assetId: %s", assetId)
 	assetStruct.AssetId = assetId
 
-	
-// Return to the client the assetId and unblock the client
+	// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(assetStruct); err != nil {
 		panic(err)
 	}
 
-// Start asset creation in async mode
+	// Start asset creation in async mode
 	go counterpartyapi.DelegatedCreateIssuance(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, description, quantity, divisible, requestId)
 
 	return nil
@@ -84,14 +78,13 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	dividendStruct.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-
-// check generic args and parse	
+	// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
-	
+
 	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
@@ -102,7 +95,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 
 	log.Printf("DividendCreate: received request sourceAddress: %s, asset: %s, dividendAsset: %s, quantityPerUnit: %d from accessKey: %s\n", sourceAddress, asset, dividendAsset, quantityPerUnit, c.Value(consts.AccessKeyKey).(string))
 
-// check function specific args
+	// check function specific args
 	//	**** Need to check all the types are as expected and all required parameters received
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
@@ -118,26 +111,22 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	}
 	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
 
-
-
-// Generate a dividendId
+	// Generate a dividendId
 	dividendId := enulib.GenerateDividendId()
 	log.Printf("Generated dividendId: %s", dividendId)
 	dividendStruct.DividendId = dividendId
 
-
-// Return to the client the assetId and unblock the client
+	// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(dividendStruct); err != nil {
 		panic(err)
 	}
 
-// Start dividend creation in async mode
+	// Start dividend creation in async mode
 	go counterpartyapi.DelegatedCreateDividend(c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, requestId)
 
 	return nil
 }
-
 
 func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
@@ -147,10 +136,10 @@ func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	assetBalances.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-// check generic args and parse
+	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -163,7 +152,7 @@ func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 
 	result, err := counterpartyapi.GetBalancesByAsset(asset)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -187,23 +176,21 @@ func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 
 func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
-
 	var issuanceForAsset enulib.AssetIssuances
 
 	requestId := c.Value(consts.RequestIdKey).(string)
 	issuanceForAsset.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-// check generic args and parse
+	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
-	}	
-	
+	}
+
 	vars := mux.Vars(r)
 	asset := vars["asset"]
-
 
 	//	**** Need to check all the types are as expected and all required parameters received
 
@@ -211,11 +198,10 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 
 	result, err := counterpartyapi.GetIssuances(asset)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 
 		return nil
 	}
-
 
 	// Iterate and gather the balances to return
 	issuanceForAsset.Asset = asset
@@ -252,12 +238,11 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 		issuanceForAsset.Issuances = append(issuanceForAsset.Issuances, issuance)
 	}
 
-
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(issuanceForAsset); err != nil {
 		panic(err)
 	}
-	
+
 	return nil
 }
 
@@ -270,10 +255,10 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetBalances.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-// check generic args and parse
+	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -286,13 +271,13 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 	result, err := counterpartyapi.GetBalancesByAsset(asset)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
 
 	resultIssuances, err := counterpartyapi.GetIssuances(asset)
 	if err != nil {
-		ReturnServerError(w, err)
+		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -341,7 +326,6 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 		assetBalances.Balances = append(assetBalances.Balances, balance)
 	}
-
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
