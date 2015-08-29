@@ -585,7 +585,10 @@ func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddr
 	supportedBlockchains := consts.SupportedBlockchains
 	sort.Strings(supportedBlockchains)
 
-	if sort.SearchStrings(supportedBlockchains, blockchainId) == 0 {
+	i := sort.SearchStrings(supportedBlockchains, blockchainId)
+	blockchainValid := i < len(supportedBlockchains) && supportedBlockchains[i] == blockchainId
+
+	if blockchainValid == false {
 		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 
 		return "", "", errors.New(e)
@@ -728,4 +731,44 @@ func UpdateUserKeyStatus(accessKey string, status string) error {
 	defer stmt.Close()
 
 	return nil
+}
+
+func GetStatusByUserKey(accessKey string) string {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("select status from userkeys where accesskey=?")
+
+	if err != nil {
+		return ""
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(accessKey)
+
+	var status string
+	row.Scan(&status)
+
+	return status
+}
+
+func GetBlockchainIdByUserKey(accessKey string) string {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("select blockchainId from userkeys where accesskey=?")
+
+	if err != nil {
+		return ""
+	}
+	defer stmt.Close()
+
+	row := stmt.QueryRow(accessKey)
+
+	var blockchainId string
+	row.Scan(&blockchainId)
+
+	return blockchainId
 }
