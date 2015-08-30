@@ -97,10 +97,12 @@ func Printf(format string, a ...interface{}) {
 // It is suggested that 'tag' be set to the name of the source file. eg "log.go"
 // Otherwise, 'tag' can be set to an empty string if the default tag of 'enu.$ENV.$HOSTNAME' is sufficient
 // Use this function whenever doing general logging which doesn't require the context to be logged
+// If the environment variable ENV=dev then this function will also log to stdout
 func Fluentf(tag string, format string, a ...interface{}) {
 	fluentf(tag, false, format, a...)
 }
 
+// When compatibilityMode == true then also log to stdout
 func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}) {
 	errorString := fmt.Sprintf(format, a...)
 
@@ -115,7 +117,7 @@ func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}
 		env = "unknown"
 	}
 
-	if compatibilityMode {
+	if compatibilityMode || env == "dev" {
 		log.Printf(format, a...)
 	}
 
@@ -130,6 +132,7 @@ func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}
 
 // Log a formatted string with a corresponding context to Fluent.
 // The values from the context are copied to a local struct
+// If the environment variable ENV=dev then this function will also log to stdout
 func FluentfContext(tag string, context context.Context, format string, a ...interface{}) {
 	type contextValues struct {
 		RequestId    string `json:"requestId"`
@@ -148,6 +151,10 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 
 	env := os.Getenv("ENV")
 	hostname, err := os.Hostname()
+
+	if env == "dev" {
+		log.Printf(format, a...)
+	}
 
 	if err != nil {
 		hostname = "unknown"
