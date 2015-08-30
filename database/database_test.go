@@ -51,6 +51,12 @@ func TestCreateUserKey(t *testing.T) {
 		t.Errorf("Unable to create user: %s\n", err.Error())
 	}
 
+	// Get the blockchainId and check it was set correctly
+	blockchainId := GetBlockchainIdByUserKey(key)
+	if blockchainId != consts.CounterpartyBlockchainId {
+		t.Errorf("userKey blockchainId not set correctly. Expected: %s, got: %s\n", consts.CounterpartyBlockchainId, blockchainId)
+	}
+
 	// Update user key with all possible statuses
 	for _, value := range consts.AccessKeyStatuses {
 		err2 := UpdateUserKeyStatus(key, value)
@@ -74,11 +80,5 @@ func TestCreateUserKey(t *testing.T) {
 	err4 := UpdateUserKeyStatus(key, "this_should_not_work")
 	if err4 == nil {
 		t.Errorf("userKey status could be updated to an invalid value: %s\n", "this_should_not_work")
-	}
-
-	// Get the blockchainId and check it was set correctly
-	blockchainId := GetBlockchainIdByUserKey(key)
-	if blockchainId != consts.CounterpartyBlockchainId {
-		t.Errorf("User key status not set correctly. Expected: %s, got: %s\n", consts.CounterpartyBlockchainId, blockchainId)
 	}
 }

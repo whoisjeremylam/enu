@@ -540,14 +540,14 @@ func GetAssetByAccessKey(accessKey string) string {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("select assetId from userKeys where accessKey=?")
+	stmt, err := Db.Prepare("select assetId from userKeys where accessKey=? and status=?")
 
 	if err != nil {
 		return ""
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(accessKey)
+	row := stmt.QueryRow(accessKey, consts.AccessKeyValidStatus)
 
 	var assetId string
 	row.Scan(&assetId)
@@ -561,13 +561,13 @@ func UpdateNonce(accessKey string, nonce int64) error {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("update userkeys set nonce=? where accessKey=?")
+	stmt, err := Db.Prepare("update userkeys set nonce=? where accessKey=? and status=?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err2 := stmt.Exec(nonce, accessKey)
+	_, err2 := stmt.Exec(nonce, accessKey, consts.AccessKeyValidStatus)
 	if err2 != nil {
 		return err2
 	}
@@ -668,19 +668,20 @@ func CreateSecondaryAddress(accessKey string, newAddress string, requestId strin
 	return nil
 }
 
+// Only return true where an accessKey exists and also has a valid status
 func UserKeyExists(accessKey string) bool {
 	if isInit == false {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("select count(*) from userkeys where accesskey=?")
+	stmt, err := Db.Prepare("select count(*) from userkeys where accesskey=? and status=?")
 
 	if err != nil {
 		return false
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(accessKey)
+	row := stmt.QueryRow(accessKey, consts.AccessKeyValidStatus)
 
 	var count int64
 	row.Scan(&count)
@@ -692,6 +693,7 @@ func UserKeyExists(accessKey string) bool {
 	return true
 }
 
+// Updates a given accessKey, ignores what the existing status is
 func UpdateUserKeyStatus(accessKey string, status string) error {
 	if isInit == false {
 		Init()
@@ -707,13 +709,6 @@ func UpdateUserKeyStatus(accessKey string, status string) error {
 		e := fmt.Sprintf("Attempt to update status to an invalid value: %s. Valid values: %s", status, strings.Join(statuses, ", "))
 
 		return errors.New(e)
-	}
-
-	// Check accessKey exists
-	if UserKeyExists(accessKey) != true {
-		log.Println("Call to UpdateUserKeyStatus() with an invalid access key")
-
-		return errors.New("Call to UpdateUserKeyStatus() with an invalid access key")
 	}
 
 	stmt, err := Db.Prepare("update userkeys set status=? where accessKey=?")
@@ -758,14 +753,14 @@ func GetBlockchainIdByUserKey(accessKey string) string {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("select blockchainId from userkeys where accesskey=?")
+	stmt, err := Db.Prepare("select blockchainId from userkeys where accesskey=? and status=?")
 
 	if err != nil {
 		return ""
 	}
 	defer stmt.Close()
 
-	row := stmt.QueryRow(accessKey)
+	row := stmt.QueryRow(accessKey, consts.AccessKeyValidStatus)
 
 	var blockchainId string
 	row.Scan(&blockchainId)
