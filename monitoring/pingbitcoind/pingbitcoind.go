@@ -2,14 +2,17 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
+	//	"log"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
 	"github.com/vennd/enu/bitcoinapi"
+	"github.com/vennd/enu/log"
 )
+
+var sourceFile = "pingbitcoind.go"
 
 // This application is to be used for monitoring purposes of bitcoind or btcd.
 //
@@ -37,8 +40,8 @@ func main() {
 		ourBlockHeight, err := bitcoinapi.GetBlockCount()
 
 		if err != nil {
-			log.Println("Error retrieving our block height")
-			log.Println(err)
+			log.Fluentf(sourceFile, "Error retrieving our block height")
+			log.Println(err.Error())
 			os.Exit(-1)
 		}
 		c1 <- ourBlockHeight
@@ -62,7 +65,7 @@ func main() {
 
 		if err != nil {
 			log.Println("Error reading from blockchain.info")
-			log.Println(err)
+			log.Println(err.Error())
 			os.Exit(-2)
 		}
 
@@ -70,7 +73,7 @@ func main() {
 
 		if err2 != nil {
 			log.Println("Error reading from blockchain.info")
-			log.Println(err2)
+			log.Println(err2.Error())
 			os.Exit(-2)
 		}
 
@@ -79,7 +82,7 @@ func main() {
 
 	select {
 	case result2 = <-c2:
-		log.Printf("Blockchain.info block height: %d\n", result2)
+		log.Fluentf(sourceFile, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
 		log.Println("Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
