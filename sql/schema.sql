@@ -1,10 +1,8 @@
-CREATE DATABASE  IF NOT EXISTS `vennd` /*!40100 DEFAULT CHARACTER SET utf8 */;
-USE `vennd`;
 -- MySQL dump 10.13  Distrib 5.6.24, for Win64 (x86_64)
 --
 -- Host: localhost    Database: vennd
 -- ------------------------------------------------------
--- Server version	5.6.25-log
+-- Server version	5.6.26-log
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -229,7 +227,7 @@ CREATE TABLE `payments` (
   `paymentTag` varchar(512) DEFAULT NULL,
   PRIMARY KEY (`rowid`),
   KEY `payments1` (`blockId`)
-) ENGINE=InnoDB AUTO_INCREMENT=118 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -277,11 +275,13 @@ DROP TABLE IF EXISTS `userkeys`;
 CREATE TABLE `userkeys` (
   `rowId` bigint(20) NOT NULL AUTO_INCREMENT,
   `userId` bigint(20) DEFAULT NULL,
+  `parentAccessKey` varchar(64) DEFAULT NULL,
   `accessKey` varchar(64) DEFAULT NULL,
   `secret` varchar(64) DEFAULT NULL,
   `nonce` bigint(20) DEFAULT NULL,
   `assetId` varchar(100) DEFAULT NULL,
   `blockchainId` varchar(100) DEFAULT NULL,
+  `status` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
 ) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -295,4 +295,4 @@ CREATE TABLE `userkeys` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-07-15 22:12:33
+-- Dump completed on 2015-09-01 11:23:55
