@@ -21,9 +21,14 @@ func NewRouter() *mux.Router {
 	router.Handle("/asset/issuances/{asset}", ctxHandler(AssetIssuances)).Methods("GET")
 	router.Handle("/asset/ledger/{asset}", ctxHandler(AssetLedger)).Methods("GET")
 
+	router.Handle("/counterparty/asset", ctxHandler(AssetCreate)).Methods("POST")
+
 	router.Handle("/wallet", ctxHandler(WalletCreate)).Methods("POST")
 	router.Handle("/wallet/balances/{address}", ctxHandler(WalletBalance)).Methods("GET")
 	router.Handle("/wallet/payment", ctxHandler(WalletSend)).Methods("POST")
+	router.Handle("/wallet/payment/{paymentId}", ctxHandler(GetPayment)).Methods("GET")
+
+	router.Handle("/counterparty/wallet", ctxHandler(WalletCreate)).Methods("POST")
 
 	router.Handle("/blocks", ctxHandler(GetBlocks)).Methods("GET")
 
