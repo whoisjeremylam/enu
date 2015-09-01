@@ -8,22 +8,20 @@ type Block struct {
 }
 
 type Blocks struct {
-	Allblocks   []Block `json:"blocks"`
-	RequestId	 string  `json:"requestId`		
+	Allblocks []Block `json:"blocks"`
+	RequestId string  `json:"requestId"`
 }
 
 type Amount struct {
 	Asset    string `json:"asset"`
 	Quantity uint64 `json:"quantity"`
-
 }
 
 type AddressAmount struct {
-    Address           string  `json:"address"`
-    Quantity          uint64  `json:"quantity"`
-    PercentageHolding float64 `json:"percentageHolding"`
+	Address           string  `json:"address"`
+	Quantity          uint64  `json:"quantity"`
+	PercentageHolding float64 `json:"percentageHolding"`
 }
-
 
 type AssetBalances struct {
 	Asset        string          `json:"asset"`
@@ -33,9 +31,8 @@ type AssetBalances struct {
 	Description  string          `json:"description"`
 	Supply       uint64          `json:"quantity"`
 	Balances     []AddressAmount `json:"balances"`
-	RequestId	 string 		 `json:"requestId`		
+	RequestId    string          `json:"requestId"`
 }
-
 
 type PaymentId struct {
 	PaymentId string `json:"paymentId"`
@@ -50,7 +47,7 @@ type Payment struct {
 	OutAmount          int64  `json:"outAmount"`
 	Status             string `json:"status"`
 	LastUpdatedBlockId int64  `json:"lastUpdatedblockId"`
-	RequestId          string `json:"requestId"`		
+	RequestId          string `json:"requestId"`
 }
 
 type Payments []Payment
@@ -66,20 +63,20 @@ type SimplePayment struct {
 	PaymentTag         string `json:"paymentTag"`
 	Status             string `json:"status"`
 	ErrorMessage       string `json:"errorMessage"`
-	RequestId          string `json:"requestId"`	
+	RequestId          string `json:"requestId"`
 }
 
 type Address struct {
 	Value      string `json:"value"`
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
-	RequestId  string `json:"requestId"`	
+	RequestId  string `json:"requestId"`
 }
 
 type AddressBalances struct {
-	Address  string        `json:"address"`
-	Balances []Amount 		`json:"balances"`
-	RequestId string       `json:"requestId`		
+	Address   string   `json:"address"`
+	Balances  []Amount `json:"balances"`
+	RequestId string   `json:"requestId"`
 }
 
 type Asset struct {
@@ -110,7 +107,7 @@ type Dividend struct {
 	QuantityPerUnit uint64 `json:"quantityPerUnit"`
 	Status          string `json:"status"`
 	ErrorMessage    string `json:"errorMessage"`
-	RequestId       string `json:"requestId"`	
+	RequestId       string `json:"requestId"`
 }
 
 type Issuance struct {
@@ -126,16 +123,15 @@ type AssetIssuances struct {
 	Description  string     `json:"description"`
 	Locked       bool       `json:"locked"`
 	Issuances    []Issuance `json:"issuances"`
-	RequestId    string     `json:"requestId"`		
+	RequestId    string     `json:"requestId"`
 }
 
-
 type WalletPayment struct {
-	Passphrase         string `json:"passphrase"`	
+	Passphrase         string `json:"passphrase"`
 	SourceAddress      string `json:"sourceAddress"`
 	DestinationAddress string `json:"destinationAddress"`
 	Asset              string `json:"asset"`
-	Quantity   		   uint64 `json:"quantity"`
+	Quantity           uint64 `json:"quantity"`
 	PaymentId          string `json:"paymentId"`
 	PaymentTag         string `json:"paymentTag"`
 	RequestId          string `json:"requestId"`
