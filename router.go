@@ -9,7 +9,7 @@ import (
 func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
-	router.Handle("/", ctxHandler(Index)).Methods("GET")
+	router.HandleFunc("/", Index).Methods("GET")
 	router.Handle("/payment", ctxHandler(PaymentCreate)).Methods("POST")
 	router.Handle("/payment/address", ctxHandler(AddressCreate)).Methods("POST")
 	router.Handle("/payment/{paymentId}", ctxHandler(GetPayment)).Methods("GET")
