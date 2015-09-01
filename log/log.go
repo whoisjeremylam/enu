@@ -93,6 +93,14 @@ func Printf(format string, a ...interface{}) {
 	fluentf("", true, format, a...)
 }
 
+// Compatibility function with existing logger.
+// Writes a copy of the string to format to stdout but also sends a copy to Fluent
+// Uses a default tag of 'enu.$ENV.$HOSTNAME'
+// Note: If unable to forward to Fluent, this function will NOT raise errors with respect to Fluent
+func Println(a string) {
+	fluentf("", true, a)
+}
+
 // Log a formatted string to Fluent.
 // It is suggested that 'tag' be set to the name of the source file. eg "log.go"
 // Otherwise, 'tag' can be set to an empty string if the default tag of 'enu.$ENV.$HOSTNAME' is sufficient
@@ -145,7 +153,6 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 	objectToLog.RequestId = context.Value(consts.RequestIdKey).(string)
 	objectToLog.BlockchainId = context.Value(consts.BlockchainIdKey).(string)
 	objectToLog.AccessId = context.Value(consts.AccessKeyKey).(string)
-	objectToLog.Nonce = context.Value(consts.NonceIntKey).(int64)
 
 	errorString := fmt.Sprintf(format, a...)
 
@@ -186,11 +193,7 @@ func object(tag string, object interface{}, errorString string, suppressErrors b
 		Init()
 	}
 
-	if object == nil {
-		payloadJsonBytes = make([]byte, 0)
-	} else {
-		payloadJsonBytes, err = json.Marshal(LogObject)
-	}
+	payloadJsonBytes, err = json.Marshal(LogObject)
 
 	if err != nil {
 		logString := fmt.Sprintf("log.go: Fatal error - unable to marshall to json: %s", object)
