@@ -26,7 +26,6 @@ import (
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
-
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430
@@ -904,8 +903,9 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 	defer counterparty_Mutexes.Unlock()
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
+	log.Println("Composing the CreateNumericIssuance transaction")
 	// Create the issuance
-	createResult, err := CreateIssuance(sourceAddress, asset, description, quantity, divisible, sourceAddressPubKey)
+	createResult, err := CreateNumericIssuance(sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
 		log.Printf("Err in CreateIssuance(): %s\n", err.Error())
 		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
