@@ -80,6 +80,7 @@ type AddressBalances struct {
 }
 
 type Asset struct {
+	Passphrase    string `json:"passphrase"`
 	SourceAddress string `json:"sourceAddress"`
 	AssetId       string `json:"assetId"`
 	Asset         string `json:"asset"`
@@ -98,6 +99,7 @@ type ReturnCode struct {
 }
 
 type Dividend struct {
+	Passphrase      string `json:"passphrase"`
 	SourceAddress   string `json:"sourceAddress"`
 	DividendId      string `json:"dividendId"`
 	Asset           string `json:"asset"`
