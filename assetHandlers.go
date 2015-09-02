@@ -133,52 +133,6 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
-func AssetBalance(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
-
-	var assetBalances enulib.AssetBalances
-
-	requestId := c.Value(consts.RequestIdKey).(string)
-	assetBalances.RequestId = requestId
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	// check generic args and parse
-	_, err := CheckAndParseJsonCTX(c, w, r)
-	if err != nil {
-		ReturnServerError(c, w, err)
-		return nil
-	}
-
-	vars := mux.Vars(r)
-	asset := vars["asset"]
-
-	//	**** Need to check all the types are as expected and all required parameters received
-
-	log.Printf("AssetBalance: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
-
-	result, err := counterpartyapi.GetBalancesByAsset(asset)
-	if err != nil {
-		ReturnServerError(c, w, err)
-		return nil
-	}
-
-	// Iterate and gather the balances to return
-	assetBalances.Asset = asset
-	for _, item := range result {
-		var balance enulib.AddressAmount
-
-		balance.Address = item.Address
-		balance.Quantity = item.Quantity
-
-		assetBalances.Balances = append(assetBalances.Balances, balance)
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
-		panic(err)
-	}
-	return nil
-}
-
 func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var issuanceForAsset enulib.AssetIssuances
