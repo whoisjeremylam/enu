@@ -58,6 +58,11 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetId := enulib.GenerateAssetId()
 	log.Printf("Generated assetId: %s", assetId)
 	assetStruct.AssetId = assetId
+	assetStruct.Asset = asset
+	assetStruct.Description = description
+	assetStruct.Quantity = quantity
+	assetStruct.Divisible = divisible
+	assetStruct.SourceAddress = sourceAddress
 
 	// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
