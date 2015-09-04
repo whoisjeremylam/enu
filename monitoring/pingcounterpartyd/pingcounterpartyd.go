@@ -2,7 +2,7 @@ package main
 
 import (
 	"io/ioutil"
-	"log"
+	//	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -10,7 +10,10 @@ import (
 
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
+	"github.com/vennd/enu/log"
 )
+
+var sourceFile = "pingcounterpartyd.go"
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
 var sendAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
@@ -37,8 +40,8 @@ func main() {
 		result, err := counterpartyapi.GetRunningInfo()
 
 		if err != nil {
-			log.Println("Error retrieving our block height")
-			log.Println(err)
+			log.Fluentf(sourceFile, "Error retrieving our block height")
+			log.Fluentf(sourceFile, err.Error())
 			os.Exit(-1)
 		}
 		c1 <- result.LastBlock.BlockIndex
@@ -46,9 +49,9 @@ func main() {
 
 	select {
 	case result1 = <-c1:
-		log.Printf("Counterpartyd last processed block: %d\n", result1)
+		log.Fluentf(sourceFile, "Counterpartyd last processed block: %d\n", result1)
 	case <-time.After(time.Second * 10):
-		log.Println("Timeout when retrieving last processed counterpartyd block")
+		log.Fluentf(sourceFile, "Timeout when retrieving last processed counterpartyd block")
 		os.Exit(-1)
 	}
 
@@ -61,16 +64,16 @@ func main() {
 		response, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
-			log.Println("Error reading from blockchain.info")
-			log.Println(err)
+			log.Fluentf(sourceFile, "Error reading from blockchain.info")
+			log.Fluentf(sourceFile, err.Error())
 			os.Exit(-2)
 		}
 
 		result, err2 := strconv.ParseUint(string(response), 10, 64)
 
 		if err2 != nil {
-			log.Println("Error reading from blockchain.info")
-			log.Println(err2)
+			log.Fluentf(sourceFile, "Error reading from blockchain.info")
+			log.Fluentf(sourceFile, err2.Error())
 			os.Exit(-2)
 		}
 
@@ -79,9 +82,9 @@ func main() {
 
 	select {
 	case result2 = <-c2:
-		log.Printf("Blockchain.info block height: %d\n", result2)
+		log.Fluentf(sourceFile, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
-		log.Println("Timeout when retrieving blockchain.info block height")
+		log.Fluentf(sourceFile, "Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
 	}
 
@@ -103,14 +106,14 @@ func main() {
 
 		if err != nil {
 			log.Println("Error getting pubkey")
-			log.Println(err)
+			log.Println(err.Error())
 		}
 
 		resultCreateSend, err2 := counterpartyapi.CreateSend(sendAddress, destinationAddress, "SHIMA", 1000, pubKey)
 
 		if err2 != nil {
 			log.Println("Error creating counterparty send")
-			log.Println(err2)
+			log.Println(err2.Error())
 		}
 
 		c3 <- resultCreateSend
@@ -118,9 +121,9 @@ func main() {
 
 	select {
 	case result3 = <-c3:
-		log.Printf("Successfully created transaction: %s\n", result3)
+		log.Fluentf(sourceFile, "Successfully created transaction: %s\n", result3)
 	case <-time.After(time.Second * 30):
-		log.Println("Timeout when creating counterparty send")
+		log.Fluentf(sourceFile, "Timeout when creating counterparty send")
 		os.Exit(-4)
 	}
 

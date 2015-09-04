@@ -25,17 +25,17 @@ func Init() {
 	}
 
 	if _, err := os.Stat("./enuapi.json"); err == nil {
-		log.Println("Found and using configuration file ./enuapi.json")
+		//		log.Println("Found and using configuration file ./enuapi.json")
 		configFilePath = "./enuapi.json"
 	} else {
 		if _, err := os.Stat(os.Getenv("GOPATH") + "/bin/enuapi.json"); err == nil {
 			configFilePath = os.Getenv("GOPATH") + "/bin/enuapi.json"
-			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+			//			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 		} else {
 			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
 				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
-				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
+				//				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 			} else {
 				log.Fatalln("Cannot find enuapi.json")
 			}
@@ -53,7 +53,7 @@ func InitWithConfigPath(configFilePath string) {
 	}
 
 	// Read configuration from file
-	log.Printf("Reading %s\n", configFilePath)
+	//	log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")

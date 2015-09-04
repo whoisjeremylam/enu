@@ -41,7 +41,7 @@ func main() {
 
 		if err != nil {
 			log.Fluentf(sourceFile, "Error retrieving our block height")
-			log.Println(err.Error())
+			log.Fluentf(sourceFile, err.Error())
 			os.Exit(-1)
 		}
 		c1 <- ourBlockHeight
@@ -49,9 +49,9 @@ func main() {
 
 	select {
 	case result1 = <-c1:
-		log.Printf("Our block height: %d\n", result1)
+		log.Fluentf(sourceFile, "Our block height: %d\n", result1)
 	case <-time.After(time.Second * 10):
-		log.Println("Timeout when retrieving our block height")
+		log.Fluentf(sourceFile, "Timeout when retrieving our block height")
 		os.Exit(-1)
 	}
 
@@ -64,16 +64,16 @@ func main() {
 		response, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
-			log.Println("Error reading from blockchain.info")
-			log.Println(err.Error())
+			log.Fluentf(sourceFile, "Error reading from blockchain.info")
+			log.Fluentf(sourceFile, err.Error())
 			os.Exit(-2)
 		}
 
 		result, err2 := strconv.ParseInt(string(response), 10, 64)
 
 		if err2 != nil {
-			log.Println("Error reading from blockchain.info")
-			log.Println(err2.Error())
+			log.Fluentf(sourceFile, "Error reading from blockchain.info")
+			log.Fluentf(sourceFile, err2.Error())
 			os.Exit(-2)
 		}
 
@@ -82,9 +82,9 @@ func main() {
 
 	select {
 	case result2 = <-c2:
-		log.Fluentf(sourceFile, "Blockchain.info block height: %d\n", result2)
+		log.Fluentf(sourceFile, sourceFile, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
-		log.Println("Timeout when retrieving blockchain.info block height")
+		log.Fluentf(sourceFile, "Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
 	}
 
