@@ -17,6 +17,8 @@ import (
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
+var sourceFile = "logger.go"
+
 type appError struct {
 	Error   error
 	Message string
