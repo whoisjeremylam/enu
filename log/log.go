@@ -63,7 +63,7 @@ func InitWithConfigPath(configFilePath string) {
 	}
 
 	// Read configuration from file
-	log.Printf("Reading %s\n", configFilePath)
+	//	log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
@@ -125,7 +125,7 @@ func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}
 		env = "unknown"
 	}
 
-	if compatibilityMode || env == "dev" {
+	if compatibilityMode || env == "dev" || env == "unknown" {
 		log.Printf(format, a...)
 	}
 
@@ -150,9 +150,18 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 	}
 
 	var objectToLog contextValues
-	objectToLog.RequestId = context.Value(consts.RequestIdKey).(string)
-	objectToLog.BlockchainId = context.Value(consts.BlockchainIdKey).(string)
-	objectToLog.AccessId = context.Value(consts.AccessKeyKey).(string)
+
+	if context.Value(consts.RequestIdKey) != nil {
+		objectToLog.RequestId = context.Value(consts.RequestIdKey).(string)
+	}
+
+	if context.Value(consts.BlockchainIdKey) != nil {
+		objectToLog.BlockchainId = context.Value(consts.BlockchainIdKey).(string)
+	}
+
+	if context.Value(consts.AccessKeyKey) != nil {
+		objectToLog.AccessId = context.Value(consts.AccessKeyKey).(string)
+	}
 
 	errorString := fmt.Sprintf(format, a...)
 
