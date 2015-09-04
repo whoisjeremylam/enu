@@ -119,16 +119,18 @@ func Index(w http.ResponseWriter, r *http.Request) {
 func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Request) (string, int64, error) {
 	// Pull headers that are necessary
 	accessKey := r.Header.Get("AccessKey")
-	nonce := r.Header.Get("Nonce")
+	//	nonce := r.Header.Get("Nonce")
+	nonce := "0"
 	nonceInt, convertNonceErr := strconv.ParseInt(nonce, 10, 64)
 	//	signatureVersion := r.Header.Get("SignatureVersion")
 	//	signatureMethod := r.Header.Get("SignatureMethod")
 	signature := r.Header.Get("Signature")
-	var nonceDB int64
+	//	var nonceDB int64
 	var err error
 
 	// Headers weren't set properly, return forbidden
-	if accessKey == "" || nonce == "" || signature == "" {
+	//	if accessKey == "" || nonce == "" || signature == "" {
+	if accessKey == "" || signature == "" {
 		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, none, signature")
 
 		log.Printf("Headers set incorrectly: accessKey=%s, nonce=%s, signature=%s\n", accessKey, nonce, signature)
@@ -142,14 +144,14 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 		ReturnUnauthorised(c, w, err)
 
 		return accessKey, nonceInt, err
-	} else if nonceInt <= database.GetNonceByAccessKey(accessKey) {
-		err = errors.New("Invalid nonce value")
+		//	} else if nonceInt <= database.GetNonceByAccessKey(accessKey) {
+		//		err = errors.New("Invalid nonce value")
 
-		//Nonce is not greater than the nonce in the DB
-		log.Printf("Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, nonce, nonceDB)
-		ReturnUnauthorised(c, w, err)
+		//		//Nonce is not greater than the nonce in the DB
+		//		log.Printf("Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, nonce, nonceDB)
+		//		ReturnUnauthorised(c, w, err)
 
-		return accessKey, nonceInt, err
+		//		return accessKey, nonceInt, err
 	} else if database.UserKeyExists(accessKey) == false {
 		returnErr := errors.New("Attempt to access API with unknown user key")
 		// User key doesn't exist
@@ -159,7 +161,7 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 		return accessKey, nonceInt, returnErr
 	}
 
-	return accessKey, nonceInt, nil
+	return accessKey, 0, nil
 }
 
 //func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, string, int64, error) {
