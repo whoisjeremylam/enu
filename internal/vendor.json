@@ -164,6 +164,13 @@
 			"revisionTime": "2015-07-15T21:39:42+09:00"
 		},
 		{
+			"canonical": "github.com/xeipuuv/gojsonschema",
+			"comment": "",
+			"local": "github.com/xeipuuv/gojsonschema",
+			"revision": "987b638051a365f087b9e7120eb92bb1b1df341b",
+			"revisionTime": "2015-07-29T02:28:06+08:00"
+		},
+		{
 			"canonical": "golang.org/x/net/context",
 			"comment": "",
 			"local": "golang.org/x/net/context",
