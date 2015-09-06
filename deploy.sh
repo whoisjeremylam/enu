@@ -22,10 +22,6 @@ go install github.com/vennd/enu
 go install github.com/vennd/enu/monitoring/pingcounterpartyd
 go install github.com/vennd/enu/monitoring/pingbitcoind
 
-# Restart processes
-cd $GOPATH/bin
-launchProcess.sh restart enu
-
 # This doesn't update service monitoring or scripts used for monitoring
 
 # Restore execute permissions on scripts
@@ -35,6 +31,10 @@ chmod u+x /home/api/api/src/github.com/vennd/enu/deploy.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/restartAndAlertBitcoin.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingcounterpartyd/restartAndAlertCounterparty.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/launchProcess.sh
+
+# Restart processes
+cd $GOPATH/bin
+launchProcess.sh restart enu
 
 # Alert
 curl -s \
