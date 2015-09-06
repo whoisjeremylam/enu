@@ -157,6 +157,20 @@
 			"revisionTime": "2014-08-01T17:21:46-04:00"
 		},
 		{
+			"canonical": "github.com/xeipuuv/gojsonpointer",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/github.com/xeipuuv/gojsonpointer",
+			"revision": "636edb2500d21f2ed09ea96a00deb36bbd07cf70",
+			"revisionTime": "2015-01-02T14:00:19+08:00"
+		},
+		{
+			"canonical": "github.com/xeipuuv/gojsonreference",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/github.com/xeipuuv/gojsonreference",
+			"revision": "e02fc20de94c78484cd5ffb007f8af96be030a45",
+			"revisionTime": "2015-08-08T14:50:54+08:00"
+		},
+		{
 			"canonical": "github.com/vennd/mneumonic",
 			"comment": "",
 			"local": "github.com/vennd/mneumonic",

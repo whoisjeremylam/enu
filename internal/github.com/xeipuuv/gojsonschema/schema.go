@@ -32,7 +32,7 @@ import (
 	"reflect"
 	"regexp"
 
-	"github.com/xeipuuv/gojsonreference"
+	"github.com/vennd/enu/internal/github.com/xeipuuv/gojsonreference"
 )
 
 var (
