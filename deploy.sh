@@ -12,7 +12,7 @@ echo GOROOT=$GOROOT
 echo PATH=$PATH
 
 # Refresh source code and clean up executables
-cd $GOPATH/src/github.com/vennd/enu && git pull
+cd $GOPATH/src/github.com/vennd/enu && git reset --hard && git pull
 rm $GOPATH/bin/enu
 rm $GOPATH/bin/pingcounterpartyd
 rm $GOPATH/bin/pingbitcoind
@@ -34,6 +34,7 @@ chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/pingbit
 chmod u+x /home/api/api/src/github.com/vennd/enu/deploy.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/restartAndAlertBitcoin.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingcounterpartyd/restartAndAlertCounterparty.sh
+chmod u+x /home/api/api/src/github.com/vennd/enu/launchProcess.sh
 
 # Alert
 curl -s \
