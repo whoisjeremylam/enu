@@ -21,10 +21,19 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetStruct.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	c = context.WithValue(c, consts.RequestTypeKey, "asset")
+
 	// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 	m := payload.(map[string]interface{})
@@ -37,9 +46,6 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	divisible := m["divisible"].(bool)
 
 	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, description: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, description, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
-
-	// check function specific args
-	//	**** Need to check all the types are as expected and all required parameters received
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {

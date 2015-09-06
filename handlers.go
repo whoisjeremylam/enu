@@ -16,6 +16,7 @@ import (
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 
+	"github.com/vennd/enu/internal/github.com/xeipuuv/gojsonschema"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
@@ -241,5 +242,38 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 
+	// Arg checking
+
+	u, ok := c.Value(consts.RequestTypeKey).(string)
+	if ok {
+
+		check := make(map[string]string)
+		check["asset"] =
+			`
+		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"description":{"type":"string"},"asset":{"type":"string"},"quantity":{"type":"integer"},"divisible":{"type":"boolean"}},"required":["sourceAddress","asset","quantity","divisible","description"]}
+	`
+
+		schemaLoader := gojsonschema.NewStringLoader(check[u])
+		documentLoader := gojsonschema.NewGoLoader(payload)
+
+		result, err := gojsonschema.Validate(schemaLoader, documentLoader)
+		if err != nil {
+			panic(err.Error())
+		}
+
+		if result.Valid() {
+			log.Printf("The document is valid\n")
+		} else {
+			log.Printf("The document is not valid. see errors :\n")
+			var errorList string
+			for _, desc := range result.Errors() {
+				log.Printf("- %s\n", desc)
+				errorList = errorList + fmt.Sprintf("%s\n", desc)
+
+			}
+			err := errors.New(errorList)
+			return payload, err
+		}
+	}
 	return payload, nil
 }

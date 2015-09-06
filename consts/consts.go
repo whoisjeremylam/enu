@@ -8,6 +8,7 @@ const RequestIdKey key = 0
 const AccessKeyKey key = 1
 const NonceIntKey key = 2
 const BlockchainIdKey key = 3
+const RequestTypeKey key = 4
 
 const CounterpartyBlockchainId string = "counterparty"
 const RippleBlockchainId string = "ripple"
