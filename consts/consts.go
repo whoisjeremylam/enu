@@ -21,3 +21,5 @@ const AccessKeyInvalidStatus = "invalid"   // the access key has been made revok
 const AccessKeyDisabledStatus = "disabled" // the access key has been disabled - eg temporarily made unavailable. This can be used when maintenance is occuring on the Enu application
 
 var AccessKeyStatuses = []string{AccessKeyValidStatus, AccessKeyInvalidStatus, AccessKeyDisabledStatus}
+
+const SourceFile = "logger.go"
