@@ -158,6 +158,16 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	vars := mux.Vars(r)
 	paymentId := vars["paymentId"]
 
+	if paymentId == "" || len(paymentId) < 16 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect paymentId"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+
+	}
+
 	log.Printf("GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
 
 	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)

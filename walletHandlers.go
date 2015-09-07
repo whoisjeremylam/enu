@@ -131,6 +131,16 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	vars := mux.Vars(r)
 	address := vars["address"]
 
+	if address == "" || len(address) != 34 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+
+	}
+
 	//	**** Need to check all the types are as expected and all required parameters received
 
 	log.Printf("WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))

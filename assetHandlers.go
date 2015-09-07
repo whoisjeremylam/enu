@@ -180,7 +180,14 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 	vars := mux.Vars(r)
 	asset := vars["asset"]
 
-	//	**** Need to check all the types are as expected and all required parameters received
+	if asset == "" || len(asset) < 5 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of asset code received in the request"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+	}
 
 	log.Printf("AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
@@ -262,7 +269,14 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	vars := mux.Vars(r)
 	asset := vars["asset"]
 
-	//	**** Need to check all the types are as expected and all required parameters received
+	if asset == "" || len(asset) < 5 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of asset code received in the request"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+	}
 
 	log.Printf("AssetLedger: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
