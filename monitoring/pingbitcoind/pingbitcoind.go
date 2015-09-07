@@ -82,7 +82,7 @@ func main() {
 
 	select {
 	case result2 = <-c2:
-		log.Fluentf(sourceFile, sourceFile, "Blockchain.info block height: %d\n", result2)
+		log.Fluentf(sourceFile, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
 		log.Fluentf(sourceFile, "Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
