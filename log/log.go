@@ -10,7 +10,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"strconv"
 
 	"github.com/vennd/enu/consts"
 
@@ -92,7 +91,7 @@ func InitWithConfigPath(configFilePath string) {
 // Uses a default tag of 'enu.$ENV.$HOSTNAME'
 // Note: If unable to forward to Fluent, this function will NOT raise errors with respect to Fluent
 func Printf(format string, a ...interface{}) {
-	fluentf("", true, format, a...)
+	fluentf(consts.LOGINFO, true, format, a...)
 }
 
 // Compatibility function with existing logger.
@@ -100,7 +99,7 @@ func Printf(format string, a ...interface{}) {
 // Uses a default tag of 'enu.$ENV.$HOSTNAME'
 // Note: If unable to forward to Fluent, this function will NOT raise errors with respect to Fluent
 func Println(a string) {
-	fluentf("", true, a)
+	fluentf(consts.LOGINFO, true, a)
 }
 
 // Log a formatted string to Fluent.
@@ -108,12 +107,54 @@ func Println(a string) {
 // Otherwise, 'tag' can be set to an empty string if the default tag of 'enu.$ENV.$HOSTNAME' is sufficient
 // Use this function whenever doing general logging which doesn't require the context to be logged
 // If the environment variable ENV=dev then this function will also log to stdout
-func Fluentf(tag string, format string, a ...interface{}) {
-	fluentf(tag, false, format, a...)
+func Fluentf(errorLevel string, format string, a ...interface{}) {
+	fluentf(errorLevel, false, format, a...)
 }
 
 // When compatibilityMode == true then also log to stdout
-func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}) {
+func fluentf(errorLevel string, compatibilityMode bool, format string, a ...interface{}) {
+	//	errorString := fmt.Sprintf(format, a...)
+
+	//	env := os.Getenv("ENV")
+	//	hostname, err := os.Hostname()
+
+	//	if err != nil {
+	//		hostname = "unknown"
+	//	}
+
+	//	if env == "" {
+	//		env = "unknown"
+	//	}
+
+	//	if compatibilityMode || env == "dev" || env == "unknown" {
+	//		log.Printf(format, a...)
+	//	}
+
+	//	fullTag := "enu." + env + "." + hostname
+
+	//	_, file, line, _ := runtime.Caller(1)
+	//	tag = file + ":" + strconv.Itoa(line) + ":" + tag
+
+	//	if tag != "" {
+	//		fullTag += "." + tag
+	//	}
+
+	//	object(fullTag, nil, errorString, compatibilityMode)
+	type objectValues struct {
+		// Information about the caller
+		Caller     string `json:"caller"`
+		LineNumber int    `json:"lineNumber"`
+		ErrorLevel string `json:"errorLevel"`
+	}
+
+	var objectToLog objectValues
+
+	// Add the caller and errorlevel into the object to log
+	_, file, line, _ := runtime.Caller(1)
+	objectToLog.Caller = file
+	objectToLog.LineNumber = line
+	objectToLog.ErrorLevel = errorLevel
+
 	errorString := fmt.Sprintf(format, a...)
 
 	env := os.Getenv("ENV")
@@ -131,27 +172,29 @@ func fluentf(tag string, compatibilityMode bool, format string, a ...interface{}
 		log.Printf(format, a...)
 	}
 
-	fullTag := "enu." + env + "." + hostname
-	if tag != "" {
-		fullTag += "." + tag
-	} else {
-	}
+	tag := "enu." + env + "." + hostname
 
-	object(fullTag, nil, errorString, compatibilityMode)
+	object(tag, objectToLog, errorString, compatibilityMode)
 }
 
 // Log a formatted string with a corresponding context to Fluent.
 // The values from the context are copied to a local struct
 // If the environment variable ENV=dev then this function will also log to stdout
-func FluentfContext(tag string, context context.Context, format string, a ...interface{}) {
-	type contextValues struct {
+func FluentfContext(errorLevel string, context context.Context, format string, a ...interface{}) {
+	type objectValues struct {
+		// Context values
 		RequestId    string `json:"requestId"`
 		BlockchainId string `json:"blockchainId"`
 		AccessId     string `json:"accessId"`
 		Nonce        int64  `json:"nonce"`
+
+		// Information about the caller
+		Caller     string `json:"caller"`
+		LineNumber int    `json:"lineNumber"`
+		ErrorLevel string `json:"errorLevel"`
 	}
 
-	var objectToLog contextValues
+	var objectToLog objectValues
 
 	if context.Value(consts.RequestIdKey) != nil {
 		objectToLog.RequestId = context.Value(consts.RequestIdKey).(string)
@@ -165,14 +208,42 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 		objectToLog.AccessId = context.Value(consts.AccessKeyKey).(string)
 	}
 
+	// Add the caller and errorlevel into the object to log
+	_, file, line, _ := runtime.Caller(1)
+	objectToLog.Caller = file
+	objectToLog.LineNumber = line
+	objectToLog.ErrorLevel = errorLevel
+
 	errorString := fmt.Sprintf(format, a...)
 
 	env := os.Getenv("ENV")
 	hostname, err := os.Hostname()
 
-	if env == "dev" {
+	if err != nil {
+		hostname = "unknown"
+	}
+
+	if env == "" {
+		env = "unknown"
+	}
+
+	if env == "dev" || env == "unknown" {
 		log.Printf(format, a...)
 	}
+
+	tag := "enu." + env + "." + hostname
+
+	object(tag, objectToLog, errorString, false)
+}
+
+// Log a formatted string with a corresponding context to Fluent.
+// The values from the context are copied to a local struct
+// If the environment variable ENV=dev then this function will also log to stdout
+func FluentfObject(errorLevel string, objectToLog interface{}, format string, a ...interface{}) {
+	errorString := fmt.Sprintf(format, a...)
+
+	env := os.Getenv("ENV")
+	hostname, err := os.Hostname()
 
 	if err != nil {
 		hostname = "unknown"
@@ -187,13 +258,6 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 	}
 
 	fullTag := "enu." + env + "." + hostname
-
-	_, file, line, _ := runtime.Caller(1)
-	tag = file + ":" + strconv.Itoa(line) + ":" + tag
-
-	if tag != "" {
-		fullTag += "." + tag
-	}
 
 	object(fullTag, objectToLog, errorString, false)
 }
