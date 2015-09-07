@@ -41,11 +41,11 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)
 	asset := m["asset"].(string)
-	description := m["description"].(string)
+	//	description := m["description"].(string)
 	quantity := uint64(m["quantity"].(float64))
 	divisible := m["divisible"].(bool)
 
-	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, description: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, description, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
+	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -65,7 +65,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	log.Printf("Generated assetId: %s", assetId)
 	assetStruct.AssetId = assetId
 	assetStruct.Asset = asset
-	assetStruct.Description = description
+	//	assetStruct.Description = description
 	assetStruct.Quantity = quantity
 	assetStruct.Divisible = divisible
 	assetStruct.SourceAddress = sourceAddress
@@ -77,7 +77,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	}
 
 	// Start asset creation in async mode
-	go counterpartyapi.DelegatedCreateIssuance(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, description, quantity, divisible, requestId)
+	go counterpartyapi.DelegatedCreateIssuance(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, quantity, divisible, requestId)
 
 	return nil
 }

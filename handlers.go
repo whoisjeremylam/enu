@@ -250,7 +250,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		check := make(map[string]string)
 		check["asset"] =
 			`
-		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"description":{"type":"string"},"asset":{"type":"string","minLength":4},"quantity":{"type":"integer"},"divisible":{"type":"boolean"}},"required":["sourceAddress","asset","quantity","divisible","description"]}
+		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"description":{"type":"string"},"asset":{"type":"string","minLength":4},"quantity":{"type":"integer"},"divisible":{"type":"boolean"}},"required":["sourceAddress","asset","quantity","divisible"]}
 	`
 		check["dividend"] =
 			`

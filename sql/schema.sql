@@ -1,8 +1,8 @@
 -- MySQL dump 10.13  Distrib 5.6.24, for Win64 (x86_64)
 --
--- Host: localhost    Database: vennd
+-- Host: 127.0.0.1    Database: vennd
 -- ------------------------------------------------------
--- Server version	5.6.26-log
+-- Server version	5.6.25
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -27,7 +27,7 @@ CREATE TABLE `addresses` (
   `accessKey` varchar(64) DEFAULT NULL,
   `sourceAddress` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
-) ENGINE=InnoDB AUTO_INCREMENT=31 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=89 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -55,6 +55,32 @@ CREATE TABLE `addressmaps` (
   UNIQUE KEY `addressMaps2` (`nativePaymentAddress`),
   UNIQUE KEY `addressMaps3` (`externalAddress`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `assets`
+--
+
+DROP TABLE IF EXISTS `assets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `assets` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `accessKey` varchar(64) DEFAULT NULL,
+  `assetId` varchar(200) DEFAULT NULL,
+  `sourceAddress` varchar(200) DEFAULT NULL,
+  `asset` varchar(200) DEFAULT NULL,
+  `description` varchar(200) DEFAULT NULL,
+  `quantity` bigint(20) DEFAULT NULL,
+  `divisible` tinyint(1) DEFAULT NULL,
+  `status` varchar(200) DEFAULT NULL,
+  `errorDescription` varchar(512) DEFAULT NULL,
+  `requestId` varchar(200) DEFAULT NULL,
+  `retryCount` tinyint(4) DEFAULT NULL,
+  `signedRawTx` text,
+  PRIMARY KEY (`rowid`),
+  KEY `assets1` (`assetId`)
+) ENGINE=InnoDB AUTO_INCREMENT=149 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -152,6 +178,30 @@ CREATE TABLE `debits` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `dividends`
+--
+
+DROP TABLE IF EXISTS `dividends`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `dividends` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `accessKey` varchar(64) DEFAULT NULL,
+  `dividendId` varchar(200) DEFAULT NULL,
+  `sourceAddress` varchar(200) DEFAULT NULL,
+  `asset` varchar(200) DEFAULT NULL,
+  `dividendAsset` varchar(200) DEFAULT NULL,
+  `quantityPerUnit` bigint(20) DEFAULT NULL,
+  `status` varchar(200) DEFAULT NULL,
+  `errorDescription` varchar(512) DEFAULT NULL,
+  `retryCount` tinyint(4) DEFAULT NULL,
+  `signedRawTx` text,
+  PRIMARY KEY (`rowid`),
+  KEY `dividends1` (`dividendId`)
+) ENGINE=InnoDB AUTO_INCREMENT=137 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `fees`
 --
 
@@ -225,9 +275,11 @@ CREATE TABLE `payments` (
   `broadcastTxId` varchar(200) DEFAULT NULL,
   `errorDescription` varchar(512) DEFAULT NULL,
   `paymentTag` varchar(512) DEFAULT NULL,
+  `retryCount` tinyint(4) DEFAULT NULL,
+  `signedRawTx` text,
   PRIMARY KEY (`rowid`),
   KEY `payments1` (`blockId`)
-) ENGINE=InnoDB AUTO_INCREMENT=121 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=128 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -283,7 +335,7 @@ CREATE TABLE `userkeys` (
   `blockchainId` varchar(100) DEFAULT NULL,
   `status` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=68 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -295,4 +347,4 @@ CREATE TABLE `userkeys` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-09-01 11:23:55
+-- Dump completed on 2015-09-07 13:21:20
