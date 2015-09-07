@@ -22,4 +22,4 @@ const AccessKeyDisabledStatus = "disabled" // the access key has been disabled -
 
 var AccessKeyStatuses = []string{AccessKeyValidStatus, AccessKeyInvalidStatus, AccessKeyDisabledStatus}
 
-const SourceFile = "logger.go"
+const LOGINFO = "INFO"

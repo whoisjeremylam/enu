@@ -34,7 +34,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	parent := context.TODO()
 	ctx := context.WithValue(parent, consts.RequestIdKey, requestId)
 
-	log.FluentfContext(consts.SourceFile, ctx, "%s %s entered.", r.Method, r.URL.Path)
+	log.FluentfContext(consts.LOGINFO, ctx, "%s %s entered.", r.Method, r.URL.Path)
 
 	accessKey, nonceInt, err := CheckHeaderGeneric(ctx, w, r)
 	if err != nil {
@@ -68,7 +68,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// If the blockchain specified in the path isn't valid and a default blockchainId isn't set in the userkey then fail
 	if blockchainValid == false && userBlockchainIdValid == false {
-		log.FluentfContext(consts.SourceFile, ctx, "Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
+		log.FluentfContext(consts.LOGINFO, ctx, "Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 		ReturnServerError(ctx, w, errors.New(e))
 
@@ -86,7 +86,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Add blockchain to the context now that we know it
 	ctx = context.WithValue(ctx1, consts.BlockchainIdKey, blockchainId)
 
-	log.FluentfContext(consts.SourceFile, ctx, "Calling context function.")
+	log.FluentfContext(consts.LOGINFO, ctx, "Calling context function.")
 
 	// run function
 	if e := fn(ctx, w, r); e != nil { // e is *appError, not os.Error.
@@ -94,7 +94,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Log how long it took
-	log.FluentfContext(consts.SourceFile, ctx,
+	log.FluentfContext(consts.LOGINFO, ctx,
 		"%s,%s,%s",
 		r.Method,
 		r.RequestURI,

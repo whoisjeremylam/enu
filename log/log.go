@@ -9,6 +9,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
+	"strconv"
 
 	"github.com/vennd/enu/consts"
 
@@ -181,6 +183,10 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 	}
 
 	fullTag := "enu." + env + "." + hostname
+
+	_, file, line, _ := runtime.Caller(1)
+	tag = file + ":" + strconv.Itoa(line) + ":" + tag
+
 	if tag != "" {
 		fullTag += "." + tag
 	}
