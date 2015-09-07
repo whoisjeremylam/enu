@@ -725,7 +725,7 @@ func CreateIssuance(sourceAddress string, asset string, description string, quan
 }
 
 // Automatically generates a numeric asset name and generates unsigned hex encoded transaction to issue an asset on Counterparty
-func CreateNumericIssuance(sourceAddress string, asset string, quantity uint64, divisible bool, pubKeyHexString string) (string, error) {
+func CreateNumericIssuance(sourceAddress string, asset string, quantity uint64, divisible bool, pubKeyHexString string) (string, string, error) {
 	var description string
 
 	if isInit == false {
@@ -740,15 +740,15 @@ func CreateNumericIssuance(sourceAddress string, asset string, quantity uint64, 
 
 	randomAssetName, err := generateRandomAssetName()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	result, err := CreateIssuance(sourceAddress, randomAssetName, description, quantity, divisible, pubKeyHexString)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return result, nil
+	return randomAssetName, result, nil
 }
 
 // Generates unsigned hex encoded transaction to pay a dividend on an asset on Counterparty
@@ -806,7 +806,7 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 	}
 
 	// Write the payment with the generated payment id to the database
-	go database.InsertPayment(accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "DelegatedSend", 0, 1500, paymentTag, requestId)
+	go database.InsertPayment(accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, 1500, paymentTag, requestId)
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -854,6 +854,9 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 
 	log.Printf("Signed tx: %s\n", signed)
 
+	// Update the DB with the raw signed TX. This will allow re-transmissions if something went wrong with sending on the network
+	database.UpdatePaymentSignedRawTxByPaymentId(accessKey, paymentId, signed)
+
 	// Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
@@ -869,13 +872,13 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress string, assetId string, asset string, description string, quantity uint64, divisible bool, requestId string) (string, error) {
+func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool, requestId string) (string, error) {
 	if isInit == false {
 		Init()
 	}
 
 	// Write the asset with the generated asset id to the database
-	go database.InsertAsset(accessKey, assetId, sourceAddress, asset, description, quantity, divisible)
+	go database.InsertAsset(accessKey, assetId, sourceAddress, "TBA", asset, quantity, divisible, "valid")
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -905,14 +908,15 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 
 	log.Println("Composing the CreateNumericIssuance transaction")
 	// Create the issuance
-	createResult, err := CreateNumericIssuance(sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
+	randomAssetName, createResult, err := CreateNumericIssuance(sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
 		log.Printf("Err in CreateIssuance(): %s\n", err.Error())
 		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
 		return "", err
 	}
 
-	log.Printf("Created issuance of %d %s at %s: %s\n", quantity, asset, sourceAddress, createResult)
+	log.Printf("Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, randomAssetName, sourceAddress, createResult)
+	database.UpdateAssetNameByAssetId(accessKey, assetId, randomAssetName)
 
 	// Sign the transactions
 	signed, err := SignRawTransaction(passphrase, createResult)
@@ -922,11 +926,13 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 
 	log.Printf("Signed tx: %s\n", signed)
 
-	// Transmit the transaction
+	//	 Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
 		return "", err
 	}
+
+	database.UpdateAssetCompleteByAssetId(accessKey, assetId, txId)
 
 	return txId, nil
 }
@@ -938,7 +944,7 @@ func DelegatedCreateDividend(accessKey string, passphrase string, dividendId str
 	}
 
 	// Write the dividend with the generated dividend id to the database
-	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
+	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, "valid")
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {

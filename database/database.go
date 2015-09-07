@@ -98,12 +98,12 @@ func InitWithConfigPath(configFilePath string) {
 }
 
 // Inserts an asset into the assets database
-func InsertAsset(accessKey string, assetId string, sourceAddressValue string, assetValue string, descriptionValue string, quantityValue uint64, divisibleValue bool) {
+func InsertAsset(accessKey string, assetId string, sourceAddressValue string, assetValue string, descriptionValue string, quantityValue uint64, divisibleValue bool, status string) {
 	if isInit == false {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("insert into assets(accessKey, assetId, sourceAddress, asset, description, quantity, divisible) values(?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := Db.Prepare("insert into assets(accessKey, assetId, sourceAddress, asset, description, quantity, divisible, status) values(?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Println("Failed to prepare statement. Reason: ")
 		panic(err.Error())
@@ -111,7 +111,7 @@ func InsertAsset(accessKey string, assetId string, sourceAddressValue string, as
 	defer stmt.Close()
 
 	// Perform the insert
-	_, err = stmt.Exec(accessKey, assetId, sourceAddressValue, assetValue, descriptionValue, quantityValue, divisibleValue)
+	_, err = stmt.Exec(accessKey, assetId, sourceAddressValue, assetValue, descriptionValue, quantityValue, divisibleValue, status)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -187,13 +187,96 @@ func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescri
 	return nil
 }
 
-// Inserts a dividend into the dividends database
-func InsertDividend(accessKey string, dividendId string, sourceAddressValue string, assetValue string, dividendAssetValue string, quantityPerUnitValue uint64) {
+func UpdateAssetStatusByAssetId(accessKey string, assetId string, status string) error {
 	if isInit == false {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("insert into dividends(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit) values(?, ?, ?, ?, ?, ?)")
+	asset := GetAssetByAssetId(accessKey, assetId)
+
+	if asset.AssetId == "" {
+		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	stmt, err := Db.Prepare("update assets set status=? where accessKey=? and assetId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(status, accessKey, assetId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func UpdateAssetNameByAssetId(accessKey string, assetId string, assetName string) error {
+	if isInit == false {
+		Init()
+	}
+
+	asset := GetAssetByAssetId(accessKey, assetId)
+
+	if asset.AssetId == "" {
+		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	stmt, err := Db.Prepare("update assets set asset=? where accessKey=? and assetId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(assetName, accessKey, assetId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func UpdateAssetCompleteByAssetId(accessKey string, assetId string, txId string) error {
+	if isInit == false {
+		Init()
+	}
+
+	asset := GetAssetByAssetId(accessKey, assetId)
+
+	if asset.AssetId == "" {
+		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	log.Printf("update assets set status='complete', broadcastTxId=%s where accessKey=%s and assetId = %s\n", txId, accessKey, assetId)
+
+	stmt, err := Db.Prepare("update assets set status='complete', broadcastTxId=? where accessKey=? and assetId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(txId, accessKey, assetId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+// Inserts a dividend into the dividends database
+func InsertDividend(accessKey string, dividendId string, sourceAddressValue string, assetValue string, dividendAssetValue string, quantityPerUnitValue uint64, status string) {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("insert into dividends(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, status) values(?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		log.Println("Failed to prepare statement. Reason: ")
 		panic(err.Error())
@@ -201,7 +284,7 @@ func InsertDividend(accessKey string, dividendId string, sourceAddressValue stri
 	defer stmt.Close()
 
 	// Perform the insert
-	_, err = stmt.Exec(accessKey, dividendId, sourceAddressValue, assetValue, dividendAssetValue, quantityPerUnitValue)
+	_, err = stmt.Exec(accessKey, dividendId, sourceAddressValue, assetValue, dividendAssetValue, quantityPerUnitValue, status)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -464,6 +547,33 @@ func UpdatePaymentCompleteByPaymentId(accessKey string, paymentId string, txId s
 	defer stmt.Close()
 
 	_, err2 := stmt.Exec(txId, accessKey, paymentId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func UpdatePaymentSignedRawTxByPaymentId(accessKey string, paymentId string, signedRawTx string) error {
+	if isInit == false {
+		Init()
+	}
+
+	payment := GetPaymentByPaymentId(accessKey, paymentId)
+
+	if payment.PaymentId == "" {
+		errorString := fmt.Sprintf("Payment does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	stmt, err := Db.Prepare("update payments set signedRawTx=? where accessKey=? and sourceTxId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(signedRawTx, accessKey, paymentId)
 	if err2 != nil {
 		return err2
 	}
