@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
+
 	"math/rand"
 	"net/http"
 	"strconv"
@@ -15,9 +15,9 @@ import (
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
-
 	"github.com/vennd/enu/internal/github.com/xeipuuv/gojsonschema"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/vennd/enu/log"
 )
 
 func ReturnUnauthorised(c context.Context, w http.ResponseWriter, e error) {
@@ -96,10 +96,10 @@ func ReturnServerError(c context.Context, w http.ResponseWriter, e error) {
 	var returnCode enulib.ReturnCode
 
 	if e == nil {
-		log.Printf("Unspecified server error.\n")
+		log.FluentfContext(consts.LOGERROR, c, "Unspecified server error.\n")
 		returnCode = enulib.ReturnCode{Code: -10000, Description: "Unspecified server error. Please contact Vennd.io support.", RequestId: c.Value(consts.RequestIdKey).(string)}
 	} else {
-		log.Printf("Server error: %s\n", e.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Server error: %s\n", e.Error())
 		returnCode = enulib.ReturnCode{Code: -10000, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
 	}
 
@@ -133,15 +133,14 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 	//	if accessKey == "" || nonce == "" || signature == "" {
 	if accessKey == "" || signature == "" {
 		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, none, signature")
-
-		log.Printf("Headers set incorrectly: accessKey=%s, nonce=%s, signature=%s\n", accessKey, nonce, signature)
+		log.FluentfContext(consts.LOGERROR, c, "Headers set incorrectly: accessKey=%s, nonce=%s, signature=%s\n", accessKey, nonce, signature)
 		ReturnUnauthorised(c, w, err)
 
 		return accessKey, nonceInt, err
 	} else if convertNonceErr != nil {
 		err = errors.New("Invalid nonce value")
 		// Unable to convert the value of nonce in the header to an integer
-		log.Println(convertNonceErr)
+		log.FluentfContext(consts.LOGERROR, c, convertNonceErr.Error())
 		ReturnUnauthorised(c, w, err)
 
 		return accessKey, nonceInt, err
@@ -156,7 +155,7 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 	} else if database.UserKeyExists(accessKey) == false {
 		returnErr := errors.New("Attempt to access API with unknown user key")
 		// User key doesn't exist
-		log.Printf("Attempt to access API with unknown user key: %s", accessKey)
+		log.FluentfContext(consts.LOGERROR, c, "Attempt to access API with unknown user key: %s", accessKey)
 		ReturnUnauthorised(c, w, returnErr)
 
 		return accessKey, nonceInt, returnErr
@@ -228,7 +227,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if err := json.Unmarshal(body, &payload); err != nil {
 		ReturnUnprocessableEntity(c, w, errors.New("Unable to unmarshal body"))
 	}
-	log.Printf("Request received: %s", body)
+	log.FluentfContext(consts.LOGINFO, c, "Request received: %s", body)
 
 	// Then look up secret and calculate digest
 	accessKey := c.Value(consts.AccessKeyKey).(string)
@@ -275,16 +274,15 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		}
 
 		if result.Valid() {
-			log.Printf("The document is valid\n")
+			log.FluentfContext(consts.LOGINFO, c, "The document is valid\n")
 		} else {
-			log.Printf("The document is not valid. see errors :\n")
 			var errorList string
 			for _, desc := range result.Errors() {
-				log.Printf("- %s\n", desc)
 				errorList = errorList + fmt.Sprintf("%s. ", desc)
 
 			}
 			err := errors.New(errorList)
+			log.FluentfContext(consts.LOGERROR, c, "The document is not valid. Errors : %s", errorList)
 			return payload, err
 		}
 	}

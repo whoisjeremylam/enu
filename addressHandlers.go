@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/vennd/enu/bitcoinapi"
@@ -10,6 +9,7 @@ import (
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/vennd/enu/log"
 )
 
 func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
@@ -27,8 +27,7 @@ func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	// Create the address
 	newAddress, err := bitcoinapi.GetNewAddress()
 	if err != nil {
-		log.Printf("Unable to create a new bitcoin address. Error: %s\n", err.Error())
-
+		log.FluentfContext(consts.LOGERROR, c, "Unable to create a new bitcoin address. Error: %s\n", err.Error())
 		ReturnServerError(c, w, err)
 		return nil
 	}
@@ -36,15 +35,13 @@ func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 	err2 := database.CreateSecondaryAddress(c.Value(consts.AccessKeyKey).(string), newAddress, requestId)
 	if err2 != nil {
-		log.Printf("Unable to persist new address to database. Error: %s\n", err2.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Unable to persist new address to database. Error: %s\n", err2.Error())
 	} else {
-		log.Printf("Created secondary address: %s for access key: %s\n", newAddress, c.Value(consts.AccessKeyKey).(string))
-
+		log.FluentfContext(consts.LOGINFO, c, "Created secondary address: %s for access key: %s\n", newAddress, c.Value(consts.AccessKeyKey).(string))
 		w.WriteHeader(http.StatusCreated)
 		if err = json.NewEncoder(w).Encode(address); err != nil {
 			panic(err)
 		}
-
 		//		ReturnCreated(w)
 	}
 

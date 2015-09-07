@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
@@ -12,6 +11,7 @@ import (
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/vennd/enu/log"
 )
 
 func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
@@ -32,7 +32,6 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			panic(err)
 		}
-
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
@@ -55,7 +54,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	if paymentId == "" {
 		paymentId = enulib.GeneratePaymentId()
 		simplePayment.PaymentId = paymentId
-		log.Printf("Generated paymentId: %s", simplePayment.PaymentId)
+		log.FluentfContext(consts.LOGINFO, c, "Generated paymentId: %s", simplePayment.PaymentId)
 	}
 
 	database.InsertPayment(c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag, requestId)
@@ -96,14 +95,12 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	vars := mux.Vars(r)
 	paymentId := vars["paymentId"]
 
-	log.Printf("PaymentRetry called for paymentId %s\n", paymentId)
-
+	log.FluentfContext(consts.LOGINFO, c, "PaymentRetry called for paymentId %s\n", paymentId)
 	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)
 
 	// Payment not found
 	if payment.Status == "Not found" || payment.Status == "" {
-		log.Printf("PaymentId: %s not found", paymentId)
-
+		log.FluentfContext(consts.LOGERROR, c, "PaymentId: %s not found", paymentId)
 		ReturnNotFound(c, w)
 		return nil
 	}
@@ -111,8 +108,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	// Payment isn't in an error state or manual state
 	if payment.Status != "error" && payment.Status != "manual" {
 		errorString := fmt.Sprintf("PaymentId: %s is not in an 'error' or 'manual' state. It is in '%s' state.", paymentId, payment.Status)
-		log.Println(errorString)
-
+		log.FluentfContext(consts.LOGINFO, c, errorString)
 		ReturnNotFoundWithCustomError(c, w, errorString)
 		return nil
 	}
@@ -120,7 +116,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	err = database.UpdatePaymentStatusByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId, "authorized")
 
 	if err != nil {
-		log.Println(err.Error())
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
 		ReturnUnprocessableEntity(c, w, err)
 	}
 
@@ -168,7 +164,7 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 
 	}
 
-	log.Printf("GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
+	log.FluentfContext(consts.LOGINFO, c, "GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
 
 	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)
 	// errorhandling here!!

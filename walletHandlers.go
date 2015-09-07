@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 
 	"github.com/vennd/enu/consts"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/vennd/enu/log"
 )
 
 func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
@@ -32,12 +32,11 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	// Create the wallet
 	wallet, err = counterpartycrypto.CreateWallet()
 	if err != nil {
-		log.Printf("Unable to create a Counterparty wallet. Error: %s\n", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Unable to create a Counterparty wallet. Error: %s\n", err.Error())
 		ReturnServerError(c, w, err)
 		return nil
 	}
-	log.Printf("Created a new wallet with first address: %s for access key: %s\n (requestID: %s)", wallet.Addresses[0], c.Value(consts.AccessKeyKey).(string), requestId)
-
+	log.FluentfContext(consts.LOGINFO, c, "Created a new wallet with first address: %s for access key: %s\n (requestID: %s)", wallet.Addresses[0], c.Value(consts.AccessKeyKey).(string), requestId)
 	// Return the wallet
 	wallet.RequestId = requestId
 	w.WriteHeader(http.StatusCreated)
@@ -68,7 +67,6 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			panic(err)
 		}
-
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
@@ -85,13 +83,10 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 		paymentTag = m["paymentTag"].(string)
 	}
 
-	//	**** Need to check all the types are as expected and all required parameters received
-
-	log.Printf("WalletSend: received request sourceAddress: %s, destinationAddress: %s, asset: %s, quantity: %d, paymentTag: %s from accessKey: %s\n", sourceAddress, destinationAddress, asset, quantity, c.Value(consts.AccessKeyKey).(string), paymentTag)
-
+	log.FluentfContext(consts.LOGINFO, c, "WalletSend: received request sourceAddress: %s, destinationAddress: %s, asset: %s, quantity: %d, paymentTag: %s from accessKey: %s\n", sourceAddress, destinationAddress, asset, quantity, c.Value(consts.AccessKeyKey).(string), paymentTag)
 	// Generate a paymentId
 	paymentId := enulib.GeneratePaymentId()
-	log.Printf("Generated paymentId: %s", paymentId)
+	log.FluentfContext(consts.LOGINFO, c, "Generated paymentId: %s", paymentId)
 
 	// Return to the client the paymentId and unblock the client
 	w.WriteHeader(http.StatusCreated)
@@ -112,9 +107,6 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	walletbalance.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	// Add to the context the RequestType
-	//	c = context.WithValue(c, consts.RequestTypeKey, "addressBalances")
-
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
@@ -123,7 +115,6 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			panic(err)
 		}
-
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
@@ -141,10 +132,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 	}
 
-	//	**** Need to check all the types are as expected and all required parameters received
-
-	log.Printf("WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))
-
+	log.FluentfContext(consts.LOGINFO, c, "WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))
 	result, err := counterpartyapi.GetBalancesByAddress(address)
 	if err != nil {
 		ReturnServerError(c, w, err)

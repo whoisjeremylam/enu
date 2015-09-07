@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	//	"log"
 	"net/http"
 
 	"github.com/vennd/enu/consts"
@@ -46,13 +45,11 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	quantity := uint64(m["quantity"].(float64))
 	divisible := m["divisible"].(bool)
 
-	//	log.Printf("AssetCreate: received request sourceAddress: %s, asset: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
 	log.FluentfContext(consts.LOGINFO, c, "AssetCreate: received request sourceAddress: %s, asset: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		//		log.Printf("Error: %s\n", err)
-		log.FluentfContext(consts.LOGINFO, c, "Error: %s\n", err)
+		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 
 		returnCode := enulib.ReturnCode{RequestId: requestId, Code: -3, Description: err.Error()}
@@ -61,7 +58,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		}
 		return nil
 	}
-	//	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
+
 	log.FluentfContext(consts.LOGINFO, c, "retrieved publickey: %s", sourceAddressPubKey)
 	// Generate an assetId
 	assetId := enulib.GenerateAssetId()
@@ -103,7 +100,6 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			panic(err)
 		}
-
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
@@ -116,15 +112,11 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	dividendAsset := m["dividendAsset"].(string)
 	quantityPerUnit := uint64(m["quantityPerUnit"].(float64))
 
-	//	log.Printf("DividendCreate: received request sourceAddress: %s, asset: %s, dividendAsset: %s, quantityPerUnit: %d from accessKey: %s\n", sourceAddress, asset, dividendAsset, quantityPerUnit, c.Value(consts.AccessKeyKey).(string))
 	log.FluentfContext(consts.LOGINFO, c, "DividendCreate: received request sourceAddress: %s, asset: %s, dividendAsset: %s, quantityPerUnit: %d from accessKey: %s\n", sourceAddress, asset, dividendAsset, quantityPerUnit, c.Value(consts.AccessKeyKey).(string))
-	// check function specific args
-	//	**** Need to check all the types are as expected and all required parameters received
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		//		log.Printf("Error: %s\n", err)
-		log.FluentfContext(consts.LOGINFO, c, "Error: %s\n", err)
+		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
 		w.WriteHeader(http.StatusBadRequest)
 
 		returnCode := enulib.ReturnCode{RequestId: requestId, Code: -3, Description: err.Error()}
@@ -133,12 +125,10 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 		}
 		return nil
 	}
-	//	log.Printf("retrieved publickey: %s", sourceAddressPubKey)
 	log.FluentfContext(consts.LOGINFO, c, "retrieved publickey: %s", sourceAddressPubKey)
 
 	// Generate a dividendId
 	dividendId := enulib.GenerateDividendId()
-	//	log.Printf("Generated dividendId: %s", dividendId)
 	log.FluentfContext(consts.LOGINFO, c, "Generated dividendId: %s", dividendId)
 	dividendStruct.DividendId = dividendId
 
@@ -167,9 +157,6 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 	issuanceForAsset.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	// Add to the context the RequestType
-	//	c = context.WithValue(c, consts.RequestTypeKey, "asset")
-
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
@@ -178,8 +165,6 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			panic(err)
 		}
-
-		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -195,7 +180,6 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 		return nil
 	}
 
-	//	log.Printf("AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 	log.FluentfContext(consts.LOGINFO, c, "AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 	result, err := counterpartyapi.GetIssuances(asset)
 	if err != nil {
@@ -256,9 +240,6 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetBalances.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	// Add to the context the RequestType
-	//	c = context.WithValue(c, consts.RequestTypeKey, "asset")
-
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
@@ -267,8 +248,6 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			panic(err)
 		}
-
-		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -284,7 +263,6 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		return nil
 	}
 
-	//	log.Printf("AssetLedger: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 	log.FluentfContext(consts.LOGINFO, c, "AssetLedger: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
 	result, err := counterpartyapi.GetBalancesByAsset(asset)

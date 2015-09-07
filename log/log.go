@@ -182,6 +182,10 @@ func FluentfContext(tag string, context context.Context, format string, a ...int
 		env = "unknown"
 	}
 
+	if env == "dev" || env == "unknown" {
+		log.Printf(format, a...)
+	}
+
 	fullTag := "enu." + env + "." + hostname
 
 	_, file, line, _ := runtime.Caller(1)
