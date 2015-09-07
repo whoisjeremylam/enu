@@ -89,10 +89,19 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	dividendStruct.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	c = context.WithValue(c, consts.RequestTypeKey, "dividend")
+
 	// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -127,6 +136,11 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	log.Printf("Generated dividendId: %s", dividendId)
 	dividendStruct.DividendId = dividendId
 
+	dividendStruct.SourceAddress = sourceAddress
+	dividendStruct.Asset = asset
+	dividendStruct.DividendAsset = dividendAsset
+	dividendStruct.QuantityPerUnit = quantityPerUnit
+
 	// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(dividendStruct); err != nil {
@@ -147,10 +161,19 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 	issuanceForAsset.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	//	c = context.WithValue(c, consts.RequestTypeKey, "asset")
+
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -220,10 +243,19 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	assetBalances.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	//	c = context.WithValue(c, consts.RequestTypeKey, "asset")
+
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 

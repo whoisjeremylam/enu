@@ -57,10 +57,19 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	walletPayment.RequestId = requestId
 
+	// Add to the context the RequestType
+	c = context.WithValue(c, consts.RequestTypeKey, "walletPayment")
+
 	// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -103,10 +112,19 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	walletbalance.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	//	c = context.WithValue(c, consts.RequestTypeKey, "addressBalances")
+
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 

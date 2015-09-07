@@ -21,10 +21,19 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	simplePayment.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	c = context.WithValue(c, consts.RequestTypeKey, "simplePayment")
+
 	// check generic args and parse
 	payload, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
@@ -51,6 +60,13 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 	database.InsertPayment(c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag, requestId)
 	// errorhandling here!!
+
+	simplePayment.SourceAddress = sourceAddress
+	simplePayment.DestinationAddress = destinationAddress
+	simplePayment.Asset = asset
+	simplePayment.Amount = amount
+	simplePayment.TxFee = int64(txFee)
+	simplePayment.PaymentTag = paymentTag
 
 	// Return to the client the paymentId
 	w.WriteHeader(http.StatusCreated)
@@ -123,10 +139,19 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	payment.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
+	// Add to the context the RequestType
+	//	c = context.WithValue(c, consts.RequestTypeKey, "simplePayment")
+
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
 		return nil
 	}
 
