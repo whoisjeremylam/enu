@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"log"
 	"math/big"
 	"net/http"
 	"os"
@@ -16,16 +15,18 @@ import (
 	"time"
 
 	"github.com/vennd/enu/bitcoinapi"
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/database"
+	"github.com/vennd/enu/log"
 
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
-
 	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430
@@ -263,7 +264,8 @@ func Init() {
 				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
 				//				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 			} else {
-				log.Fatalln("Cannot find enuapi.json")
+				log.Println("Cannot find enuapi.json")
+				os.Exit(-100)
 			}
 		}
 	}
@@ -283,14 +285,16 @@ func InitWithConfigPath(configFilePath string) {
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
-		log.Fatalln(err)
+		log.Println(err.Error())
+		os.Exit(-101)
 	}
 
 	err = json.Unmarshal(file, &configuration)
 
 	if err != nil {
 		log.Println("Unable to parse enuapi.json")
-		log.Fatalln(err)
+		log.Println(err.Error())
+		os.Exit(-101)
 	}
 
 	m := configuration.(map[string]interface{})
@@ -530,7 +534,8 @@ func SignRawTransaction(passphrase string, rawTxHexString string) (string, error
 	// Convert the hex string to a byte array
 	txBytes, err := hex.DecodeString(rawTxHexString)
 	if err != nil {
-		log.Fatalln(err)
+		log.Println(err.Error())
+		os.Exit(-103)
 	}
 
 	//	log.Printf("Unsigned tx: %s", rawTxHexString)
@@ -538,7 +543,7 @@ func SignRawTransaction(passphrase string, rawTxHexString string) (string, error
 	// Deserialise the transaction
 	tx, err := btcutil.NewTxFromBytes(txBytes)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 	}
 	//	log.Printf("Deserialised ok!: %+v", tx)
 
@@ -586,7 +591,7 @@ func SignRawTransaction(passphrase string, rawTxHexString string) (string, error
 
 		privateKeyString, err := counterpartycrypto.GetPrivateKey(passphrase, address)
 		if err != nil {
-			log.Println(err)
+			log.Println(err.Error())
 			return nil, false, nil
 		}
 
@@ -594,7 +599,7 @@ func SignRawTransaction(passphrase string, rawTxHexString string) (string, error
 
 		privateKeyBytes, err := hex.DecodeString(privateKeyString)
 		if err != nil {
-			log.Println(err)
+			log.Println(err.Error())
 			return nil, false, nil
 		}
 
@@ -848,6 +853,7 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 	// Sign the transactions
 	signed, err := SignRawTransaction(passphrase, createResult)
 	if err != nil {
+		log.Printf("Err in SignRawTransaction(): %s\n", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
 		return "", err
 	}
@@ -860,6 +866,7 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 	// Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
+		log.Printf("Err in SendRawTransaction(): %s\n", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
 		return "", err
 	}
@@ -921,6 +928,8 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 	// Sign the transactions
 	signed, err := SignRawTransaction(passphrase, createResult)
 	if err != nil {
+		log.Printf("Err in SignRawTransaction(): %s\n", err.Error())
+		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
 		return "", err
 	}
 
@@ -929,6 +938,8 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 	//	 Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
+		log.Printf("Err in SendRawTransaction(): %s\n", err.Error())
+		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
 		return "", err
 	}
 
@@ -938,7 +949,7 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateDividend(accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, requestId string) (string, error) {
+func DelegatedCreateDividend(c context.Context, accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, requestId string) (string, error) {
 	if isInit == false {
 		Init()
 	}
@@ -948,25 +959,25 @@ func DelegatedCreateDividend(accessKey string, passphrase string, dividendId str
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		log.Printf("Error: %s\n", err)
+		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
 		return "", err
 	}
 
 	// Mutex lock this address
 	counterparty_Mutexes.Lock()
-	log.Println("Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
 
 	// If an entry doesn't currently exist in the map for that address
 	if counterparty_Mutexes.m[sourceAddress] == nil {
-		log.Printf("Created new entry in map for %s\n", sourceAddress)
+		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
 		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
 	}
 
 	counterparty_Mutexes.m[sourceAddress].Lock()
-	log.Printf("Locked: %s\n", sourceAddress)
+	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
 
 	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.Println("Sleeping")
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
 	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
 
 	defer counterparty_Mutexes.Unlock()
@@ -975,27 +986,34 @@ func DelegatedCreateDividend(accessKey string, passphrase string, dividendId str
 	// Create the dividend
 	createResult, err := CreateDividend(sourceAddress, asset, dividendAsset, quantityPerUnit, sourceAddressPubKey)
 	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
 		return "", err
 	}
 
-	log.Printf("Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
+	log.FluentfContext(consts.LOGINFO, c, "Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
 
 	// Sign the transactions
 	signed, err := SignRawTransaction(passphrase, createResult)
 	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
 		return "", err
 	}
 
-	log.Printf("Signed tx: %s\n", signed)
+	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
 
 	// Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
 		return "", err
 	}
 
+	database.UpdateDividendCompleteByDividendId(c, accessKey, dividendId, txId)
+
 	return txId, nil
-	//	return "good", nil
 }
 
 func GetRunningInfo() (RunningInfo, error) {
