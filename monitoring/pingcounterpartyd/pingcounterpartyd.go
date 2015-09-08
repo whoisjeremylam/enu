@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/log"
@@ -40,8 +41,8 @@ func main() {
 		result, err := counterpartyapi.GetRunningInfo()
 
 		if err != nil {
-			log.Fluentf(sourceFile, "Error retrieving our block height")
-			log.Fluentf(sourceFile, err.Error())
+			log.Fluentf(consts.LOGINFO, "Error retrieving our block height")
+			log.Fluentf(consts.LOGINFO, err.Error())
 			os.Exit(-1)
 		}
 		c1 <- result.LastBlock.BlockIndex
@@ -49,9 +50,9 @@ func main() {
 
 	select {
 	case result1 = <-c1:
-		log.Fluentf(sourceFile, "Counterpartyd last processed block: %d\n", result1)
+		log.Fluentf(consts.LOGINFO, "Counterpartyd last processed block: %d\n", result1)
 	case <-time.After(time.Second * 10):
-		log.Fluentf(sourceFile, "Timeout when retrieving last processed counterpartyd block")
+		log.Fluentf(consts.LOGINFO, "Timeout when retrieving last processed counterpartyd block")
 		os.Exit(-1)
 	}
 
@@ -64,16 +65,16 @@ func main() {
 		response, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
-			log.Fluentf(sourceFile, "Error reading from blockchain.info")
-			log.Fluentf(sourceFile, err.Error())
+			log.Fluentf(consts.LOGINFO, "Error reading from blockchain.info")
+			log.Fluentf(consts.LOGINFO, err.Error())
 			os.Exit(-2)
 		}
 
 		result, err2 := strconv.ParseUint(string(response), 10, 64)
 
 		if err2 != nil {
-			log.Fluentf(sourceFile, "Error reading from blockchain.info")
-			log.Fluentf(sourceFile, err2.Error())
+			log.Fluentf(consts.LOGINFO, "Error reading from blockchain.info")
+			log.Fluentf(consts.LOGINFO, err2.Error())
 			os.Exit(-2)
 		}
 
@@ -82,9 +83,9 @@ func main() {
 
 	select {
 	case result2 = <-c2:
-		log.Fluentf(sourceFile, "Blockchain.info block height: %d\n", result2)
+		log.Fluentf(consts.LOGINFO, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
-		log.Fluentf(sourceFile, "Timeout when retrieving blockchain.info block height")
+		log.Fluentf(consts.LOGINFO, "Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
 	}
 
