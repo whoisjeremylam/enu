@@ -41,8 +41,8 @@ func main() {
 		ourBlockHeight, err := bitcoinapi.GetBlockCount()
 
 		if err != nil {
-			log.Fluentf(consts.LOGINFO, "Error retrieving our block height")
-			log.Fluentf(consts.LOGINFO, err.Error())
+			log.Fluentf(consts.LOGERROR, "Error retrieving our block height")
+			log.Fluentf(consts.LOGERROR, err.Error())
 			os.Exit(-1)
 		}
 		c1 <- ourBlockHeight
@@ -52,7 +52,7 @@ func main() {
 	case result1 = <-c1:
 		log.Fluentf(consts.LOGINFO, "Our block height: %d\n", result1)
 	case <-time.After(time.Second * 10):
-		log.Fluentf(consts.LOGINFO, "Timeout when retrieving our block height")
+		log.Fluentf(consts.LOGERROR, "Timeout when retrieving our block height")
 		os.Exit(-1)
 	}
 
@@ -65,16 +65,16 @@ func main() {
 		response, err := ioutil.ReadAll(request.Body)
 
 		if err != nil {
-			log.Fluentf(consts.LOGINFO, "Error reading from blockchain.info")
-			log.Fluentf(consts.LOGINFO, err.Error())
+			log.Fluentf(consts.LOGERROR, "Error reading from blockchain.info")
+			log.Fluentf(consts.LOGERROR, err.Error())
 			os.Exit(-2)
 		}
 
 		result, err2 := strconv.ParseInt(string(response), 10, 64)
 
 		if err2 != nil {
-			log.Fluentf(consts.LOGINFO, "Error reading from blockchain.info")
-			log.Fluentf(consts.LOGINFO, err2.Error())
+			log.Fluentf(consts.LOGERROR, "Error reading from blockchain.info")
+			log.Fluentf(consts.LOGERROR, err2.Error())
 			os.Exit(-2)
 		}
 
@@ -85,7 +85,7 @@ func main() {
 	case result2 = <-c2:
 		log.Fluentf(consts.LOGINFO, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
-		log.Fluentf(consts.LOGINFO, "Timeout when retrieving blockchain.info block height")
+		log.Fluentf(consts.LOGERROR, "Timeout when retrieving blockchain.info block height")
 		os.Exit(-2)
 	}
 
