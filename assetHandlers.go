@@ -7,6 +7,7 @@ import (
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
+	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
@@ -144,7 +145,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	}
 
 	// Start dividend creation in async mode
-	go counterpartyapi.DelegatedCreateDividend(c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, requestId)
+	go counterpartyapi.DelegatedCreateDividend(c, c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, requestId)
 
 	return nil
 }
@@ -327,5 +328,49 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
 		panic(err)
 	}
+	return nil
+}
+
+func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+	var dividend enulib.Dividend
+	requestId := c.Value(consts.RequestIdKey).(string)
+	dividend.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
+		return nil
+	}
+
+	vars := mux.Vars(r)
+	dividendId := vars["dividendId"]
+
+	if dividendId == "" || len(dividendId) < 16 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Invalid dividendId"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "GetDividend called for '%s' by '%s'\n", dividendId, c.Value(consts.AccessKeyKey).(string))
+
+	dividend = database.GetDividendByDividendId(c, c.Value(consts.AccessKeyKey).(string), dividendId)
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(dividend); err != nil {
+		panic(err)
+	}
+
 	return nil
 }

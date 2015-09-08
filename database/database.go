@@ -7,15 +7,16 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/enulib"
+	"github.com/vennd/enu/log"
 
 	_ "github.com/vennd/enu/internal/github.com/go-sql-driver/mysql"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 var Db *sql.DB
@@ -44,7 +45,8 @@ func Init() {
 				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 			} else {
-				log.Fatalln("Cannot find enuapi.json")
+				log.Println("Cannot find enuapi.json")
+				os.Exit(-100)
 			}
 		}
 	}
@@ -64,7 +66,8 @@ func InitWithConfigPath(configFilePath string) {
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
-		log.Fatalln(err)
+		log.Println(err.Error())
+		os.Exit(-100)
 	}
 
 	err = json.Unmarshal(file, &configuration)
@@ -291,23 +294,23 @@ func InsertDividend(accessKey string, dividendId string, sourceAddressValue stri
 	defer stmt.Close()
 }
 
-func GetDividendByDividendId(accessKey string, dividendId string) enulib.Dividend {
+func GetDividendByDividendId(c context.Context, accessKey string, dividendId string) enulib.Dividend {
 	if isInit == false {
 		Init()
 	}
 
 	//	 Query DB
-	stmt, err := Db.Prepare("select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, errorDescription from dividends where dividendId=? and accessKey=?")
+	log.FluentfContext(consts.LOGERROR, c, "select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, errorDescription, broadcastTxId from dividends where dividendId=%s and accessKey=%s", dividendId, accessKey)
+	stmt, err := Db.Prepare("select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, status, errorDescription, broadcastTxId from dividends where dividendId=? and accessKey=?")
 	if err != nil {
-		log.Println("Failed to prepare statement. Reason: ")
-		panic(err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
 	}
 	defer stmt.Close()
 
 	//	 Get row
 	row := stmt.QueryRow(dividendId, accessKey)
 	if err != nil {
-		panic(err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Failed to QueryRow. Reason: %s", err.Error())
 	}
 
 	var rowId string
@@ -317,27 +320,37 @@ func GetDividendByDividendId(accessKey string, dividendId string) enulib.Dividen
 	var quantityPerUnit uint64
 	var status string
 	var errorMessage string
+	var broadcastTxId []byte
 	var dividendStruct enulib.Dividend
 
-	if err := row.Scan(&rowId, &dividendId, &sourceAddress, &asset, &dividendAsset, &quantityPerUnit, &status, &errorMessage); err == sql.ErrNoRows {
+	if err := row.Scan(&rowId, &dividendId, &sourceAddress, &asset, &dividendAsset, &quantityPerUnit, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
 		dividendStruct = enulib.Dividend{}
 		if err.Error() == "sql: no rows in result set" {
 			dividendStruct.DividendId = dividendId
 			dividendStruct.Status = "Not found"
 		}
+	} else if err != nil {
+		dividendStruct = enulib.Dividend{}
+		dividendStruct.DividendId = dividendId
+		dividendStruct.Status = "Not found"
+		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	} else {
-		dividendStruct = enulib.Dividend{SourceAddress: sourceAddress, Asset: asset, DividendAsset: dividendAsset, QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: status, ErrorMessage: errorMessage}
+		dividendStruct = enulib.Dividend{SourceAddress: sourceAddress, Asset: asset, DividendAsset: dividendAsset, QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: status, ErrorMessage: errorMessage, BroadcastTxId: string(broadcastTxId)}
 	}
+
+	log.FluentfContext(consts.LOGINFO, c, "%s", asset)
+
+	log.FluentfContext(consts.LOGINFO, c, "%s", dividendStruct)
 
 	return dividendStruct
 }
 
-func UpdateDividendWithErrorByDividendId(accessKey string, dividendId string, errorDescription string) error {
+func UpdateDividendWithErrorByDividendId(c context.Context, accessKey string, dividendId string, errorDescription string) error {
 	if isInit == false {
 		Init()
 	}
 
-	dividend := GetDividendByDividendId(accessKey, dividendId)
+	dividend := GetDividendByDividendId(c, accessKey, dividendId)
 
 	if dividend.DividendId == "" {
 		errorString := fmt.Sprintf("Dividend does not exist or cannot be accessed by %s\n", accessKey)
@@ -352,6 +365,35 @@ func UpdateDividendWithErrorByDividendId(accessKey string, dividendId string, er
 	defer stmt.Close()
 
 	_, err2 := stmt.Exec(errorDescription, accessKey, dividendId)
+	if err2 != nil {
+		return err2
+	}
+
+	return nil
+}
+
+func UpdateDividendCompleteByDividendId(c context.Context, accessKey string, dividendId string, txId string) error {
+	if isInit == false {
+		Init()
+	}
+
+	dividend := GetDividendByDividendId(c, accessKey, dividendId)
+
+	if dividend.DividendId == "" {
+		errorString := fmt.Sprintf("Dividend does not exist or cannot be accessed by %s\n", accessKey)
+
+		return errors.New(errorString)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "update dividends set status='complete', broadcastTxId=%s where accessKey=%s and dividendId = %s\n", txId, accessKey, dividendId)
+
+	stmt, err := Db.Prepare("update dividends set status='complete', broadcastTxId=? where accessKey=? and dividendId = ?")
+	if err != nil {
+		return err
+	}
+	defer stmt.Close()
+
+	_, err2 := stmt.Exec(txId, accessKey, dividendId)
 	if err2 != nil {
 		return err2
 	}

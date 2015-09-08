@@ -108,6 +108,7 @@ type Dividend struct {
 	Status          string `json:"status"`
 	ErrorMessage    string `json:"errorMessage"`
 	RequestId       string `json:"requestId"`
+	BroadcastTxId   string `json:"broadcastTxId"`
 }
 
 type Issuance struct {
