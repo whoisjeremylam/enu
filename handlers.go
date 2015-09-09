@@ -117,102 +117,35 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s\n", quotes[number])
 }
 
-func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Request) (string, int64, error) {
+func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Request) (string, error) {
 	// Pull headers that are necessary
 	accessKey := r.Header.Get("AccessKey")
-	//	nonce := r.Header.Get("Nonce")
-	nonce := "0"
-	nonceInt, convertNonceErr := strconv.ParseInt(nonce, 10, 64)
-	//	signatureVersion := r.Header.Get("SignatureVersion")
-	//	signatureMethod := r.Header.Get("SignatureMethod")
 	signature := r.Header.Get("Signature")
-	//	var nonceDB int64
 	var err error
 
 	// Headers weren't set properly, return forbidden
-	//	if accessKey == "" || nonce == "" || signature == "" {
 	if accessKey == "" || signature == "" {
 		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, none, signature")
-		log.FluentfContext(consts.LOGERROR, c, "Headers set incorrectly: accessKey=%s, nonce=%s, signature=%s\n", accessKey, nonce, signature)
+		log.FluentfContext(consts.LOGERROR, c, "Headers set incorrectly: accessKey=%s, signature=%s\n", accessKey, signature)
 		ReturnUnauthorised(c, w, err)
 
-		return accessKey, nonceInt, err
-	} else if convertNonceErr != nil {
-		err = errors.New("Invalid nonce value")
-		// Unable to convert the value of nonce in the header to an integer
-		log.FluentfContext(consts.LOGERROR, c, convertNonceErr.Error())
-		ReturnUnauthorised(c, w, err)
-
-		return accessKey, nonceInt, err
-		//	} else if nonceInt <= database.GetNonceByAccessKey(accessKey) {
-		//		err = errors.New("Invalid nonce value")
-
-		//		//Nonce is not greater than the nonce in the DB
-		//		log.Printf("Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, nonce, nonceDB)
-		//		ReturnUnauthorised(c, w, err)
-
-		//		return accessKey, nonceInt, err
+		return accessKey, err
 	} else if database.UserKeyExists(accessKey) == false {
 		returnErr := errors.New("Attempt to access API with unknown user key")
 		// User key doesn't exist
 		log.FluentfContext(consts.LOGERROR, c, "Attempt to access API with unknown user key: %s", accessKey)
 		ReturnUnauthorised(c, w, returnErr)
 
-		return accessKey, nonceInt, returnErr
+		return accessKey, returnErr
 	}
 
-	return accessKey, 0, nil
+	return accessKey, nil
 }
-
-//func CheckAndParseJson(w http.ResponseWriter, r *http.Request) (interface{}, string, int64, error) {
-//	//	var blockchainId string
-//	var payload interface{}
-
-//	// Pull headers that are necessary
-//	accessKey := r.Header.Get("AccessKey")
-//	nonce := r.Header.Get("Nonce")
-//	nonceInt, _ := strconv.ParseInt(nonce, 10, 64)
-//	//	signatureVersion := r.Header.Get("SignatureVersion")
-//	//	signatureMethod := r.Header.Get("SignatureMethod")
-//	signature := r.Header.Get("Signature")
-
-//	accessKey, nonceInt, err := CheckHeaderGeneric(w, r)
-//	if err != nil {
-//		return nil, accessKey, nonceInt, err
-//	}
-
-//	// Limit amount read to 512,000 bytes and parse body
-//	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 512000))
-//	if err != nil {
-//		panic(err)
-//	}
-//	if err := r.Body.Close(); err != nil {
-//		panic(err)
-//	}
-//	if err := json.Unmarshal(body, &payload); err != nil {
-//		ReturnUnprocessableEntity(w, errors.New("Unable to unmarshal body"))
-//	}
-//	log.Printf("Request received: %s", body)
-
-//	// Then look up secret and calculate digest
-//	calculatedSignature := enulib.ComputeHmac512(body, database.GetSecretByAccessKey(accessKey))
-
-//	// If we didn't receive the expected signature then raise a forbidden
-//	if calculatedSignature != signature {
-//		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
-//		err := errors.New(errorString)
-
-//		return nil, accessKey, nonceInt, err
-//	}
-
-//	database.UpdateNonce(accessKey, nonceInt)
-
-//	return payload, accessKey, nonceInt, nil
-//}
 
 func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (interface{}, error) {
 	//	var blockchainId string
 	var payload interface{}
+	var nonceDB int64
 
 	signature := r.Header.Get("Signature")
 
@@ -241,6 +174,36 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 
+	// nonce checking
+	m := payload.(map[string]interface{})
+	log.FluentfContext(consts.LOGINFO, c, "Nonce received: %s", m["nonce"].(string))
+	nonceInt, convertNonceErr := strconv.ParseInt(m["nonce"].(string), 10, 64)
+	if convertNonceErr != nil {
+		err = errors.New("Invalid nonce value")
+		// Unable to convert the value of nonce in the header to an integer
+		log.FluentfContext(consts.LOGERROR, c, convertNonceErr.Error())
+		ReturnUnauthorised(c, w, err)
+		return nil, err
+	} else {
+		nonceDB = database.GetNonceByAccessKey(accessKey)
+		if nonceInt <= nonceDB {
+			err = errors.New("Invalid nonce value")
+			//Nonce is not greater than the nonce in the DB
+			log.Printf("Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, m["nonce"].(string), nonceDB)
+			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, m["nonce"].(string), nonceDB)
+			ReturnUnauthorised(c, w, err)
+			return nil, err
+		} else {
+			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, m["nonce"].(string), nonceDB)
+			database.UpdateNonce(accessKey, nonceInt)
+			if err != nil {
+				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
+				ReturnServerError(c, w, err)
+				return nil, err
+			}
+		}
+	}
+
 	// Arg checking
 
 	u, ok := c.Value(consts.RequestTypeKey).(string)
@@ -259,7 +222,6 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			`
 		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"destinationAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"quantity":{"type":"integer"}},"required":["sourceAddress","asset","quantity","destinationAddress"]}
 	`
-
 		check["simplePayment"] =
 			`
 		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"destinationAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"amount":{"type":"integer"},,"txFee":{"type":"integer"}},"required":["sourceAddress","destinationAddress","asset","amount"]}

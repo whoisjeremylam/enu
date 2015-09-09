@@ -36,7 +36,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.FluentfContext(consts.LOGINFO, ctx, "%s %s entered.", r.Method, r.URL.Path)
 
-	accessKey, nonceInt, err := CheckHeaderGeneric(ctx, w, r)
+	accessKey, err := CheckHeaderGeneric(ctx, w, r)
 	if err != nil {
 		return
 	}
@@ -44,12 +44,6 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Add to the context the accessKey now that we know it
 	ctx1 := context.WithValue(ctx, consts.AccessKeyKey, accessKey)
 
-	database.UpdateNonce(accessKey, nonceInt)
-	if err != nil {
-		ReturnServerError(ctx, w, err)
-
-		return
-	}
 	// Determine blockchain this request is acting upon
 	usersDefaultBlockchain := database.GetBlockchainIdByUserKey(accessKey)
 	p := strings.Split(r.URL.Path, "/")
