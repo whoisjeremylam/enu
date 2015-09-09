@@ -24,3 +24,4 @@ var AccessKeyStatuses = []string{AccessKeyValidStatus, AccessKeyInvalidStatus, A
 
 const LOGINFO = "INFO"
 const LOGERROR = "ERROR"
+const LOGDEBUG = "DEBUG"
