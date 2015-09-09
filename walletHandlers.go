@@ -137,7 +137,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))
-	result, err := counterpartyapi.GetBalancesByAddress(address)
+	result, err := counterpartyapi.GetBalancesByAddress(c, address)
 	if err != nil {
 		ReturnServerError(c, w, err)
 		return nil

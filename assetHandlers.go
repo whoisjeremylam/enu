@@ -179,7 +179,7 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
-	result, err := counterpartyapi.GetIssuances(asset)
+	result, err := counterpartyapi.GetIssuances(c, asset)
 	if err != nil {
 		ReturnServerError(c, w, err)
 
@@ -263,13 +263,13 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 	log.FluentfContext(consts.LOGINFO, c, "AssetLedger: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
-	result, err := counterpartyapi.GetBalancesByAsset(asset)
+	result, err := counterpartyapi.GetBalancesByAsset(c, asset)
 	if err != nil {
 		ReturnServerError(c, w, err)
 		return nil
 	}
 
-	resultIssuances, err := counterpartyapi.GetIssuances(asset)
+	resultIssuances, err := counterpartyapi.GetIssuances(c, asset)
 	if err != nil {
 		ReturnServerError(c, w, err)
 		return nil

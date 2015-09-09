@@ -308,11 +308,10 @@ func InitWithConfigPath(configFilePath string) {
 	isInit = true
 }
 
-func postAPI(postData []byte) ([]byte, int64, error) {
-	//	postDataJsonBytes, _ := json.Marshal(postData)
+func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
 	postDataJson := string(postData)
 
-	//	log.Printf("counterpartyapi postAPI() posting: %s", postDataJson)
+	log.FluentfContext(consts.LOGDEBUG, c, "counterpartyapi postAPI() posting: %s", postDataJson)
 
 	// Set headers
 	req, err := http.NewRequest("POST", counterpartyHost, bytes.NewBufferString(postDataJson))
@@ -327,10 +326,7 @@ func postAPI(postData []byte) ([]byte, int64, error) {
 	}
 
 	if resp.StatusCode != 200 {
-		log.Printf("Request failed. Status code: %d\n", resp.StatusCode)
-
-		//		var respBody []byte
-		//		numBytes, err := resp.Body.Read(respBody)
+		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", resp.StatusCode)
 
 		body, err := ioutil.ReadAll(resp.Body)
 		defer resp.Body.Close()
@@ -339,7 +335,7 @@ func postAPI(postData []byte) ([]byte, int64, error) {
 			return nil, 0, err
 		}
 
-		log.Printf("Reply: %s\n", string(body))
+		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
 
 		return nil, -1000, errors.New(string(body))
 	}
@@ -354,7 +350,7 @@ func postAPI(postData []byte) ([]byte, int64, error) {
 	return body, 0, nil
 }
 
-func generateId() uint32 {
+func generateId(c context.Context) uint32 {
 	buf := securecookie.GenerateRandomKey(4)
 	randomUint64, err := strconv.ParseUint(hex.EncodeToString(buf), 16, 32)
 
@@ -367,7 +363,7 @@ func generateId() uint32 {
 	return randomUint32
 }
 
-func GetBalancesByAddress(address string) ([]Balance, error) {
+func GetBalancesByAddress(c context.Context, address string) ([]Balance, error) {
 	var payload payloadGetBalances
 	var result ResultGetBalances
 
@@ -380,14 +376,14 @@ func GetBalancesByAddress(address string) ([]Balance, error) {
 	payload.Method = "get_balances"
 	payload.Params.Filters = append(payload.Params.Filters, filterCondition)
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 
 	payloadJsonBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -399,7 +395,7 @@ func GetBalancesByAddress(address string) ([]Balance, error) {
 	return result.Result, nil
 }
 
-func GetBalancesByAsset(asset string) ([]Balance, error) {
+func GetBalancesByAsset(c context.Context, asset string) ([]Balance, error) {
 	var payload payloadGetBalances
 	var result ResultGetBalances
 
@@ -412,7 +408,7 @@ func GetBalancesByAsset(asset string) ([]Balance, error) {
 	payload.Method = "get_balances"
 	payload.Params.Filters = append(payload.Params.Filters, filterCondition)
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 
 	payloadJsonBytes, err := json.Marshal(payload)
 
@@ -422,7 +418,7 @@ func GetBalancesByAsset(asset string) ([]Balance, error) {
 		return nil, err
 	}
 
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +432,7 @@ func GetBalancesByAsset(asset string) ([]Balance, error) {
 	return result.Result, nil
 }
 
-func GetIssuances(asset string) ([]Issuance, error) {
+func GetIssuances(c context.Context, asset string) ([]Issuance, error) {
 	var payload payloadGetIssuances
 	var result ResultGetIssuances
 
@@ -452,14 +448,14 @@ func GetIssuances(asset string) ([]Issuance, error) {
 	payload.Params.Filters = append(payload.Params.Filters, filterCondition)
 	payload.Params.Filters = append(payload.Params.Filters, filterCondition2)
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 
 	payloadJsonBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err
 	}
 
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -474,7 +470,7 @@ func GetIssuances(asset string) ([]Issuance, error) {
 	return result.Result, nil
 }
 
-func CreateSend(sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, error) {
+func CreateSend(c context.Context, sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, error) {
 	var payload payloadCreateSend_Counterparty
 	var result ResultCreateSend_Counterparty
 
@@ -487,7 +483,7 @@ func CreateSend(sourceAddress string, destinationAddress string, asset string, q
 	// ["source":sourceAddress,"destination":destinationAddress,"asset":asset,"quantity":amount,"allow_unconfirmed_inputs":true,"encoding":counterpartyTransactionEncoding,"pubkey":pubkey]
 	payload.Method = "create_send"
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 	payload.Params.Source = sourceAddress
 	payload.Params.Destination = destinationAddress
 	payload.Params.Asset = asset
@@ -505,7 +501,7 @@ func CreateSend(sourceAddress string, destinationAddress string, asset string, q
 	}
 
 	// Post to the counterparty daemon backend
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return "", err
 	}
@@ -530,7 +526,7 @@ func CreateSend(sourceAddress string, destinationAddress string, asset string, q
 //
 // Assumptions
 // 1) This is a Counterparty transaction so all inputs need to be signed with the same pubkeyhash
-func SignRawTransaction(passphrase string, rawTxHexString string) (string, error) {
+func SignRawTransaction(c context.Context, passphrase string, rawTxHexString string) (string, error) {
 	// Convert the hex string to a byte array
 	txBytes, err := hex.DecodeString(rawTxHexString)
 	if err != nil {
@@ -656,7 +652,7 @@ func SignRawTransaction(passphrase string, rawTxHexString string) (string, error
 //    var r = bigInt.randBetween(NUMERIC_ASSET_ID_MIN, NUMERIC_ASSET_ID_MAX);
 //    self.name('A' + r);
 //}
-func generateRandomAssetName() (string, error) {
+func generateRandomAssetName(c context.Context) (string, error) {
 	numericAssetIdMin := new(big.Int)
 	numericAssetIdMax := new(big.Int)
 	//	var err error
@@ -681,7 +677,7 @@ func generateRandomAssetName() (string, error) {
 
 // Generates unsigned hex encoded transaction to issue an asset on Counterparty
 // This function MUST NOT be called directly. The high level function Counterparty_CreateIssuanceAndSend() should be used instead.
-func CreateIssuance(sourceAddress string, asset string, description string, quantity uint64, divisible bool, pubKeyHexString string) (string, error) {
+func CreateIssuance(c context.Context, sourceAddress string, asset string, description string, quantity uint64, divisible bool, pubKeyHexString string) (string, error) {
 	var payload payloadCreateIssuance_Counterparty
 	var result ResultCreateIssuance_Counterparty
 
@@ -691,7 +687,7 @@ func CreateIssuance(sourceAddress string, asset string, description string, quan
 
 	payload.Method = "create_issuance"
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 	payload.Params.Source = sourceAddress
 	payload.Params.Asset = asset
 	payload.Params.Description = description
@@ -710,7 +706,7 @@ func CreateIssuance(sourceAddress string, asset string, description string, quan
 		return "", err
 	}
 
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return "", err
 	}
@@ -730,7 +726,7 @@ func CreateIssuance(sourceAddress string, asset string, description string, quan
 }
 
 // Automatically generates a numeric asset name and generates unsigned hex encoded transaction to issue an asset on Counterparty
-func CreateNumericIssuance(sourceAddress string, asset string, quantity uint64, divisible bool, pubKeyHexString string) (string, string, error) {
+func CreateNumericIssuance(c context.Context, sourceAddress string, asset string, quantity uint64, divisible bool, pubKeyHexString string) (string, string, error) {
 	var description string
 
 	if isInit == false {
@@ -743,12 +739,12 @@ func CreateNumericIssuance(sourceAddress string, asset string, quantity uint64, 
 		description = asset
 	}
 
-	randomAssetName, err := generateRandomAssetName()
+	randomAssetName, err := generateRandomAssetName(c)
 	if err != nil {
 		return "", "", err
 	}
 
-	result, err := CreateIssuance(sourceAddress, randomAssetName, description, quantity, divisible, pubKeyHexString)
+	result, err := CreateIssuance(c, sourceAddress, randomAssetName, description, quantity, divisible, pubKeyHexString)
 	if err != nil {
 		return "", "", err
 	}
@@ -757,7 +753,7 @@ func CreateNumericIssuance(sourceAddress string, asset string, quantity uint64, 
 }
 
 // Generates unsigned hex encoded transaction to pay a dividend on an asset on Counterparty
-func CreateDividend(sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, pubKeyHexString string) (string, error) {
+func CreateDividend(c context.Context, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, pubKeyHexString string) (string, error) {
 	var payload payloadCreateDividend_Counterparty
 	var result ResultCreateDividend_Counterparty
 
@@ -767,7 +763,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 
 	payload.Method = "create_dividend"
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 	payload.Params.Source = sourceAddress
 	payload.Params.Asset = asset
 	payload.Params.DividendAsset = dividendAsset
@@ -785,7 +781,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 		return result.Result, err
 	}
 
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return result.Result, err
 	}
@@ -841,7 +837,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
 	// Create the send
-	createResult, err := CreateSend(sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
+	createResult, err := CreateSend(c, sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in CreateSend(): %s", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
@@ -851,7 +847,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, destinationAddress, createResult)
 
 	// Sign the transactions
-	signed, err := SignRawTransaction(passphrase, createResult)
+	signed, err := SignRawTransaction(c, passphrase, createResult)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in SignRawTransaction(): %s\n", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
@@ -915,7 +911,7 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 
 	log.Println("Composing the CreateNumericIssuance transaction")
 	// Create the issuance
-	randomAssetName, createResult, err := CreateNumericIssuance(sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
+	randomAssetName, createResult, err := CreateNumericIssuance(c, sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
 		log.Printf("Err in CreateIssuance(): %s\n", err.Error())
 		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
@@ -926,7 +922,7 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	database.UpdateAssetNameByAssetId(c, accessKey, assetId, randomAssetName)
 
 	// Sign the transactions
-	signed, err := SignRawTransaction(passphrase, createResult)
+	signed, err := SignRawTransaction(c, passphrase, createResult)
 	if err != nil {
 		log.Printf("Err in SignRawTransaction(): %s\n", err.Error())
 		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
@@ -984,7 +980,7 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
 	// Create the dividend
-	createResult, err := CreateDividend(sourceAddress, asset, dividendAsset, quantityPerUnit, sourceAddressPubKey)
+	createResult, err := CreateDividend(c, sourceAddress, asset, dividendAsset, quantityPerUnit, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
 		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
@@ -994,7 +990,7 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	log.FluentfContext(consts.LOGINFO, c, "Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
 
 	// Sign the transactions
-	signed, err := SignRawTransaction(passphrase, createResult)
+	signed, err := SignRawTransaction(c, passphrase, createResult)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
 		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
@@ -1016,7 +1012,7 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	return txId, nil
 }
 
-func GetRunningInfo() (RunningInfo, error) {
+func GetRunningInfo(c context.Context) (RunningInfo, error) {
 	var payload payloadGetRunningInfo
 	var result ResultGetRunningInfo
 
@@ -1026,7 +1022,7 @@ func GetRunningInfo() (RunningInfo, error) {
 
 	payload.Method = "get_running_info"
 	payload.Jsonrpc = "2.0"
-	payload.Id = generateId()
+	payload.Id = generateId(c)
 
 	payloadJsonBytes, err := json.Marshal(payload)
 
@@ -1036,7 +1032,7 @@ func GetRunningInfo() (RunningInfo, error) {
 		return result.Result, err
 	}
 
-	responseData, _, err := postAPI(payloadJsonBytes)
+	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		return result.Result, err
 	}
