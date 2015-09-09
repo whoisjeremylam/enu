@@ -87,6 +87,7 @@ type Asset struct {
 	Description   string `json:"description"`
 	Quantity      uint64 `json:"quantity"`
 	Divisible     bool   `json:"divisible"`
+	BroadcastTxId string `json:"broadcastTxId"`
 	Status        string `json:"status"`
 	ErrorMessage  string `json:"errorMessage"`
 	RequestId     string `json:"requestId"`

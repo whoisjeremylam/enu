@@ -16,6 +16,7 @@ func NewRouter() *mux.Router {
 	router.Handle("/payment/status/{paymentId}", ctxHandler(PaymentRetry)).Methods("POST")
 
 	router.Handle("/asset", ctxHandler(AssetCreate)).Methods("POST")
+	router.Handle("/asset/{assetId}", ctxHandler(GetAsset)).Methods("GET")
 	router.Handle("/asset/dividend", ctxHandler(DividendCreate)).Methods("POST")
 	router.Handle("/asset/dividend/{dividendId}", ctxHandler(GetDividend)).Methods("GET")
 	router.Handle("/asset/issuances/{asset}", ctxHandler(AssetIssuances)).Methods("GET")
@@ -28,6 +29,7 @@ func NewRouter() *mux.Router {
 
 	// Direct access to Counterparty resources
 	router.Handle("/counterparty/asset", ctxHandler(AssetCreate)).Methods("POST")
+	router.Handle("/counterparty/asset/{assetId}", ctxHandler(GetAsset)).Methods("GET")
 	router.Handle("/counterparty/asset/dividend", ctxHandler(DividendCreate)).Methods("POST")
 	router.Handle("/counterparty/asset/dividend/{dividendId}", ctxHandler(GetDividend)).Methods("GET")
 	router.Handle("/counterparty/asset/issuances/{asset}", ctxHandler(AssetIssuances)).Methods("GET")

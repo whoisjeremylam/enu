@@ -78,7 +78,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	}
 
 	// Start asset creation in async mode
-	go counterpartyapi.DelegatedCreateIssuance(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, quantity, divisible, requestId)
+	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, quantity, divisible, requestId)
 
 	return nil
 }
@@ -369,6 +369,50 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(dividend); err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+	var asset enulib.Asset
+	requestId := c.Value(consts.RequestIdKey).(string)
+	asset.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
+		return nil
+	}
+
+	vars := mux.Vars(r)
+	assetId := vars["assetId"]
+
+	if assetId == "" || len(assetId) < 16 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Invalid assetId"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "GetDividend called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
+
+	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(asset); err != nil {
 		panic(err)
 	}
 

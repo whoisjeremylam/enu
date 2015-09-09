@@ -879,7 +879,7 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool, requestId string) (string, error) {
+func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool, requestId string) (string, error) {
 	if isInit == false {
 		Init()
 	}
@@ -918,18 +918,18 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 	randomAssetName, createResult, err := CreateNumericIssuance(sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
 		log.Printf("Err in CreateIssuance(): %s\n", err.Error())
-		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
 		return "", err
 	}
 
 	log.Printf("Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, randomAssetName, sourceAddress, createResult)
-	database.UpdateAssetNameByAssetId(accessKey, assetId, randomAssetName)
+	database.UpdateAssetNameByAssetId(c, accessKey, assetId, randomAssetName)
 
 	// Sign the transactions
 	signed, err := SignRawTransaction(passphrase, createResult)
 	if err != nil {
 		log.Printf("Err in SignRawTransaction(): %s\n", err.Error())
-		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
 		return "", err
 	}
 
@@ -939,11 +939,11 @@ func DelegatedCreateIssuance(accessKey string, passphrase string, sourceAddress 
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
 		log.Printf("Err in SendRawTransaction(): %s\n", err.Error())
-		database.UpdateAssetWithErrorByAssetId(accessKey, assetId, err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
 		return "", err
 	}
 
-	database.UpdateAssetCompleteByAssetId(accessKey, assetId, txId)
+	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txId)
 
 	return txId, nil
 }
