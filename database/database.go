@@ -121,54 +121,60 @@ func InsertAsset(accessKey string, assetId string, sourceAddressValue string, as
 	defer stmt.Close()
 }
 
-func GetAssetByAssetId(accessKey string, assetId string) enulib.Asset {
+func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enulib.Asset {
 	if isInit == false {
 		Init()
 	}
 
+	// Set some initial values
+	var assetStruct = enulib.Asset{}
+	assetStruct.AssetId = assetId
+	assetStruct.Status = "Not found"
+
 	//	 Query DB
-	stmt, err := Db.Prepare("select rowId, assetId, sourceAddress, asset, description, quantity, divisible, errorDescription from assets where assetId=? and accessKey=?")
+	log.FluentfContext(consts.LOGINFO, c, "select rowId, assetId, sourceAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=? and accessKey=?", assetId, accessKey)
+	stmt, err := Db.Prepare("select rowId, assetId, sourceAddress, asset, description, quantity, divisible, status, errorDescription,  broadcastTxId from assets where assetId=? and accessKey=?")
 	if err != nil {
-		log.Println("Failed to prepare statement. Reason: ")
-		panic(err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return assetStruct
 	}
 	defer stmt.Close()
 
 	//	 Get row
 	row := stmt.QueryRow(assetId, accessKey)
 	if err != nil {
-		panic(err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Failed to QueryRow. Reason: %s", err.Error())
+		return assetStruct
 	}
 
 	var rowId string
 	var sourceAddress string
 	var asset string
-	var description string
+	var description []byte
 	var quantity uint64
 	var divisible bool
-	var status string
-	var errorMessage string
-	var assetStruct enulib.Asset
+	var status []byte
+	var errorMessage []byte
+	var broadcastTxId []byte
 
-	if err := row.Scan(&rowId, &assetId, &sourceAddress, &asset, &description, &quantity, &divisible, &status, &errorMessage); err == sql.ErrNoRows {
-		assetStruct = enulib.Asset{}
+	if err := row.Scan(&rowId, &assetId, &sourceAddress, &asset, &description, &quantity, &divisible, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
 		if err.Error() == "sql: no rows in result set" {
-			assetStruct.AssetId = assetId
-			assetStruct.Status = "Not found"
 		}
+	} else if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	} else {
-		assetStruct = enulib.Asset{SourceAddress: sourceAddress, Asset: asset, Description: description, Quantity: quantity, AssetId: assetId, Status: status, ErrorMessage: errorMessage}
+		assetStruct = enulib.Asset{SourceAddress: sourceAddress, Asset: asset, Description: string(description), Quantity: quantity, AssetId: assetId, Status: string(status), ErrorMessage: string(errorMessage)}
 	}
 
 	return assetStruct
 }
 
-func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescription string) error {
+func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId string, errorDescription string) error {
 	if isInit == false {
 		Init()
 	}
 
-	asset := GetAssetByAssetId(accessKey, assetId)
+	asset := GetAssetByAssetId(c, accessKey, assetId)
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -190,12 +196,12 @@ func UpdateAssetWithErrorByAssetId(accessKey string, assetId string, errorDescri
 	return nil
 }
 
-func UpdateAssetStatusByAssetId(accessKey string, assetId string, status string) error {
+func UpdateAssetStatusByAssetId(c context.Context, accessKey string, assetId string, status string) error {
 	if isInit == false {
 		Init()
 	}
 
-	asset := GetAssetByAssetId(accessKey, assetId)
+	asset := GetAssetByAssetId(c, accessKey, assetId)
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -217,12 +223,12 @@ func UpdateAssetStatusByAssetId(accessKey string, assetId string, status string)
 	return nil
 }
 
-func UpdateAssetNameByAssetId(accessKey string, assetId string, assetName string) error {
+func UpdateAssetNameByAssetId(c context.Context, accessKey string, assetId string, assetName string) error {
 	if isInit == false {
 		Init()
 	}
 
-	asset := GetAssetByAssetId(accessKey, assetId)
+	asset := GetAssetByAssetId(c, accessKey, assetId)
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -244,12 +250,12 @@ func UpdateAssetNameByAssetId(accessKey string, assetId string, assetName string
 	return nil
 }
 
-func UpdateAssetCompleteByAssetId(accessKey string, assetId string, txId string) error {
+func UpdateAssetCompleteByAssetId(c context.Context, accessKey string, assetId string, txId string) error {
 	if isInit == false {
 		Init()
 	}
 
-	asset := GetAssetByAssetId(accessKey, assetId)
+	asset := GetAssetByAssetId(c, accessKey, assetId)
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -299,11 +305,17 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 		Init()
 	}
 
+	// Initialise some initial values
+	var dividendStruct = enulib.Dividend{}
+	dividendStruct.DividendId = dividendId
+	dividendStruct.Status = "Not found"
+
 	//	 Query DB
 	log.FluentfContext(consts.LOGERROR, c, "select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, errorDescription, broadcastTxId from dividends where dividendId=%s and accessKey=%s", dividendId, accessKey)
 	stmt, err := Db.Prepare("select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, status, errorDescription, broadcastTxId from dividends where dividendId=? and accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return dividendStruct
 	}
 	defer stmt.Close()
 
@@ -311,6 +323,7 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	row := stmt.QueryRow(dividendId, accessKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to QueryRow. Reason: %s", err.Error())
+		return dividendStruct
 	}
 
 	var rowId string
@@ -321,26 +334,16 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	var status string
 	var errorMessage string
 	var broadcastTxId []byte
-	var dividendStruct enulib.Dividend
 
 	if err := row.Scan(&rowId, &dividendId, &sourceAddress, &asset, &dividendAsset, &quantityPerUnit, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
-		dividendStruct = enulib.Dividend{}
 		if err.Error() == "sql: no rows in result set" {
-			dividendStruct.DividendId = dividendId
-			dividendStruct.Status = "Not found"
+			return dividendStruct
 		}
 	} else if err != nil {
-		dividendStruct = enulib.Dividend{}
-		dividendStruct.DividendId = dividendId
-		dividendStruct.Status = "Not found"
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	} else {
 		dividendStruct = enulib.Dividend{SourceAddress: sourceAddress, Asset: asset, DividendAsset: dividendAsset, QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: status, ErrorMessage: errorMessage, BroadcastTxId: string(broadcastTxId)}
 	}
-
-	log.FluentfContext(consts.LOGINFO, c, "%s", asset)
-
-	log.FluentfContext(consts.LOGINFO, c, "%s", dividendStruct)
 
 	return dividendStruct
 }

@@ -14,8 +14,6 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-var sourceFile = "pingcounterpartyd.go"
-
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
 var sendAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
 var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
@@ -115,7 +113,6 @@ func main() {
 		if err2 != nil {
 			log.Fluentf(consts.LOGERROR, "Error creating counterparty send")
 			log.Fluentf(consts.LOGERROR, err2.Error())
-
 		}
 
 		c3 <- resultCreateSend

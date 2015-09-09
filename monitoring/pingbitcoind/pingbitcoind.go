@@ -13,8 +13,6 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-var sourceFile = "pingbitcoind.go"
-
 // This application is to be used for monitoring purposes of bitcoind or btcd.
 //
 // Calls GetBlockCount to check to see if bitcoind is alive
