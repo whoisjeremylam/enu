@@ -142,7 +142,7 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 	return accessKey, nil
 }
 
-func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (interface{}, error) {
+func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (map[string]interface{}, error) {
 	//	var blockchainId string
 	var payload interface{}
 	var nonceDB int64
@@ -245,8 +245,8 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			}
 			err := errors.New(errorList)
 			log.FluentfContext(consts.LOGERROR, c, "The document is not valid. Errors : %s", errorList)
-			return payload, err
+			return m, err
 		}
 	}
-	return payload, nil
+	return m, nil
 }

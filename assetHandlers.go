@@ -26,7 +26,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	c = context.WithValue(c, consts.RequestTypeKey, "asset")
 
 	// check generic args and parse
-	payload, err := CheckAndParseJsonCTX(c, w, r)
+	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
@@ -37,7 +37,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
-	m := payload.(map[string]interface{})
+	//	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)
@@ -94,7 +94,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	c = context.WithValue(c, consts.RequestTypeKey, "dividend")
 
 	// check generic args and parse
-	payload, err := CheckAndParseJsonCTX(c, w, r)
+	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
@@ -105,7 +105,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 		return nil
 	}
 
-	m := payload.(map[string]interface{})
+	//	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)

@@ -60,7 +60,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	c = context.WithValue(c, consts.RequestTypeKey, "walletPayment")
 
 	// check generic args and parse
-	payload, err := CheckAndParseJsonCTX(c, w, r)
+	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
@@ -71,7 +71,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 		return nil
 	}
 
-	m := payload.(map[string]interface{})
+	//m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)

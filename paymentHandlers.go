@@ -25,7 +25,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	c = context.WithValue(c, consts.RequestTypeKey, "simplePayment")
 
 	// check generic args and parse
-	payload, err := CheckAndParseJsonCTX(c, w, r)
+	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
@@ -36,7 +36,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 		return nil
 	}
 
-	m := payload.(map[string]interface{})
+	//	m := payload.(map[string]interface{})
 
 	paymentId := m["paymentId"].(string)
 	sourceAddress := m["sourceAddress"].(string)
