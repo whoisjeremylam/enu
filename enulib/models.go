@@ -10,7 +10,7 @@ type Block struct {
 type Blocks struct {
 	Allblocks []Block `json:"blocks"`
 	RequestId string  `json:"requestId"`
-	Nonce     string  `json:"nonce"`
+	Nonce     int64   `json:"nonce"`
 }
 
 type Amount struct {
@@ -33,7 +33,7 @@ type AssetBalances struct {
 	Supply       uint64          `json:"quantity"`
 	Balances     []AddressAmount `json:"balances"`
 	RequestId    string          `json:"requestId"`
-	Nonce        string          `json:"nonce"`
+	Nonce        int64           `json:"nonce"`
 }
 
 type PaymentId struct {
@@ -50,7 +50,7 @@ type Payment struct {
 	Status             string `json:"status"`
 	LastUpdatedBlockId int64  `json:"lastUpdatedblockId"`
 	RequestId          string `json:"requestId"`
-	Nonce              string `json:"nonce"`
+	Nonce              int64  `json:"nonce"`
 }
 
 type Payments []Payment
@@ -67,7 +67,7 @@ type SimplePayment struct {
 	Status             string `json:"status"`
 	ErrorMessage       string `json:"errorMessage"`
 	RequestId          string `json:"requestId"`
-	Nonce              string `json:"nonce"`
+	Nonce              int64  `json:"nonce"`
 }
 
 type Address struct {
@@ -75,14 +75,14 @@ type Address struct {
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
 	RequestId  string `json:"requestId"`
-	Nonce      string `json:"nonce"`
+	Nonce      int64  `json:"nonce"`
 }
 
 type AddressBalances struct {
 	Address   string   `json:"address"`
 	Balances  []Amount `json:"balances"`
 	RequestId string   `json:"requestId"`
-	Nonce     string   `json:"nonce"`
+	Nonce     int64    `json:"nonce"`
 }
 
 type Asset struct {
@@ -97,7 +97,7 @@ type Asset struct {
 	Status        string `json:"status"`
 	ErrorMessage  string `json:"errorMessage"`
 	RequestId     string `json:"requestId"`
-	Nonce         string `json:"nonce"`
+	Nonce         int64  `json:"nonce"`
 }
 
 type ReturnCode struct {
@@ -116,7 +116,7 @@ type Dividend struct {
 	Status          string `json:"status"`
 	ErrorMessage    string `json:"errorMessage"`
 	RequestId       string `json:"requestId"`
-	Nonce           string `json:"nonce"`
+	Nonce           int64  `json:"nonce"`
 	BroadcastTxId   string `json:"broadcastTxId"`
 }
 
@@ -134,7 +134,7 @@ type AssetIssuances struct {
 	Locked       bool       `json:"locked"`
 	Issuances    []Issuance `json:"issuances"`
 	RequestId    string     `json:"requestId"`
-	Nonce        string     `json:"nonce"`
+	Nonce        int64      `json:"nonce"`
 }
 
 type WalletPayment struct {
@@ -146,5 +146,5 @@ type WalletPayment struct {
 	PaymentId          string `json:"paymentId"`
 	PaymentTag         string `json:"paymentTag"`
 	RequestId          string `json:"requestId"`
-	Nonce              string `json:"nonce"`
+	Nonce              int64  `json:"nonce"`
 }

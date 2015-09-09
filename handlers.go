@@ -9,7 +9,6 @@ import (
 
 	"math/rand"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/vennd/enu/consts"
@@ -173,24 +172,21 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		return nil, err
 	}
 
-	// nonce checking
 	m := payload.(map[string]interface{})
-	log.FluentfContext(consts.LOGINFO, c, "Nonce received: %s", m["nonce"].(string))
-	nonceInt, convertNonceErr := strconv.ParseInt(m["nonce"].(string), 10, 64)
-	if convertNonceErr != nil {
-		err = errors.New("Invalid nonce value")
-		// Unable to convert the value of nonce in the header to an integer
-		log.FluentfContext(consts.LOGERROR, c, convertNonceErr.Error())
-		return nil, err
-	} else {
+
+	// nonce checking
+	nonceInt := int64(m["nonce"].(float64))
+	log.FluentfContext(consts.LOGINFO, c, "Nonce received: %s", nonceInt)
+
+	if nonceInt > 0 {
 		nonceDB = database.GetNonceByAccessKey(accessKey)
 		if nonceInt <= nonceDB {
 			err = errors.New("Invalid nonce value")
 			//Nonce is not greater than the nonce in the DB
-			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, m["nonce"].(string), nonceDB)
+			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %d <= %d\n", accessKey, nonceInt, nonceDB)
 			return nil, err
 		} else {
-			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, m["nonce"].(string), nonceDB)
+			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, nonceInt, nonceDB)
 			database.UpdateNonce(accessKey, nonceInt)
 			if err != nil {
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
