@@ -37,7 +37,6 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
-	//	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)
@@ -104,8 +103,6 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 		//		ReturnServerError(c, w, err)
 		return nil
 	}
-
-	//	m := payload.(map[string]interface{})
 
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)
@@ -408,9 +405,10 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *appErr
 
 	}
 
-	log.FluentfContext(consts.LOGINFO, c, "GetDividend called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
+	log.FluentfContext(consts.LOGINFO, c, "GetAsset called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
 
 	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
+	asset.RequestId = requestId
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(asset); err != nil {

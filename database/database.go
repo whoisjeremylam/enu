@@ -132,7 +132,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	assetStruct.Status = "Not found"
 
 	//	 Query DB
-	log.FluentfContext(consts.LOGINFO, c, "select rowId, assetId, sourceAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=? and accessKey=?", assetId, accessKey)
+	log.FluentfContext(consts.LOGINFO, c, "select rowId, assetId, sourceAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=%s and accessKey=%s", assetId, accessKey)
 	stmt, err := Db.Prepare("select rowId, assetId, sourceAddress, asset, description, quantity, divisible, status, errorDescription,  broadcastTxId from assets where assetId=? and accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())

@@ -71,8 +71,6 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 		return nil
 	}
 
-	//m := payload.(map[string]interface{})
-
 	passphrase := m["passphrase"].(string)
 	sourceAddress := m["sourceAddress"].(string)
 	destinationAddress := m["destinationAddress"].(string)
