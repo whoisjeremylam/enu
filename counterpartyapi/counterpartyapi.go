@@ -805,7 +805,7 @@ func CreateDividend(sourceAddress string, asset string, dividendAsset string, qu
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedSend(accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, quantity uint64, paymentId string, paymentTag string, requestId string) (string, error) {
+func DelegatedSend(c context.Context, accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, quantity uint64, paymentId string, paymentTag string, requestId string) (string, error) {
 	if isInit == false {
 		Init()
 	}
@@ -820,45 +820,45 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 
 	// Mutex lock this address
 	counterparty_Mutexes.Lock()
-	log.Println("Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
 
 	// If an entry doesn't currently exist in the map for that address
 	if counterparty_Mutexes.m[sourceAddress] == nil {
-		log.Printf("Created new entry in map for %s\n", sourceAddress)
+		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s", sourceAddress)
 		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
 	}
 
 	counterparty_Mutexes.m[sourceAddress].Lock()
-	log.Printf("Locked: %s\n", sourceAddress)
+	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
 
 	defer counterparty_Mutexes.Unlock()
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
 	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.Println("Sleeping")
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
 	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
 
-	log.Println("Sleep complete")
+	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
 	// Create the send
 	createResult, err := CreateSend(sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
 	if err != nil {
-		log.Printf("Err in CreateSend(): %s\n", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Err in CreateSend(): %s", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
 		return "", err
 	}
 
-	log.Printf("Created send of %d %s to %s: %s\n", quantity, asset, destinationAddress, createResult)
+	log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, destinationAddress, createResult)
 
 	// Sign the transactions
 	signed, err := SignRawTransaction(passphrase, createResult)
 	if err != nil {
-		log.Printf("Err in SignRawTransaction(): %s\n", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Err in SignRawTransaction(): %s\n", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
 		return "", err
 	}
 
-	log.Printf("Signed tx: %s\n", signed)
+	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s", signed)
 
 	// Update the DB with the raw signed TX. This will allow re-transmissions if something went wrong with sending on the network
 	database.UpdatePaymentSignedRawTxByPaymentId(accessKey, paymentId, signed)
@@ -866,14 +866,14 @@ func DelegatedSend(accessKey string, passphrase string, sourceAddress string, de
 	// Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
-		log.Printf("Err in SendRawTransaction(): %s\n", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Err in SendRawTransaction(): %s\n", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
 		return "", err
 	}
 
 	database.UpdatePaymentCompleteByPaymentId(accessKey, paymentId, txId)
 
-	log.Println("Complete.")
+	log.FluentfContext(consts.LOGINFO, c, "Complete.")
 
 	return txId, nil
 }

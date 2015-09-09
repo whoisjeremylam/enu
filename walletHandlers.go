@@ -84,15 +84,21 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	log.FluentfContext(consts.LOGINFO, c, "WalletSend: received request sourceAddress: %s, destinationAddress: %s, asset: %s, quantity: %d, paymentTag: %s from accessKey: %s\n", sourceAddress, destinationAddress, asset, quantity, c.Value(consts.AccessKeyKey).(string), paymentTag)
 	// Generate a paymentId
 	paymentId := enulib.GeneratePaymentId()
+
 	log.FluentfContext(consts.LOGINFO, c, "Generated paymentId: %s", paymentId)
 
-	// Return to the client the paymentId and unblock the client
+	// Return to the client the walletPayment containing requestId and paymentId and unblock the client
+	walletPayment.PaymentId = paymentId
+	walletPayment.Asset = asset
+	walletPayment.SourceAddress = sourceAddress
+	walletPayment.DestinationAddress = destinationAddress
+	walletPayment.Quantity = quantity
 	w.WriteHeader(http.StatusCreated)
-	if err = json.NewEncoder(w).Encode(paymentId); err != nil {
+	if err = json.NewEncoder(w).Encode(walletPayment); err != nil {
 		panic(err)
 	}
 
-	go counterpartyapi.DelegatedSend(c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
+	go counterpartyapi.DelegatedSend(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
 
 	return nil
 }
