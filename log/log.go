@@ -283,14 +283,15 @@ func object(tag string, object interface{}, errorString string, suppressErrors b
 		log.Println(logString)
 	}
 
-	_, err2 := sendToFluent(fluentHost+"/"+tag, payloadJsonBytes)
+	//	_, err2 := sendToFluent(fluentHost+"/"+tag, payloadJsonBytes)
+	go sendToFluent(fluentHost+"/"+tag, payloadJsonBytes)
 
-	// If running in suppressErrors mode, don't raise if we couldn't send to fluentd
-	// suppressErrors mode is used when Object is called by Printf for backwards compatibility
-	if err2 != nil && suppressErrors == false {
-		log.Println("log.go: Fatal error - failed to send to fluentd")
-		log.Printf("\"%s\",\"%s\",\"%s\"\n", errorString, tag, string(payloadJsonBytes)) // fallback to printing to stdout
-	}
+	//	// If running in suppressErrors mode, don't raise if we couldn't send to fluentd
+	//	// suppressErrors mode is used when Object is called by Printf for backwards compatibility
+	//	if err2 != nil && suppressErrors == false {
+	//		log.Println("log.go: Fatal error - failed to send to fluentd")
+	//		log.Printf("\"%s\",\"%s\",\"%s\"\n", errorString, tag, string(payloadJsonBytes)) // fallback to printing to stdout
+	//	}
 }
 
 func sendToFluent(url string, postData []byte) (int64, error) {
