@@ -366,6 +366,7 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	log.FluentfContext(consts.LOGINFO, c, "GetDividend called for '%s' by '%s'\n", dividendId, c.Value(consts.AccessKeyKey).(string))
 
 	dividend = database.GetDividendByDividendId(c, c.Value(consts.AccessKeyKey).(string), dividendId)
+	dividend.RequestId = requestId
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(dividend); err != nil {

@@ -170,7 +170,6 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if calculatedSignature != signature {
 		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
 		err := errors.New(errorString)
-
 		return nil, err
 	}
 
@@ -182,23 +181,19 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		err = errors.New("Invalid nonce value")
 		// Unable to convert the value of nonce in the header to an integer
 		log.FluentfContext(consts.LOGERROR, c, convertNonceErr.Error())
-		ReturnUnauthorised(c, w, err)
 		return nil, err
 	} else {
 		nonceDB = database.GetNonceByAccessKey(accessKey)
 		if nonceInt <= nonceDB {
 			err = errors.New("Invalid nonce value")
 			//Nonce is not greater than the nonce in the DB
-			log.Printf("Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, m["nonce"].(string), nonceDB)
 			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %s <= %d\n", accessKey, m["nonce"].(string), nonceDB)
-			ReturnUnauthorised(c, w, err)
 			return nil, err
 		} else {
 			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, m["nonce"].(string), nonceDB)
 			database.UpdateNonce(accessKey, nonceInt)
 			if err != nil {
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
-				ReturnServerError(c, w, err)
 				return nil, err
 			}
 		}
