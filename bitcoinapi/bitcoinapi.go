@@ -3,13 +3,18 @@ package bitcoinapi
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
+	"net/http"
 	"os"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcrpcclient"
 	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/vennd/enu/log"
+
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 // Globals
@@ -37,7 +42,8 @@ func Init() {
 				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
 				//				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 			} else {
-				log.Fatalln("Cannot find enuapi.json")
+				log.Println("Cannot find enuapi.json")
+				os.Exit(-100)
 			}
 		}
 	}
@@ -57,14 +63,14 @@ func InitWithConfigPath(configFilePath string) {
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
 		log.Println("Unable to read configuration file enuapi.json")
-		log.Fatalln(err)
+		os.Exit(-100)
 	}
 
 	err = json.Unmarshal(file, &configuration)
 
 	if err != nil {
 		log.Println("Unable to parse enuapi.json")
-		log.Fatalln(err)
+		os.Exit(-100)
 	}
 
 	m := configuration.(map[string]interface{})
@@ -89,7 +95,7 @@ func GetBlockCount() (int64, error) {
 	// not supported in HTTP POST mode.
 	client, err := btcrpcclient.New(&config, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return 0, err
 	}
 	defer client.Shutdown()
@@ -97,7 +103,7 @@ func GetBlockCount() (int64, error) {
 	// Get the current block count.
 	blockCount, err := client.GetBlockCount()
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return 0, err
 	}
 
@@ -137,14 +143,14 @@ func SendRawTransaction(txHexString string) (string, error) {
 	// Convert the hex string to a byte array
 	txBytes, err := hex.DecodeString(txHexString)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return "", err
 	}
 
 	// Deserialise the transaction
 	tx, err := btcutil.NewTxFromBytes(txBytes)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return "", err
 	}
 
@@ -154,7 +160,7 @@ func SendRawTransaction(txHexString string) (string, error) {
 	// not supported in HTTP POST mode.
 	client, err := btcrpcclient.New(&config, nil)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return "", err
 	}
 	defer client.Shutdown()
@@ -162,33 +168,82 @@ func SendRawTransaction(txHexString string) (string, error) {
 	// Send the tx
 	result, err := client.SendRawTransaction(msgTx, true)
 	if err != nil {
-		log.Println(err)
+		log.Println(err.Error())
 		return "", err
 	}
 
 	return fmt.Sprintf("%s", result.String()), nil
 }
 
-func GetBalance(account string) (float64, error) {
+func GetBalance(c context.Context, address string) (int64, error) {
 	if isInit == false {
 		Init()
 	}
 
-	// Notice the notification parameter is nil since notifications are
-	// not supported in HTTP POST mode.
-	client, err := btcrpcclient.New(&config, nil)
-	if err != nil {
-		log.Println(err)
-		return 0, err
-	}
-	defer client.Shutdown()
+	result, status, err := httpGet(c, "http://btc.blockr.io/api/v1/address/balance/"+address)
 
-	// Get the current balance
-	amount, err := client.GetBalance(account)
-	if err != nil {
-		log.Println(err)
-		return 0, err
+	if status != 200 {
+		log.FluentfContext(consts.LOGERROR, c, string(result))
 	}
-	var unit btcutil.AmountUnit = 0
-	return amount.ToUnit(unit), nil
+
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+
+		return 0.0, err
+	}
+
+	var r interface{}
+
+	if err := json.Unmarshal(result, &r); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return 0.0, err
+	}
+
+	m := r.(map[string]interface{})
+
+	if m["status"] == nil || m["status"] != "success" {
+		return 0.0, errors.New("Blockr.io unavailable")
+	}
+
+	data := m["data"].(map[string]interface{})
+	balanceFloat := data["balance"].(float64) * consts.Satoshi
+
+	return int64(balanceFloat), nil
+}
+
+func httpGet(c context.Context, url string) ([]byte, int64, error) {
+	// Set headers
+	req, err := http.NewRequest("GET", url, nil)
+
+	clientPointer := &http.Client{}
+	resp, err := clientPointer.Do(req)
+
+	if err != nil {
+		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. %s", err.Error())
+		return nil, 0, err
+	}
+
+	if resp.StatusCode != 200 {
+		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", resp.StatusCode)
+
+		body, err := ioutil.ReadAll(resp.Body)
+		defer resp.Body.Close()
+
+		if err != nil {
+			return nil, 0, err
+		}
+
+		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
+
+		return nil, -1000, errors.New(string(body))
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+	defer resp.Body.Close()
+
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return body, 0, nil
 }
