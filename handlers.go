@@ -175,8 +175,13 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	m := payload.(map[string]interface{})
 
 	// nonce checking
-	nonceInt := int64(m["nonce"].(float64))
-	log.FluentfContext(consts.LOGINFO, c, "Nonce received: %s", nonceInt)
+	var nonceInt int64
+	if m["nonce"] != nil {
+		nonceInt := int64(m["nonce"].(float64))
+		log.FluentfContext(consts.LOGINFO, c, "Nonce received: %s", nonceInt)
+	} else {
+		nonceInt = 0
+	}
 
 	if nonceInt > 0 {
 		nonceDB = database.GetNonceByAccessKey(accessKey)
