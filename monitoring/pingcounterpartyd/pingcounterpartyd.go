@@ -11,7 +11,10 @@ import (
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
+	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/log"
+
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
@@ -33,10 +36,13 @@ func main() {
 	var result1, result2 uint64
 	var result3 string
 
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
 	// First check the internal block height via our API
 	c1 := make(chan uint64, 1)
 	go func() {
-		result, err := counterpartyapi.GetRunningInfo()
+		result, err := counterpartyapi.GetRunningInfo(c)
 
 		if err != nil {
 			log.Fluentf(consts.LOGERROR, "Error retrieving our block height")
@@ -108,7 +114,7 @@ func main() {
 			log.Fluentf(consts.LOGERROR, err.Error())
 		}
 
-		resultCreateSend, err2 := counterpartyapi.CreateSend(sendAddress, destinationAddress, "SHIMA", 1000, pubKey)
+		resultCreateSend, err2 := counterpartyapi.CreateSend(c, sendAddress, destinationAddress, "SHIMA", 1000, pubKey)
 
 		if err2 != nil {
 			log.Fluentf(consts.LOGERROR, "Error creating counterparty send")

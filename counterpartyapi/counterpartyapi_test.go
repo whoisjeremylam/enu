@@ -1,10 +1,13 @@
 package counterpartyapi
 
 import (
-	//	"log"
 	"testing"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartycrypto"
+	"github.com/vennd/enu/enulib"
+
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
@@ -12,7 +15,10 @@ var sendAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
 var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
 
 func TestGenerateRandomAssetName(t *testing.T) {
-	result, err := generateRandomAssetName()
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
+	result, err := generateRandomAssetName(c)
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -27,8 +33,10 @@ func TestGenerateRandomAssetName(t *testing.T) {
 
 func TestGetBalances(t *testing.T) {
 	Init()
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
 
-	resultGetBalances, err := GetBalancesByAsset("XBTC")
+	resultGetBalances, err := GetBalancesByAsset(c, "XBTC")
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -42,7 +50,10 @@ func TestGetBalances(t *testing.T) {
 func TestGetBalancesByAsset(t *testing.T) {
 	Init()
 
-	resultGetBalances, err := GetBalancesByAddress("1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
+	resultGetBalances, err := GetBalancesByAddress(c, "1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -70,6 +81,9 @@ func TestCreateSend(t *testing.T) {
 
 	Init()
 
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.From)
 
@@ -77,7 +91,7 @@ func TestCreateSend(t *testing.T) {
 			t.Error(err.Error())
 		}
 
-		resultCreateSend, err := CreateSend(s.From, s.To, "SHIMA", s.Amount, pubKey)
+		resultCreateSend, err := CreateSend(c, s.From, s.To, "SHIMA", s.Amount, pubKey)
 
 		if s.ExpectedResult != resultCreateSend {
 			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateSend, s.CaseDescription)
@@ -103,8 +117,11 @@ func TestSignRawTransaction(t *testing.T) {
 
 	Init()
 
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
 	for _, s := range testData {
-		result, err := SignRawTransaction(s.Passphrase, s.UnsignedTx)
+		result, err := SignRawTransaction(c, s.Passphrase, s.UnsignedTx)
 
 		if s.ExpectedResult != result {
 			t.Errorf("Expected: %s, Got: %s\n", s.ExpectedResult, result)
@@ -120,6 +137,9 @@ func TestSignRawTransaction(t *testing.T) {
 func TestSendRawTransaction(t *testing.T) {
 	Init()
 
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
 	pubKey, err := counterpartycrypto.GetPublicKey(passphrase, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p")
 	if err != nil {
 		t.Error(err.Error())
@@ -127,14 +147,14 @@ func TestSendRawTransaction(t *testing.T) {
 		return
 	}
 
-	payload, err := CreateSend("1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 2000, pubKey)
+	payload, err := CreateSend(c, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 2000, pubKey)
 	if err != nil {
 		t.Error(err.Error())
 
 		return
 	}
 
-	signedRawTransactionHexString, err := SignRawTransaction("attention stranger fate plain huge poetry view precious drug world try age", payload)
+	signedRawTransactionHexString, err := SignRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -170,6 +190,9 @@ func TestCreateIssuance(t *testing.T) {
 
 	Init()
 
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.SourceAddress)
 		if err != nil {
@@ -180,7 +203,7 @@ func TestCreateIssuance(t *testing.T) {
 			t.Errorf("Unable to retrieve pubkey for: %s\n", s.SourceAddress)
 		}
 
-		resultCreateIssuance, err := CreateIssuance(s.SourceAddress, s.Asset, s.Description, s.Quantity, s.Divisible, pubKey)
+		resultCreateIssuance, err := CreateIssuance(c, s.SourceAddress, s.Asset, s.Description, s.Quantity, s.Divisible, pubKey)
 
 		if s.ExpectedResult != resultCreateIssuance {
 			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateIssuance, s.CaseDescription)
@@ -210,6 +233,9 @@ func TestCreateDividend(t *testing.T) {
 
 	Init()
 
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.SourceAddress)
 		if err != nil {
@@ -220,7 +246,7 @@ func TestCreateDividend(t *testing.T) {
 			t.Errorf("Unable to retrieve pubkey for: %s\n", s.SourceAddress)
 		}
 
-		resultCreateIssuance, err := CreateDividend(s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
+		resultCreateIssuance, err := CreateDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
 
 		if s.ExpectedResult != resultCreateIssuance {
 			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateIssuance, s.CaseDescription)
@@ -239,7 +265,10 @@ func TestGetRunningInfo(t *testing.T) {
 	var result RunningInfo
 	Init()
 
-	result, err := GetRunningInfo()
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+
+	result, err := GetRunningInfo(c)
 	if err != nil {
 		t.Error(err.Error())
 	}
