@@ -9,6 +9,7 @@ const AccessKeyKey key = 1
 const NonceIntKey key = 2
 const BlockchainIdKey key = 3
 const RequestTypeKey key = 4
+const EnvKey key = 5
 
 const CounterpartyBlockchainId string = "counterparty"
 const RippleBlockchainId string = "ripple"
@@ -25,3 +26,5 @@ var AccessKeyStatuses = []string{AccessKeyValidStatus, AccessKeyInvalidStatus, A
 const LOGINFO = "INFO"
 const LOGERROR = "ERROR"
 const LOGDEBUG = "DEBUG"
+
+const CounterpartyAddressActivationAmount = 100 // Number of transactions to activate Counterparty addresses by default

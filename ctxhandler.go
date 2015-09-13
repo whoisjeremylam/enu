@@ -34,6 +34,13 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	parent := context.TODO()
 	ctx := context.WithValue(parent, consts.RequestIdKey, requestId)
 
+	// Get the env we are running in
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "dev"
+	}
+	ctx = context.WithValue(ctx, consts.EnvKey, env)
+
 	log.FluentfContext(consts.LOGINFO, ctx, "%s %s entered.", r.Method, r.URL.Path)
 
 	accessKey, err := CheckHeaderGeneric(ctx, w, r)
