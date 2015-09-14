@@ -797,7 +797,7 @@ func CreateUserKey(userId int64, assetId string, blockchainId string, sourceAddr
 	return key, secret, nil
 }
 
-func CreateSecondaryAddress(accessKey string, newAddress string, requestId string) error {
+func CreateSecondaryAddress(c context.Context, accessKey string, newAddress string) error {
 	if isInit == false {
 		Init()
 	}

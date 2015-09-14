@@ -99,7 +99,7 @@ func TestInsertActivationandInsertPayment(t *testing.T) {
 	InsertActivation(ctx, "TestAccessKey", activationId, "BlockchainId", "AddressToActive", 100)
 
 	// Insert a corresponding payment
-	InsertPayment("TestAccessKey", 0, activationId, "InternalAddress", "AddressToActive", "BTC", 1, "testing", 0, 1500, "", requestId)
+	InsertPayment(ctx, "TestAccessKey", 0, activationId, "InternalAddress", "AddressToActive", "BTC", 1, "testing", 0, 1500, "")
 
 	// need to cover more columns and how to test that payment actually works?
 

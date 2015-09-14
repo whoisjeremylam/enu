@@ -33,7 +33,7 @@ func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	}
 	address.Value = newAddress
 
-	err2 := database.CreateSecondaryAddress(c.Value(consts.AccessKeyKey).(string), newAddress, requestId)
+	err2 := database.CreateSecondaryAddress(c, c.Value(consts.AccessKeyKey).(string), newAddress)
 	if err2 != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Unable to persist new address to database. Error: %s\n", err2.Error())
 	} else {
