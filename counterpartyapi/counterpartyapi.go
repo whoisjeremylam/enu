@@ -801,13 +801,13 @@ func CreateDividend(c context.Context, sourceAddress string, asset string, divid
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedSend(c context.Context, accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, quantity uint64, paymentId string, paymentTag string, requestId string) (string, error) {
+func DelegatedSend(c context.Context, accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, quantity uint64, paymentId string, paymentTag string) (string, error) {
 	if isInit == false {
 		Init()
 	}
 
 	// Write the payment with the generated payment id to the database
-	go database.InsertPayment(accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, 1500, paymentTag, requestId)
+	go database.InsertPayment(c, accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, 1500, paymentTag)
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -840,7 +840,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	createResult, err := CreateSend(c, sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in CreateSend(): %s", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
 		return "", err
 	}
 
@@ -850,24 +850,24 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	signed, err := SignRawTransaction(c, passphrase, createResult)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in SignRawTransaction(): %s\n", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
 		return "", err
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s", signed)
 
 	// Update the DB with the raw signed TX. This will allow re-transmissions if something went wrong with sending on the network
-	database.UpdatePaymentSignedRawTxByPaymentId(accessKey, paymentId, signed)
+	database.UpdatePaymentSignedRawTxByPaymentId(c, accessKey, paymentId, signed)
 
 	// Transmit the transaction
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in SendRawTransaction(): %s\n", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(accessKey, paymentId, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
 		return "", err
 	}
 
-	database.UpdatePaymentCompleteByPaymentId(accessKey, paymentId, txId)
+	database.UpdatePaymentCompleteByPaymentId(c, accessKey, paymentId, txId)
 
 	log.FluentfContext(consts.LOGINFO, c, "Complete.")
 
@@ -875,7 +875,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool, requestId string) (string, error) {
+func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool) (string, error) {
 	if isInit == false {
 		Init()
 	}
@@ -945,7 +945,7 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateDividend(c context.Context, accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, requestId string) (string, error) {
+func DelegatedCreateDividend(c context.Context, accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64) (string, error) {
 	if isInit == false {
 		Init()
 	}

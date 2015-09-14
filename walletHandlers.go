@@ -98,7 +98,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 		panic(err)
 	}
 
-	go counterpartyapi.DelegatedSend(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag, requestId)
+	go counterpartyapi.DelegatedSend(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag)
 
 	return nil
 }

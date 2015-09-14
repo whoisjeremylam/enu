@@ -57,7 +57,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 		log.FluentfContext(consts.LOGINFO, c, "Generated paymentId: %s", simplePayment.PaymentId)
 	}
 
-	database.InsertPayment(c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag, requestId)
+	database.InsertPayment(c, c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag)
 	// errorhandling here!!
 
 	simplePayment.SourceAddress = sourceAddress
@@ -96,7 +96,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	paymentId := vars["paymentId"]
 
 	log.FluentfContext(consts.LOGINFO, c, "PaymentRetry called for paymentId %s\n", paymentId)
-	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)
+	payment = database.GetPaymentByPaymentId(c, c.Value(consts.AccessKeyKey).(string), paymentId)
 
 	// Payment not found
 	if payment.Status == "Not found" || payment.Status == "" {
@@ -113,7 +113,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 		return nil
 	}
 
-	err = database.UpdatePaymentStatusByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId, "authorized")
+	err = database.UpdatePaymentStatusByPaymentId(c, c.Value(consts.AccessKeyKey).(string), paymentId, "authorized")
 
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
@@ -166,7 +166,7 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 
 	log.FluentfContext(consts.LOGINFO, c, "GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
 
-	payment = database.GetPaymentByPaymentId(c.Value(consts.AccessKeyKey).(string), paymentId)
+	payment = database.GetPaymentByPaymentId(c, c.Value(consts.AccessKeyKey).(string), paymentId)
 	// errorhandling here!!
 
 	w.WriteHeader(http.StatusOK)
