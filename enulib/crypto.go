@@ -37,3 +37,7 @@ func GenerateDividendId() string {
 func GenerateRequestId() string {
 	return hex.EncodeToString(securecookie.GenerateRandomKey(16))
 }
+
+func GenerateActivationId() string {
+	return hex.EncodeToString(securecookie.GenerateRandomKey(16))
+}

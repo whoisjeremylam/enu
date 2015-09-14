@@ -148,8 +148,8 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	}
 
 	var rowId string
-	var sourceAddress string
-	var asset string
+	var sourceAddress []byte
+	var asset []byte
 	var description []byte
 	var quantity uint64
 	var divisible bool
@@ -163,7 +163,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	} else if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	} else {
-		assetStruct = enulib.Asset{SourceAddress: sourceAddress, Asset: asset, Description: string(description), Quantity: quantity, AssetId: assetId, Status: string(status), ErrorMessage: string(errorMessage)}
+		assetStruct = enulib.Asset{SourceAddress: string(sourceAddress), Asset: string(asset), Description: string(description), Quantity: quantity, AssetId: assetId, Status: string(status), ErrorMessage: string(errorMessage)}
 	}
 
 	return assetStruct
@@ -327,12 +327,12 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	}
 
 	var rowId string
-	var sourceAddress string
-	var asset string
-	var dividendAsset string
+	var sourceAddress []byte
+	var asset []byte
+	var dividendAsset []byte
 	var quantityPerUnit uint64
-	var status string
-	var errorMessage string
+	var status []byte
+	var errorMessage []byte
 	var broadcastTxId []byte
 
 	if err := row.Scan(&rowId, &dividendId, &sourceAddress, &asset, &dividendAsset, &quantityPerUnit, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
@@ -342,7 +342,7 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	} else if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	} else {
-		dividendStruct = enulib.Dividend{SourceAddress: sourceAddress, Asset: asset, DividendAsset: dividendAsset, QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: status, ErrorMessage: errorMessage, BroadcastTxId: string(broadcastTxId)}
+		dividendStruct = enulib.Dividend{SourceAddress: string(sourceAddress), Asset: string(asset), DividendAsset: string(dividendAsset), QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: string(status), ErrorMessage: string(errorMessage), BroadcastTxId: string(broadcastTxId)}
 	}
 
 	return dividendStruct
@@ -425,7 +425,7 @@ func InsertPayment(accessKey string, blockIdValue int64, sourceTxidValue string,
 	defer stmt.Close()
 }
 
-func GetPaymentByPaymentId(accessKey string, paymentId string) enulib.SimplePayment {
+func GetPaymentByPaymentId(c context.Context, accessKey string, paymentId string) enulib.SimplePayment {
 	if isInit == false {
 		Init()
 	}
@@ -445,19 +445,19 @@ func GetPaymentByPaymentId(accessKey string, paymentId string) enulib.SimplePaym
 	}
 
 	var rowId string
-	var blockId string
-	var sourceAddress string
-	var destinationAddress string
-	var asset string
+	var blockId []byte
+	var sourceAddress []byte
+	var destinationAddress []byte
+	var asset []byte
 	var amount uint64
 	var txFee int64
-	var broadcastTxId string
-	var status string
-	var sourceTxId string
-	var lastUpdatedBlockId string
+	var broadcastTxId []byte
+	var status []byte
+	var sourceTxId []byte
+	var lastUpdatedBlockId []byte
 	var payment enulib.SimplePayment
-	var paymentTag string
-	var errorMessage string
+	var paymentTag []byte
+	var errorMessage []byte
 
 	if err := row.Scan(&rowId, &blockId, &sourceTxId, &sourceAddress, &destinationAddress, &asset, &amount, &status, &lastUpdatedBlockId, &txFee, &broadcastTxId, &paymentTag, &errorMessage); err == sql.ErrNoRows {
 		payment = enulib.SimplePayment{}
@@ -465,14 +465,16 @@ func GetPaymentByPaymentId(accessKey string, paymentId string) enulib.SimplePaym
 			payment.PaymentId = paymentId
 			payment.Status = "Not found"
 		}
-	} else {
-		payment = enulib.SimplePayment{SourceAddress: sourceAddress, DestinationAddress: destinationAddress, Asset: asset, Amount: amount, PaymentId: sourceTxId, Status: status, BroadcastTxId: broadcastTxId, TxFee: txFee, ErrorMessage: errorMessage}
+	} else if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	}
+
+	payment = enulib.SimplePayment{SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage)}
 
 	return payment
 }
 
-func GetPaymentByPaymentTag(accessKey string, paymentTag string) enulib.SimplePayment {
+func GetPaymentByPaymentTag(c context.Context, accessKey string, paymentTag string) enulib.SimplePayment {
 	if isInit == false {
 		Init()
 	}
@@ -492,18 +494,18 @@ func GetPaymentByPaymentTag(accessKey string, paymentTag string) enulib.SimplePa
 	}
 
 	var rowId string
-	var blockId string
-	var sourceAddress string
-	var destinationAddress string
-	var asset string
+	var blockId []byte
+	var sourceAddress []byte
+	var destinationAddress []byte
+	var asset []byte
 	var amount uint64
 	var txFee int64
-	var broadcastTxId string
-	var status string
-	var sourceTxId string
-	var lastUpdatedBlockId string
+	var broadcastTxId []byte
+	var status []byte
+	var sourceTxId []byte
+	var lastUpdatedBlockId uint64
 	var payment enulib.SimplePayment
-	var errorMessage string
+	var errorMessage []byte
 
 	if err := row.Scan(&rowId, &blockId, &sourceTxId, &sourceAddress, &destinationAddress, &asset, &amount, &status, &lastUpdatedBlockId, &txFee, &broadcastTxId, &errorMessage); err == sql.ErrNoRows {
 		payment = enulib.SimplePayment{}
@@ -512,18 +514,19 @@ func GetPaymentByPaymentTag(accessKey string, paymentTag string) enulib.SimplePa
 			payment.Status = "Not found"
 		}
 	} else {
-		payment = enulib.SimplePayment{SourceAddress: sourceAddress, DestinationAddress: destinationAddress, Asset: asset, Amount: amount, PaymentId: sourceTxId, Status: status, BroadcastTxId: broadcastTxId, TxFee: txFee, ErrorMessage: errorMessage, PaymentTag: paymentTag}
+		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		payment = enulib.SimplePayment{SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage), PaymentTag: string(paymentTag)}
 	}
 
 	return payment
 }
 
-func UpdatePaymentStatusByPaymentId(accessKey string, paymentId string, status string) error {
+func UpdatePaymentStatusByPaymentId(c context.Context, accessKey string, paymentId string, status string) error {
 	if isInit == false {
 		Init()
 	}
 
-	payment := GetPaymentByPaymentId(accessKey, paymentId)
+	payment := GetPaymentByPaymentId(c, accessKey, paymentId)
 
 	if payment.PaymentId == "" {
 		errorString := fmt.Sprintf("Payment does not exist or cannot be accessed by %s\n", accessKey)
@@ -545,12 +548,12 @@ func UpdatePaymentStatusByPaymentId(accessKey string, paymentId string, status s
 	return nil
 }
 
-func UpdatePaymentWithErrorByPaymentId(accessKey string, paymentId string, errorDescription string) error {
+func UpdatePaymentWithErrorByPaymentId(c context.Context, accessKey string, paymentId string, errorDescription string) error {
 	if isInit == false {
 		Init()
 	}
 
-	payment := GetPaymentByPaymentId(accessKey, paymentId)
+	payment := GetPaymentByPaymentId(c, accessKey, paymentId)
 
 	if payment.PaymentId == "" {
 		errorString := fmt.Sprintf("Payment does not exist or cannot be accessed by %s\n", accessKey)
@@ -572,12 +575,12 @@ func UpdatePaymentWithErrorByPaymentId(accessKey string, paymentId string, error
 	return nil
 }
 
-func UpdatePaymentCompleteByPaymentId(accessKey string, paymentId string, txId string) error {
+func UpdatePaymentCompleteByPaymentId(c context.Context, accessKey string, paymentId string, txId string) error {
 	if isInit == false {
 		Init()
 	}
 
-	payment := GetPaymentByPaymentId(accessKey, paymentId)
+	payment := GetPaymentByPaymentId(c, accessKey, paymentId)
 
 	if payment.PaymentId == "" {
 		errorString := fmt.Sprintf("Payment does not exist or cannot be accessed by %s\n", accessKey)
@@ -599,12 +602,12 @@ func UpdatePaymentCompleteByPaymentId(accessKey string, paymentId string, txId s
 	return nil
 }
 
-func UpdatePaymentSignedRawTxByPaymentId(accessKey string, paymentId string, signedRawTx string) error {
+func UpdatePaymentSignedRawTxByPaymentId(c context.Context, accessKey string, paymentId string, signedRawTx string) error {
 	if isInit == false {
 		Init()
 	}
 
-	payment := GetPaymentByPaymentId(accessKey, paymentId)
+	payment := GetPaymentByPaymentId(c, accessKey, paymentId)
 
 	if payment.PaymentId == "" {
 		errorString := fmt.Sprintf("Payment does not exist or cannot be accessed by %s\n", accessKey)
@@ -921,4 +924,87 @@ func GetBlockchainIdByUserKey(accessKey string) string {
 	row.Scan(&blockchainId)
 
 	return blockchainId
+}
+
+// Inserts an activation request into the database
+func InsertActivation(c context.Context, accessKey string, activationId string, blockchainId string, addressToActivate string, amount uint64) {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("insert into activations(activationId, blockchainId, accessKey, addressToActivate, amount) values(?, ?, ?, ?, ?)")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return
+	}
+	defer stmt.Close()
+
+	// Perform the insert
+	_, err = stmt.Exec(activationId, blockchainId, accessKey, addressToActivate, amount)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return
+	}
+	defer stmt.Close()
+}
+
+func GetActivationByActivationId(c context.Context, accessKey string, activationId string) map[string]interface{} {
+	if isInit == false {
+		Init()
+	}
+
+	requestId := c.Value(consts.RequestIdKey).(string)
+
+	//	 Query DB
+	log.FluentfContext(consts.LOGDEBUG, c, "select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=%s and a.accessKey=%s", activationId, accessKey)
+	stmt, err := Db.Prepare("select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=? and a.accessKey=?")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return map[string]interface{}{}
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	row := stmt.QueryRow(activationId, accessKey)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return map[string]interface{}{}
+	}
+
+	var blockchainId []byte
+	var addressToActivate []byte
+	var amount uint64
+	var rowId string
+	var sourceAddress []byte
+	var outAsset []byte
+	var outAmount int64
+	var status []byte
+	var broadcastTxId []byte
+	var errorMessage []byte
+
+	if err := row.Scan(&blockchainId, &addressToActivate, &amount, &rowId, &sourceAddress, &outAsset, &outAmount, &status, &broadcastTxId, &errorMessage); err == sql.ErrNoRows {
+		if err.Error() == "sql: no rows in result set" {
+			var result = map[string]interface{}{
+				"activationId": activationId,
+				"status":       "Not found",
+			}
+
+			return result
+		}
+	} else if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+	}
+
+	// Return the values
+	var result = map[string]interface{}{
+		"address":       string(addressToActivate),
+		"amount":        amount,
+		"activationId":  string(activationId),
+		"broadcastTxId": string(broadcastTxId),
+		"status":        string(status),
+		"errorMessage":  string(errorMessage),
+		"requestId":     string(requestId),
+	}
+
+	return result
 }

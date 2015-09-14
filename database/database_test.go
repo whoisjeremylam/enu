@@ -1,11 +1,15 @@
 package database
 
 import (
-	"github.com/vennd/enu/consts"
 	"testing"
+
+	"github.com/vennd/enu/consts"
+	"github.com/vennd/enu/enulib"
+
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
-func TestUpdateNonceByAccesKey(t *testing.T) {
+func TestUpdateNonceByAccessKey(t *testing.T) {
 	// Code to test update nonce
 
 	nonce := int64(100000)
@@ -19,7 +23,7 @@ func TestUpdateNonceByAccesKey(t *testing.T) {
 	}
 }
 
-func TestGetNonceByAccesKey(t *testing.T) {
+func TestGetNonceByAccessKey(t *testing.T) {
 	// Code to test nonce check
 
 	// non existing acessKey
@@ -80,5 +84,46 @@ func TestCreateUserKey(t *testing.T) {
 	err4 := UpdateUserKeyStatus(key, "this_should_not_work")
 	if err4 == nil {
 		t.Errorf("userKey status could be updated to an invalid value: %s\n", "this_should_not_work")
+	}
+}
+
+// Also tests insert payment
+func TestInsertActivationandInsertPayment(t *testing.T) {
+	activationId := "test_" + enulib.GenerateActivationId()
+	requestId := "test_" + enulib.GenerateRequestId()
+
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, consts.RequestIdKey, requestId)
+
+	// Okay insertion
+	InsertActivation(ctx, "TestAccessKey", activationId, "BlockchainId", "AddressToActive", 100)
+
+	// Insert a corresponding payment
+	InsertPayment("TestAccessKey", 0, activationId, "InternalAddress", "AddressToActive", "BTC", 1, "testing", 0, 1500, "", requestId)
+
+	// need to cover more columns and how to test that payment actually works?
+
+	// Retrieve the payment
+	payment := GetPaymentByPaymentId(ctx, "TestAccessKey", activationId)
+	if payment.SourceAddress != "InternalAddress" || payment.DestinationAddress != "AddressToActive" || payment.Asset != "BTC" || payment.Amount != 1 || payment.TxFee != 1500 || payment.PaymentTag != "" {
+		t.Errorf("Expected: %s, %s, %s, %d, %d, %s, %s. Got: %s, %s, %s, %d, %d, %s, %s", "InternalAddress", "AddressToActive", "BTC", 1, 1500, "", payment.SourceAddress, payment.DestinationAddress, payment.Asset, payment.Amount, payment.TxFee, payment.PaymentTag)
+	}
+
+	// Retrieve the activation
+	activation := GetActivationByActivationId(ctx, "TestAccessKey", activationId)
+	//		var result = map[string]interface{}{
+	//		"address":       addressToActivate,
+	//		"amount":        amount,
+	//		"activationId":  activationId,
+	//		"broadcastTxId": broadcastTxId,
+	//		"status":        status,
+	//		"errorMessage":  errorMessage,
+	//		"requestId":     requestId,
+	//	}
+	if activation["address"].(string) != "AddressToActive" {
+		t.Errorf("Expected: %s. Got: %s\n", "AddressToActive", activation["address"])
+	}
+	if activation["status"] != "testing" {
+		t.Errorf("Expected: %s. Got: %s\n", "valid", activation["status"])
 	}
 }
