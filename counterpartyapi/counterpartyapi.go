@@ -1058,7 +1058,6 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	accessKey := c.Value(consts.AccessKeyKey).(string)
 	blockchainId := c.Value(consts.BlockchainIdKey).(string)
 	env := c.Value(consts.EnvKey).(string)
-	requestId := c.Value(consts.RequestIdKey).(string)
 
 	// Need a better way to secure internal wallets
 	// Array of internal wallets that can be round robined to prime addresses
@@ -1119,13 +1118,13 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
 	// Write the payment using the activationId as the paymentId to the db
-	go database.InsertPayment(accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "", requestId)
+	go database.InsertPayment(c, accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "")
 
 	// Create the send from the internal wallet to the destination address
 	createResult, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(accessKey, activationId, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
 		return "", err
 	}
 
@@ -1135,7 +1134,7 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	signed, err := SignRawTransaction(c, wallets[randomNumber].Passphrase, createResult)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(accessKey, activationId, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
 		return "", err
 	}
 
@@ -1145,11 +1144,11 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	txId, err := bitcoinapi.SendRawTransaction(signed)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(accessKey, activationId, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
 		return "", err
 	}
 
-	database.UpdatePaymentCompleteByPaymentId(accessKey, activationId, txId)
+	database.UpdatePaymentCompleteByPaymentId(c, accessKey, activationId, txId)
 
 	return txId, nil
 }
