@@ -77,7 +77,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	}
 
 	// Start asset creation in async mode
-	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, quantity, divisible, requestId)
+	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, quantity, divisible)
 
 	return nil
 }
@@ -142,7 +142,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	}
 
 	// Start dividend creation in async mode
-	go counterpartyapi.DelegatedCreateDividend(c, c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, requestId)
+	go counterpartyapi.DelegatedCreateDividend(c, c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
 
 	return nil
 }
