@@ -16,7 +16,7 @@ var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
 
 func TestGenerateRandomAssetName(t *testing.T) {
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	result, err := generateRandomAssetName(c)
 
@@ -34,7 +34,7 @@ func TestGenerateRandomAssetName(t *testing.T) {
 func TestGetBalances(t *testing.T) {
 	Init()
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	resultGetBalances, err := GetBalancesByAsset(c, "XBTC")
 
@@ -51,7 +51,7 @@ func TestGetBalancesByAsset(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	resultGetBalances, err := GetBalancesByAddress(c, "1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
 
@@ -82,7 +82,7 @@ func TestCreateSend(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.From)
@@ -118,7 +118,7 @@ func TestSignRawTransaction(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
 		result, err := SignRawTransaction(c, s.Passphrase, s.UnsignedTx)
@@ -138,7 +138,7 @@ func TestSendRawTransaction(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	pubKey, err := counterpartycrypto.GetPublicKey(passphrase, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p")
 	if err != nil {
@@ -191,7 +191,7 @@ func TestCreateIssuance(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.SourceAddress)
@@ -234,7 +234,7 @@ func TestCreateDividend(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.SourceAddress)
@@ -266,7 +266,7 @@ func TestGetRunningInfo(t *testing.T) {
 	Init()
 
 	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	result, err := GetRunningInfo(c)
 	if err != nil {

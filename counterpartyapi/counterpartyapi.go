@@ -30,7 +30,8 @@ import (
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430
-var Counterparty_DefaultTxFee uint = 1500 // in satoshis
+var Counterparty_DefaultTxFee uint64 = 10000       // in satoshis
+var Counterparty_DefaultTestingTxFee uint64 = 1500 // in satoshis
 var numericAssetIdMinString = "95428956661682176"
 var numericAssetIdMaxString = "18446744073709551616"
 var counterparty_BackEndPollRate = 2000 // milliseconds
@@ -89,7 +90,7 @@ type payloadCreateSendParams_Counterparty struct {
 	AllowUnconfirmedInputs string `json:"allow_unconfirmed_inputs"`
 	Encoding               string `json:"encoding"`
 	PubKey                 string `json:"pubkey"`
-	Fee                    uint   `json:"fee"`
+	Fee                    uint64 `json:"fee"`
 	DustSize               uint64 `json:"regular_dust_size"`
 }
 
@@ -116,7 +117,7 @@ type payloadCreateIssuanceParams_Counterparty struct {
 	Encoding               string `json:"encoding"`
 	PubKey                 string `json:"pubkey"`
 	AllowUnconfirmedInputs string `json:"allow_unconfirmed_inputs"`
-	Fee                    uint   `json:"fee"`
+	Fee                    uint64 `json:"fee"`
 	DustSize               uint64 `json:"regular_dust_size"`
 }
 
@@ -141,7 +142,7 @@ type payloadCreateDividendParams_Counterparty struct {
 	Encoding               string `json:"encoding"`
 	PubKey                 string `json:"pubkey"`
 	AllowUnconfirmedInputs string `json:"allow_unconfirmed_inputs"`
-	Fee                    uint   `json:"fee"`
+	Fee                    uint64 `json:"fee"`
 	DustSize               uint64 `json:"regular_dust_size"`
 }
 
@@ -1045,4 +1046,110 @@ func GetRunningInfo(c context.Context) (RunningInfo, error) {
 	}
 
 	return result.Result, nil
+}
+
+// Concurrency safe to create and send transactions from a single address.
+func DelegatedActivateAddress(c context.Context, addressToActivate string, amount uint64, activationId string) (string, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Copy same context values to local variables which are often accessed
+	accessKey := c.Value(consts.AccessKeyKey).(string)
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+	env := c.Value(consts.EnvKey).(string)
+	requestId := c.Value(consts.RequestIdKey).(string)
+
+	// Need a better way to secure internal wallets
+	// Array of internal wallets that can be round robined to prime addresses
+	var wallets = []struct {
+		Address      string
+		Passphrase   string
+		BlockchainId string
+	}{
+		{"bound social cookie wrong yet story cigarette descend metal drug waste candle", "1E5YgFkC4HNHwWTF5iUdDbKpzry1SRLv8e", "counterparty"},
+	}
+
+	// Pick an internal address to send from
+	var randomNumber int = 0
+	var sourceAddress = wallets[randomNumber].Address
+
+	// Calculate the quantity of BTC to send by the amount specified
+	// For Counterparty: each transaction = dust_size + miners_fee
+	var quantity uint64
+	var asset string
+	if blockchainId == consts.CounterpartyBlockchainId && env != "dev" {
+		quantity = Counterparty_DefaultDustSize + Counterparty_DefaultTxFee
+		asset = "BTC"
+	} else if blockchainId == consts.CounterpartyBlockchainId && env == "dev" {
+		quantity = Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee
+		asset = "BTC"
+	} else {
+		log.FluentfContext(consts.LOGERROR, c, "Unsupported blockchain: %s\n", blockchainId)
+		return "", errors.New("Unsupported blockchain")
+	}
+
+	// Write the dividend with the generated dividend id to the database
+	go database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amount)
+
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(wallets[randomNumber].Passphrase, sourceAddress)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
+		return "", err
+	}
+
+	// Mutex lock this address
+	counterparty_Mutexes.Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+
+	// If an entry doesn't currently exist in the map for that address
+	if counterparty_Mutexes.m[sourceAddress] == nil {
+		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
+		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
+	}
+
+	counterparty_Mutexes.m[sourceAddress].Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
+
+	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
+
+	defer counterparty_Mutexes.Unlock()
+	defer counterparty_Mutexes.m[sourceAddress].Unlock()
+
+	// Write the payment using the activationId as the paymentId to the db
+	go database.InsertPayment(accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "", requestId)
+
+	// Create the send from the internal wallet to the destination address
+	createResult, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(accessKey, activationId, err.Error())
+		return "", err
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, addressToActivate, createResult)
+
+	// Sign the transactions
+	signed, err := SignRawTransaction(c, wallets[randomNumber].Passphrase, createResult)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(accessKey, activationId, err.Error())
+		return "", err
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
+
+	// Transmit the transaction
+	txId, err := bitcoinapi.SendRawTransaction(signed)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(accessKey, activationId, err.Error())
+		return "", err
+	}
+
+	database.UpdatePaymentCompleteByPaymentId(accessKey, activationId, txId)
+
+	return txId, nil
 }
