@@ -181,7 +181,6 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 		return nil
 	}
 
-	passphrase := m["passphrase"].(string)
 	address := m["address"].(string)
 
 	var amount uint64
@@ -213,7 +212,7 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 		panic(err)
 	}
 
-	go counterpartyapi.DelegatedActivateAddress(c, c.Value(consts.AccessKeyKey).(string), address, amount, activationId)
+	go counterpartyapi.DelegatedActivateAddress(c, address, amount, activationId)
 
 	return nil
 }
