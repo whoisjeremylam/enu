@@ -222,7 +222,10 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			`
 		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"destinationAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"amount":{"type":"integer"},,"txFee":{"type":"integer"}},"required":["sourceAddress","destinationAddress","asset","amount"]}
 	`
-
+		check["activateaddress"] =
+			`
+		{"properties":{"address":{"type":"string","maxLength":34,"minLength":34},"amount":{"type":"integer"}},"required":["address","amount"]}
+	`
 		schemaLoader := gojsonschema.NewStringLoader(check[u])
 		documentLoader := gojsonschema.NewGoLoader(payload)
 
