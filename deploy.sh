@@ -16,11 +16,13 @@ cd $GOPATH/src/github.com/vennd/enu && git reset --hard && git pull
 rm $GOPATH/bin/enu
 rm $GOPATH/bin/pingcounterpartyd
 rm $GOPATH/bin/pingbitcoind
+rm $GOPATH/bin/createapikey
 
 # Rebuild executables
 go install github.com/vennd/enu
 go install github.com/vennd/enu/monitoring/pingcounterpartyd
 go install github.com/vennd/enu/monitoring/pingbitcoind
+go install github.com/vennd/enu/utils/createapikey
 
 # This doesn't update service monitoring or scripts used for monitoring
 
