@@ -256,9 +256,41 @@ func TestCreateDividend(t *testing.T) {
 				t.Error(err.Error())
 			}
 		}
+	}
+}
 
+func TestActivateAddress(t *testing.T) {
+	var testData = []struct {
+		AddressToActivate string
+		Amount            uint64
+		ActivationId      string
+		ExpectedResult    string
+		CaseDescription   string
+	}{
+		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10, "TestActivateAddress1", "success", "Successful case"},
+		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "", "Insufficient BTC case"},
 	}
 
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
+	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
+	c = context.WithValue(c, consts.EnvKey, "dev")
+
+	for _, s := range testData {
+		txId, err := DelegatedActivateAddress(c, s.AddressToActivate, s.Amount, s.ActivationId)
+
+		if txId != s.ExpectedResult {
+			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, txId, s.CaseDescription)
+
+			// Additionally log the error if we got an error
+			if err != nil {
+				t.Error(err.Error())
+			}
+		}
+	}
 }
 
 func TestGetRunningInfo(t *testing.T) {

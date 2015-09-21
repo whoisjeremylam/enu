@@ -1060,13 +1060,13 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	env := c.Value(consts.EnvKey).(string)
 
 	// Need a better way to secure internal wallets
-	// Array of internal wallets that can be round robined to prime addresses
+	// Array of internal wallets that can be round robined to activate addresses
 	var wallets = []struct {
 		Address      string
 		Passphrase   string
 		BlockchainId string
 	}{
-		{"bound social cookie wrong yet story cigarette descend metal drug waste candle", "1E5YgFkC4HNHwWTF5iUdDbKpzry1SRLv8e", "counterparty"},
+		{"1E5YgFkC4HNHwWTF5iUdDbKpzry1SRLv8e", "bound social cookie wrong yet story cigarette descend metal drug waste candle", "counterparty"},
 	}
 
 	// Pick an internal address to send from
@@ -1078,10 +1078,10 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	var quantity uint64
 	var asset string
 	if blockchainId == consts.CounterpartyBlockchainId && env != "dev" {
-		quantity = Counterparty_DefaultDustSize + Counterparty_DefaultTxFee
+		quantity = (Counterparty_DefaultDustSize + Counterparty_DefaultTxFee) * amount
 		asset = "BTC"
 	} else if blockchainId == consts.CounterpartyBlockchainId && env == "dev" {
-		quantity = Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee
+		quantity = (Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee) * amount
 		asset = "BTC"
 	} else {
 		log.FluentfContext(consts.LOGERROR, c, "Unsupported blockchain: %s\n", blockchainId)
@@ -1140,12 +1140,19 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
 
-	// Transmit the transaction
-	txId, err := bitcoinapi.SendRawTransaction(signed)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
-		return "", err
+	//	 Transmit the transaction if not in dev, otherwise stub out the return
+	var txId string
+	if env != "dev" {
+		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
+			return "", err
+		}
+
+		txId = txIdSignedTx
+	} else {
+		txId = "success"
 	}
 
 	database.UpdatePaymentCompleteByPaymentId(c, accessKey, activationId, txId)
