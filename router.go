@@ -26,6 +26,7 @@ func NewRouter() *mux.Router {
 	router.Handle("/wallet/balances/{address}", ctxHandler(WalletBalance)).Methods("GET")
 	router.Handle("/wallet/payment", ctxHandler(WalletSend)).Methods("POST")
 	router.Handle("/wallet/payment/{paymentId}", ctxHandler(GetPayment)).Methods("GET")
+	router.Handle("/wallet/activate/address/{address}", ctxHandler(ActivateAddress)).Methods("POST")
 
 	// Direct access to Counterparty resources
 	router.Handle("/counterparty/asset", ctxHandler(AssetCreate)).Methods("POST")
@@ -38,6 +39,7 @@ func NewRouter() *mux.Router {
 	router.Handle("/counterparty/wallet/balances/{address}", ctxHandler(WalletBalance)).Methods("GET")
 	router.Handle("/counterparty/wallet/payment", ctxHandler(WalletSend)).Methods("POST")
 	router.Handle("/counterparty/wallet/payment/{paymentId}", ctxHandler(GetPayment)).Methods("GET")
+	router.Handle("/counterparty/wallet/activate/address/{address}", ctxHandler(ActivateAddress)).Methods("POST")
 
 	router.Handle("/blocks", ctxHandler(GetBlocks)).Methods("GET")
 
