@@ -522,7 +522,7 @@ func GetPaymentByPaymentTag(c context.Context, accessKey string, paymentTag stri
 	return payment
 }
 
-func GetPaymentByAddress(c context.Context, accessKey string, address string) []enulib.SimplePayment {
+func GetPaymentsByAddress(c context.Context, accessKey string, address string) []enulib.SimplePayment {
 	var result []enulib.SimplePayment
 
 	if isInit == false {

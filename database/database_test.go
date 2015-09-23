@@ -129,7 +129,7 @@ func TestInsertActivationandInsertPayment(t *testing.T) {
 	}
 }
 
-func TestGetPaymentByAddress(t *testing.T) {
+func TestGetPaymentsByAddress(t *testing.T) {
 	var testData = []struct {
 		Address         string
 		ExpectedResult  []enulib.SimplePayment
