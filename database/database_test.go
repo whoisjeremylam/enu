@@ -1,6 +1,7 @@
 package database
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/vennd/enu/consts"
@@ -125,5 +126,50 @@ func TestInsertActivationandInsertPayment(t *testing.T) {
 	}
 	if activation["status"] != "testing" {
 		t.Errorf("Expected: %s. Got: %s\n", "valid", activation["status"])
+	}
+}
+
+func TestGetPaymentByAddress(t *testing.T) {
+	var testData = []struct {
+		Address         string
+		ExpectedResult  []enulib.SimplePayment
+		CaseDescription string
+	}{
+		{"unittesting1", []enulib.SimplePayment{
+			{SourceAddress: "unittesting1", DestinationAddress: "unittesting2", Asset: "CHANGE", Amount: 124364, TxFee: 1500, BroadcastTxId: "", Status: "valid", PaymentId: "unittesting1", ErrorMessage: "", PaymentTag: ""},
+			{SourceAddress: "unittesting3", DestinationAddress: "unittesting1", Asset: "GOLD", Amount: 7853, TxFee: 2000, BroadcastTxId: "success", Status: "complete", PaymentId: "unittesting12", ErrorMessage: "", PaymentTag: ""},
+			{SourceAddress: "unittesting1", DestinationAddress: "unittesting3", Asset: "SILVER", Amount: 23523456, TxFee: 1000, BroadcastTxId: "", Status: "error", PaymentId: "unittesting123", ErrorMessage: "Not enough silver", PaymentTag: "invoice123"},
+		}, "successful"},
+		{"addressdoesntexist", []enulib.SimplePayment{{SourceAddress: "", DestinationAddress: "", Asset: "", Amount: 0, TxFee: 0, BroadcastTxId: "", Status: "", PaymentId: "", ErrorMessage: "", PaymentTag: ""}}, "Address doesn't exist"},
+	}
+
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
+	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
+	c = context.WithValue(c, consts.EnvKey, "dev")
+
+	for _, s := range testData {
+		result := GetPaymentByAddress(c, c.Value(consts.AccessKeyKey).(string), s.Address)
+
+		for i, paymentResult := range result {
+			if paymentResult.SourceAddress != s.ExpectedResult[i].SourceAddress ||
+				paymentResult.DestinationAddress != s.ExpectedResult[i].DestinationAddress ||
+				paymentResult.Asset != s.ExpectedResult[i].Asset ||
+				paymentResult.Amount != s.ExpectedResult[i].Amount ||
+				paymentResult.TxFee != s.ExpectedResult[i].TxFee ||
+				paymentResult.BroadcastTxId != s.ExpectedResult[i].BroadcastTxId ||
+				paymentResult.Status != s.ExpectedResult[i].Status ||
+				paymentResult.PaymentId != s.ExpectedResult[i].PaymentId ||
+				paymentResult.ErrorMessage != s.ExpectedResult[i].ErrorMessage ||
+				paymentResult.PaymentTag != s.ExpectedResult[i].PaymentTag {
+				paymentResultString := fmt.Sprintf("%#v", paymentResult)
+				expectedResultString := fmt.Sprintf("%#v", s.ExpectedResult[i])
+
+				t.Errorf("Expected: %s, Got: %s\nCase: %s\n", paymentResultString, expectedResultString, s.CaseDescription)
+			}
+		}
 	}
 }

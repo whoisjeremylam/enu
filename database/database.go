@@ -515,10 +515,67 @@ func GetPaymentByPaymentTag(c context.Context, accessKey string, paymentTag stri
 		}
 	} else {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
-		payment = enulib.SimplePayment{SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage), PaymentTag: string(paymentTag)}
 	}
 
+	payment = enulib.SimplePayment{SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage), PaymentTag: string(paymentTag)}
+
 	return payment
+}
+
+func GetPaymentByAddress(c context.Context, accessKey string, address string) []enulib.SimplePayment {
+	var result []enulib.SimplePayment
+
+	if isInit == false {
+		Init()
+	}
+
+	//	 Query DB
+	stmt, err := Db.Prepare("select rowId, blockId, sourceTxId, sourceAddress, destinationAddress, outAsset, outAmount, status, lastUpdatedBlockId, txFee, broadcastTxId, paymentTag, errorDescription from payments where accessKey = ? and (sourceAddress = ? or destinationAddress = ?)")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return result
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	rows, err := stmt.Query(accessKey, address, address)
+	defer rows.Close()
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
+		return result
+	}
+
+	for rows.Next() {
+		var rowId string
+		var blockId []byte
+		var sourceAddress []byte
+		var destinationAddress []byte
+		var asset []byte
+		var amount uint64
+		var txFee int64
+		var broadcastTxId []byte
+		var status []byte
+		var sourceTxId []byte
+		var lastUpdatedBlockId uint64
+		var payment enulib.SimplePayment
+		var errorMessage []byte
+		var paymentTag []byte
+
+		if err := rows.Scan(&rowId, &blockId, &sourceTxId, &sourceAddress, &destinationAddress, &asset, &amount, &status, &lastUpdatedBlockId, &txFee, &broadcastTxId, &paymentTag, &errorMessage); err == sql.ErrNoRows {
+			payment = enulib.SimplePayment{}
+			if err.Error() == "sql: no rows in result set" {
+				payment.Status = "Not found"
+			}
+		} else if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		}
+
+		payment = enulib.SimplePayment{SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage), PaymentTag: string(paymentTag)}
+
+		result = append(result, payment)
+	}
+
+	return result
 }
 
 func UpdatePaymentStatusByPaymentId(c context.Context, accessKey string, paymentId string, status string) error {
@@ -956,7 +1013,7 @@ func GetActivationByActivationId(c context.Context, accessKey string, activation
 	requestId := c.Value(consts.RequestIdKey).(string)
 
 	//	 Query DB
-	log.FluentfContext(consts.LOGDEBUG, c, "select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=%s and a.accessKey=%s", activationId, accessKey)
+	//	log.FluentfContext(consts.LOGDEBUG, c, "select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=%s and a.accessKey=%s", activationId, accessKey)
 	stmt, err := Db.Prepare("select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=? and a.accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
