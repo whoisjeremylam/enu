@@ -807,6 +807,9 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 		Init()
 	}
 
+	// Copy same context values to local variables which are often accessed
+	env := c.Value(consts.EnvKey).(string)
+
 	// Write the payment with the generated payment id to the database
 	go database.InsertPayment(c, accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, 1500, paymentTag)
 
@@ -860,12 +863,19 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	// Update the DB with the raw signed TX. This will allow re-transmissions if something went wrong with sending on the network
 	database.UpdatePaymentSignedRawTxByPaymentId(c, accessKey, paymentId, signed)
 
-	// Transmit the transaction
-	txId, err := bitcoinapi.SendRawTransaction(signed)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Err in SendRawTransaction(): %s\n", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
-		return "", err
+	//	 Transmit the transaction if not in dev, otherwise stub out the return
+	var txId string
+	if env != "dev" {
+		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
+			return "", err
+		}
+
+		txId = txIdSignedTx
+	} else {
+		txId = "success"
 	}
 
 	database.UpdatePaymentCompleteByPaymentId(c, accessKey, paymentId, txId)
@@ -880,6 +890,9 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	if isInit == false {
 		Init()
 	}
+
+	// Copy same context values to local variables which are often accessed
+	env := c.Value(consts.EnvKey).(string)
 
 	// Write the asset with the generated asset id to the database
 	go database.InsertAsset(accessKey, assetId, sourceAddress, "TBA", asset, quantity, divisible, "valid")
@@ -932,12 +945,19 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 
 	log.Printf("Signed tx: %s\n", signed)
 
-	//	 Transmit the transaction
-	txId, err := bitcoinapi.SendRawTransaction(signed)
-	if err != nil {
-		log.Printf("Err in SendRawTransaction(): %s\n", err.Error())
-		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
-		return "", err
+	//	 Transmit the transaction if not in dev, otherwise stub out the return
+	var txId string
+	if env != "dev" {
+		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
+			return "", err
+		}
+
+		txId = txIdSignedTx
+	} else {
+		txId = "success"
 	}
 
 	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txId)
@@ -950,6 +970,9 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	if isInit == false {
 		Init()
 	}
+
+	// Copy same context values to local variables which are often accessed
+	env := c.Value(consts.EnvKey).(string)
 
 	// Write the dividend with the generated dividend id to the database
 	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, "valid")
@@ -1000,12 +1023,19 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
 
-	// Transmit the transaction
-	txId, err := bitcoinapi.SendRawTransaction(signed)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
-		return "", err
+	//	 Transmit the transaction if not in dev, otherwise stub out the return
+	var txId string
+	if env != "dev" {
+		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
+			return "", err
+		}
+
+		txId = txIdSignedTx
+	} else {
+		txId = "success"
 	}
 
 	database.UpdateDividendCompleteByDividendId(c, accessKey, dividendId, txId)
