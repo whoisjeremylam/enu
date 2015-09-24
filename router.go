@@ -12,6 +12,7 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/", Index).Methods("GET")
 	router.Handle("/payment", ctxHandler(PaymentCreate)).Methods("POST")
 	router.Handle("/payment/address", ctxHandler(AddressCreate)).Methods("POST")
+	router.Handle("/payment/address/{address}", ctxHandler(GetPaymentsByAddress)).Methods("GET")
 	router.Handle("/payment/{paymentId}", ctxHandler(GetPayment)).Methods("GET")
 	router.Handle("/payment/status/{paymentId}", ctxHandler(PaymentRetry)).Methods("POST")
 
@@ -40,6 +41,7 @@ func NewRouter() *mux.Router {
 	router.Handle("/counterparty/wallet/payment", ctxHandler(WalletSend)).Methods("POST")
 	router.Handle("/counterparty/wallet/payment/{paymentId}", ctxHandler(GetPayment)).Methods("GET")
 	router.Handle("/counterparty/wallet/activate/address/{address}", ctxHandler(ActivateAddress)).Methods("POST")
+	router.Handle("/counterparty/payment/address/{address}", ctxHandler(GetPaymentsByAddress)).Methods("GET")
 
 	router.Handle("/blocks", ctxHandler(GetBlocks)).Methods("GET")
 

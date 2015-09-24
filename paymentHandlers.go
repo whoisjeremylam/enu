@@ -135,9 +135,6 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	payment.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
-	// Add to the context the RequestType
-	//	c = context.WithValue(c, consts.RequestTypeKey, "simplePayment")
-
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
@@ -171,6 +168,51 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(payment); err != nil {
+		panic(err)
+	}
+
+	return nil
+}
+
+func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var payment enulib.SimplePayment
+	requestId := c.Value(consts.RequestIdKey).(string)
+	payment.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	// check generic args and parse
+	_, err := CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+
+		//		ReturnServerError(c, w, err)
+		return nil
+	}
+
+	vars := mux.Vars(r)
+	address := vars["address"]
+
+	if address == "" {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect address"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "GetPaymentByAddress called for '%s' by '%s'\n", address, c.Value(consts.AccessKeyKey).(string))
+
+	payments := database.GetPaymentsByAddress(c, c.Value(consts.AccessKeyKey).(string), address)
+	// errorhandling here!!
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(payments); err != nil {
 		panic(err)
 	}
 
