@@ -254,6 +254,7 @@ func FluentfObject(errorLevel string, objectToLog interface{}, format string, a 
 	}
 
 	if env == "dev" || env == "unknown" {
+		log.Printf("%#v", objectToLog)
 		log.Printf(format, a...)
 	}
 
