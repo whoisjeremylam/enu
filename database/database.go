@@ -530,6 +530,7 @@ func GetPaymentsByAddress(c context.Context, accessKey string, address string) [
 	}
 
 	//	 Query DB
+	//	log.Fluentf(consts.LOGDEBUG, "select rowId, blockId, sourceTxId, sourceAddress, destinationAddress, outAsset, outAmount, status, lastUpdatedBlockId, txFee, broadcastTxId, paymentTag, errorDescription from payments where accessKey = %s and (sourceAddress = %s or destinationAddress = %s)", accessKey, address, address)
 	stmt, err := Db.Prepare("select rowId, blockId, sourceTxId, sourceAddress, destinationAddress, outAsset, outAmount, status, lastUpdatedBlockId, txFee, broadcastTxId, paymentTag, errorDescription from payments where accessKey = ? and (sourceAddress = ? or destinationAddress = ?)")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())

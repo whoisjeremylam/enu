@@ -147,12 +147,12 @@ func TestGetPaymentsByAddress(t *testing.T) {
 
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
-	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
+	c = context.WithValue(c, consts.AccessKeyKey, "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16")
 	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
 	c = context.WithValue(c, consts.EnvKey, "dev")
 
 	for _, s := range testData {
-		result := GetPaymentByAddress(c, c.Value(consts.AccessKeyKey).(string), s.Address)
+		result := GetPaymentsByAddress(c, c.Value(consts.AccessKeyKey).(string), s.Address)
 
 		for i, paymentResult := range result {
 			if paymentResult.SourceAddress != s.ExpectedResult[i].SourceAddress ||
