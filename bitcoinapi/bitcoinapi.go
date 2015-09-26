@@ -175,7 +175,7 @@ func SendRawTransaction(txHexString string) (string, error) {
 	return fmt.Sprintf("%s", result.String()), nil
 }
 
-func GetBalance(c context.Context, address string) (int64, error) {
+func GetBalance(c context.Context, address string) (uint64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -208,7 +208,7 @@ func GetBalance(c context.Context, address string) (int64, error) {
 	data := m["data"].(map[string]interface{})
 	balanceFloat := data["balance"].(float64) * consts.Satoshi
 
-	return int64(balanceFloat), nil
+	return uint64(balanceFloat), nil
 }
 
 func httpGet(c context.Context, url string) ([]byte, int64, error) {
