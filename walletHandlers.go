@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
@@ -137,6 +138,8 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))
+
+	// Get counterparty balances
 	result, err := counterpartyapi.GetBalancesByAddress(c, address)
 	if err != nil {
 		ReturnServerError(c, w, err)
@@ -153,6 +156,10 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 		walletbalance.Balances = append(walletbalance.Balances, balance)
 	}
+
+	// Add BTC balances
+	btcbalance, err := bitcoinapi.GetBalance(c, address)
+	walletbalance.Balances = append(walletbalance.Balances, enulib.Amount{Asset: "BTC", Quantity: btcbalance})
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(walletbalance); err != nil {
@@ -181,13 +188,32 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 		return nil
 	}
 
-	address := m["address"].(string)
+	vars := mux.Vars(r)
+	address := vars["address"]
+
+	if address == "" || len(address) != 34 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			panic(err)
+		}
+		return nil
+
+	}
 
 	var amount uint64
 	if m["amount"] == nil {
 		amount = consts.CounterpartyAddressActivationAmount
 	} else {
 		amount = uint64(m["amount"].(float64))
+	}
+
+	if amount > 1000 {
+		amount = 1000
+	}
+
+	if amount < 20 {
+		amount = 20
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "ActivateAddress: received request address to activate: %s, number of transactions to activate: %d", address, amount)
