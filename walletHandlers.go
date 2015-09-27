@@ -148,6 +148,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 	// Iterate and gather the balances to return
 	walletbalance.Address = address
+	walletbalance.BlockchainId = consts.CounterpartyBlockchainId
 	for _, item := range result {
 		var balance enulib.Amount
 
@@ -160,6 +161,14 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	// Add BTC balances
 	btcbalance, err := bitcoinapi.GetBalance(c, address)
 	walletbalance.Balances = append(walletbalance.Balances, enulib.Amount{Asset: "BTC", Quantity: btcbalance})
+
+	// Calculate number of transactions possible
+	numberOfTransactions, err := counterpartyapi.CalculateNumberOfTransactions(c, btcbalance)
+	if err != nil {
+		numberOfTransactions = 0
+		log.FluentfContext(consts.LOGERROR, c, "Unable to calculate number of transactions: %s", err.Error())
+	}
+	walletbalance.NumberOfTransactions = numberOfTransactions
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(walletbalance); err != nil {
@@ -201,19 +210,12 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 
 	}
 
+	// Get the amount from the URL
 	var amount uint64
 	if m["amount"] == nil {
 		amount = consts.CounterpartyAddressActivationAmount
 	} else {
 		amount = uint64(m["amount"].(float64))
-	}
-
-	if amount > 1000 {
-		amount = 1000
-	}
-
-	if amount < 20 {
-		amount = 20
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "ActivateAddress: received request address to activate: %s, number of transactions to activate: %d", address, amount)

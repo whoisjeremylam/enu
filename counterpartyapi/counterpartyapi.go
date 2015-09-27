@@ -1191,7 +1191,7 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	return txId, nil
 }
 
-// Calculates the total BTC that is required for the given number of transactions
+// Returns the total BTC that is required for the given number of transactions
 func CalculateFeeAmount(c context.Context, amount uint64) (uint64, string, error) {
 	// Get env and blockchain from context
 	env := c.Value(consts.EnvKey).(string)
@@ -1225,4 +1225,25 @@ func CalculateFeeAmount(c context.Context, amount uint64) (uint64, string, error
 	}
 
 	return quantity, asset, nil
+}
+
+// Returns the number of transactions that can be performed with the given amount of BTC
+// If the env value is not found in the context, calculations are defaulted to production
+func CalculateNumberOfTransactions(c context.Context, amount uint64) (uint64, error) {
+	// Get env and blockchain from context
+	env := c.Value(consts.EnvKey).(string)
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+
+	if blockchainId != consts.CounterpartyBlockchainId {
+		errorString := fmt.Sprintf("Blockchain must be %s, got %s", consts.CounterpartyBlockchainId, blockchainId)
+		log.FluentfContext(consts.LOGERROR, c, errorString)
+
+		return 0, errors.New(errorString)
+	}
+
+	if env == "dev" {
+		return amount / (Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee), nil
+	} else {
+		return amount / (Counterparty_DefaultDustSize + Counterparty_DefaultTxFee), nil
+	}
 }

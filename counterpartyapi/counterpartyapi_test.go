@@ -325,6 +325,8 @@ func TestCalculateFee(t *testing.T) {
 		{"prd", consts.CounterpartyBlockchainId, 64567, 15430000, "BTC", "Specified 64567, returns fee for 1000 prd transactions"},
 		{"dev", consts.CounterpartyBlockchainId, 555, 3846150, "BTC", "Specified 555, returns fee for 1000 dev transactions"},
 		{"prd", consts.CounterpartyBlockchainId, 444, 6850920, "BTC", "Specified 444, returns fee for 1000 prd transactions"},
+		{"prd", consts.CounterpartyBlockchainId, 444, 6850920, "BTC", "Specified 444, returns fee for 1000 prd transactions"},
+		{"prd", consts.RippleBlockchainId, 444, 0, "", "Specified an invalid blockchain, returns 0"},
 	}
 
 	for _, s := range testData {
@@ -333,17 +335,43 @@ func TestCalculateFee(t *testing.T) {
 		c = context.WithValue(c, consts.EnvKey, s.Env)
 		c = context.WithValue(c, consts.BlockchainIdKey, s.BlockchainId)
 
-		resultAmount, resultAsset, err := CalculateFeeAmount(c, s.Amount)
+		resultAmount, resultAsset, _ := CalculateFeeAmount(c, s.Amount)
 
 		if resultAmount != s.ExpectedAmount || resultAsset != s.ExpectedAsset {
 			t.Errorf("Expected: %d %s, Got: %d %s\nCase: %s\n", s.ExpectedAmount, s.ExpectedAsset, resultAmount, resultAsset, s.CaseDescription)
 		}
+	}
+}
 
-		// Additionally log the error if we got an error
-		if err != nil {
-			t.Error(err.Error())
-		}
+func TestCalculateNumberOfTransactions(t *testing.T) {
+	var testData = []struct {
+		Env             string
+		BlockchainId    string
+		Amount          uint64
+		ExpectedNumber  uint64
+		CaseDescription string
+	}{
+		{"dev", consts.CounterpartyBlockchainId, 0, 0, "Specified 0 in dev"},
+		{"prd", consts.CounterpartyBlockchainId, 0, 0, "Specified 0 in prd"},
+		{"dev", consts.CounterpartyBlockchainId, 138600, 20, "20 transactions in dev"},
+		{"prd", consts.CounterpartyBlockchainId, 308600, 20, "20 transactions in prd"},
+		{"dev", consts.CounterpartyBlockchainId, 6930000, 1000, "1000 transactions in dev"},
+		{"prd", consts.CounterpartyBlockchainId, 15430000, 1000, "1000 transactions in prd"},
+		{"dev", consts.CounterpartyBlockchainId, 5930003, 855, "855 transactions in dev (amounts are trunced)"},
+		{"prd", consts.CounterpartyBlockchainId, 13430002, 870, "870 transactions in prd (amounts are trunced)"},
+		{"prd", consts.RippleBlockchainId, 444, 0, "Specified an invalid blockchain, returns 0"},
 	}
 
-	// Calculate
+	for _, s := range testData {
+		c := context.TODO()
+		c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+		c = context.WithValue(c, consts.EnvKey, s.Env)
+		c = context.WithValue(c, consts.BlockchainIdKey, s.BlockchainId)
+
+		resultAmount, _ := CalculateNumberOfTransactions(c, s.Amount)
+
+		if resultAmount != s.ExpectedNumber {
+			t.Errorf("Expected: %d, Got: %d\nCase: %s\n", s.ExpectedNumber, resultAmount, s.CaseDescription)
+		}
+	}
 }

@@ -79,10 +79,12 @@ type Address struct {
 }
 
 type AddressBalances struct {
-	Address   string   `json:"address"`
-	Balances  []Amount `json:"balances"`
-	RequestId string   `json:"requestId"`
-	Nonce     int64    `json:"nonce"`
+	BlockchainId         string   `json:"blockchainId"`
+	Address              string   `json:"address"`
+	NumberOfTransactions uint64   `json:"numberOfTransactions"`
+	Balances             []Amount `json:"balances"`
+	RequestId            string   `json:"requestId"`
+	Nonce                int64    `json:"nonce"`
 }
 
 type Asset struct {
