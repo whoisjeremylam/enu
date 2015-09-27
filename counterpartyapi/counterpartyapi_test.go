@@ -309,3 +309,41 @@ func TestGetRunningInfo(t *testing.T) {
 		t.Errorf("DbCaughtUp expected: true, Got: false\n")
 	}
 }
+
+func TestCalculateFee(t *testing.T) {
+	var testData = []struct {
+		Env             string
+		BlockchainId    string
+		Amount          uint64
+		ExpectedAmount  uint64
+		ExpectedAsset   string
+		CaseDescription string
+	}{
+		{"dev", consts.CounterpartyBlockchainId, 0, 138600, "BTC", "Specified 0, returns fee for 20 dev transactions"},
+		{"prd", consts.CounterpartyBlockchainId, 0, 308600, "BTC", "Specified 0, returns fee for 20 prd transactions"},
+		{"dev", consts.CounterpartyBlockchainId, 5607, 6930000, "BTC", "Specified 5607, returns fee for 1000 dev transactions"},
+		{"prd", consts.CounterpartyBlockchainId, 64567, 15430000, "BTC", "Specified 64567, returns fee for 1000 prd transactions"},
+		{"dev", consts.CounterpartyBlockchainId, 555, 3846150, "BTC", "Specified 555, returns fee for 1000 dev transactions"},
+		{"prd", consts.CounterpartyBlockchainId, 444, 6850920, "BTC", "Specified 444, returns fee for 1000 prd transactions"},
+	}
+
+	for _, s := range testData {
+		c := context.TODO()
+		c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+		c = context.WithValue(c, consts.EnvKey, s.Env)
+		c = context.WithValue(c, consts.BlockchainIdKey, s.BlockchainId)
+
+		resultAmount, resultAsset, err := CalculateFeeAmount(c, s.Amount)
+
+		if resultAmount != s.ExpectedAmount || resultAsset != s.ExpectedAsset {
+			t.Errorf("Expected: %d %s, Got: %d %s\nCase: %s\n", s.ExpectedAmount, s.ExpectedAsset, resultAmount, resultAsset, s.CaseDescription)
+		}
+
+		// Additionally log the error if we got an error
+		if err != nil {
+			t.Error(err.Error())
+		}
+	}
+
+	// Calculate
+}

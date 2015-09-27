@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"math/big"
 	"net/http"
@@ -1188,4 +1189,40 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	database.UpdatePaymentCompleteByPaymentId(c, accessKey, activationId, txId)
 
 	return txId, nil
+}
+
+// Calculates the total BTC that is required for the given number of transactions
+func CalculateFeeAmount(c context.Context, amount uint64) (uint64, string, error) {
+	// Get env and blockchain from context
+	env := c.Value(consts.EnvKey).(string)
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+
+	// Set some maximum and minimums
+	var thisAmount = amount
+	if thisAmount > 1000 {
+		thisAmount = 1000
+	}
+	if thisAmount < 20 {
+		thisAmount = 20
+	}
+
+	if blockchainId != consts.CounterpartyBlockchainId {
+		errorString := fmt.Sprintf("Blockchain must be %s, got %s", consts.CounterpartyBlockchainId, blockchainId)
+		log.FluentfContext(consts.LOGERROR, c, errorString)
+
+		return 0, "", errors.New(errorString)
+	}
+
+	var quantity uint64
+	var asset string
+
+	if env == "dev" {
+		quantity = (Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee) * thisAmount
+		asset = "BTC"
+	} else {
+		quantity = (Counterparty_DefaultDustSize + Counterparty_DefaultTxFee) * thisAmount
+		asset = "BTC"
+	}
+
+	return quantity, asset, nil
 }
