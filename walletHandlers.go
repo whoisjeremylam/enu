@@ -115,12 +115,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-		//		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 

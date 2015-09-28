@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -156,10 +157,26 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if err := r.Body.Close(); err != nil {
 		panic(err)
 	}
-	if err := json.Unmarshal(body, &payload); err != nil {
-		ReturnUnprocessableEntity(c, w, errors.New("Unable to unmarshal body"))
+
+	// If the body is an empty byte array then don't attempt to unmarshall the JSON and set a default
+	if bytes.Compare(body, make([]byte, 0)) != 0 {
+		if err := json.Unmarshal(body, &payload); err != nil {
+			log.FluentfContext(consts.LOGINFO, c, "Malformed body: %s", string(body))
+			returnErr := errors.New("Invalid JSON object in request")
+			log.FluentfContext(consts.LOGERROR, c, err.Error()) // Log the real error
+			ReturnUnprocessableEntity(c, w, returnErr)          // Send back sanitised error
+
+			return nil, returnErr
+		}
+		log.FluentfContext(consts.LOGINFO, c, "Request received: %s", body)
+	} else if bytes.Compare(body, make([]byte, 0)) == 0 {
+		log.FluentfContext(consts.LOGINFO, c, "Empty body received")
+		returnErr := errors.New("Empty body received. If you aren't sending a payload then send an empty JSON object: {}")
+		log.FluentfContext(consts.LOGERROR, c, returnErr.Error())
+		ReturnUnprocessableEntity(c, w, returnErr)
+
+		return nil, returnErr
 	}
-	log.FluentfContext(consts.LOGINFO, c, "Request received: %s", body)
 
 	// Then look up secret and calculate digest
 	accessKey := c.Value(consts.AccessKeyKey).(string)
@@ -169,6 +186,8 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if calculatedSignature != signature {
 		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
 		err := errors.New(errorString)
+		ReturnUnauthorised(c, w, err)
+
 		return nil, err
 	}
 
@@ -189,12 +208,16 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			err = errors.New("Invalid nonce value")
 			//Nonce is not greater than the nonce in the DB
 			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %d <= %d\n", accessKey, nonceInt, nonceDB)
+			ReturnUnauthorised(c, w, err)
+
 			return nil, err
 		} else {
 			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, nonceInt, nonceDB)
 			database.UpdateNonce(accessKey, nonceInt)
 			if err != nil {
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
+				ReturnUnauthorised(c, w, errors.New("Nonce update failed"))
+
 				return nil, err
 			}
 		}
@@ -242,8 +265,10 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 				errorList = errorList + fmt.Sprintf("%s. ", desc)
 
 			}
-			err := errors.New(errorList)
-			log.FluentfContext(consts.LOGERROR, c, "The document is not valid. Errors : %s", errorList)
+			err := errors.New("The request was not properly formed. Please correct these errors : " + errorList)
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			ReturnUnprocessableEntity(c, w, err)
+
 			return m, err
 		}
 	}
