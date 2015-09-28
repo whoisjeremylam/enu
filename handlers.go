@@ -125,7 +125,7 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 
 	// Headers weren't set properly, return forbidden
 	if accessKey == "" || signature == "" {
-		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, none, signature")
+		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, signature")
 		log.FluentfContext(consts.LOGERROR, c, "Headers set incorrectly: accessKey=%s, signature=%s\n", accessKey, signature)
 		ReturnUnauthorised(c, w, err)
 

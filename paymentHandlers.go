@@ -28,12 +28,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	// check generic args and parse
 	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-		//		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
@@ -87,7 +82,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
@@ -139,13 +134,7 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-
-		//		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
@@ -197,13 +186,7 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-
-		//		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 

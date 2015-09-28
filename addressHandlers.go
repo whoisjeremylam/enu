@@ -20,7 +20,7 @@ func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 

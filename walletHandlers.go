@@ -34,7 +34,6 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	wallet, err = counterpartycrypto.CreateWallet()
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Unable to create a Counterparty wallet. Error: %s\n", err.Error())
-		ReturnServerError(c, w, err)
 		return nil
 	}
 	log.FluentfContext(consts.LOGINFO, c, "Created a new wallet with first address: %s for access key: %s\n (requestID: %s)", wallet.Addresses[0], c.Value(consts.AccessKeyKey).(string), requestId)
@@ -63,12 +62,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	// check generic args and parse
 	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-		//		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
@@ -183,12 +177,7 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 	// check generic args and parse
 	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-		//		ReturnServerError(c, w, err)
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
