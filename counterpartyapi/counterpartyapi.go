@@ -1106,17 +1106,10 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 
 	// Calculate the quantity of BTC to send by the amount specified
 	// For Counterparty: each transaction = dust_size + miners_fee
-	var quantity uint64
-	var asset string
-	if blockchainId == consts.CounterpartyBlockchainId && env != "dev" {
-		quantity = (Counterparty_DefaultDustSize + Counterparty_DefaultTxFee) * amount
-		asset = "BTC"
-	} else if blockchainId == consts.CounterpartyBlockchainId && env == "dev" {
-		quantity = (Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee) * amount
-		asset = "BTC"
-	} else {
-		log.FluentfContext(consts.LOGERROR, c, "Unsupported blockchain: %s\n", blockchainId)
-		return "", errors.New("Unsupported blockchain")
+	quantity, asset, err := CalculateFeeAmount(c, amount)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Could not calculate fee: %s", err.Error())
+		return "", err
 	}
 
 	// Write the dividend with the generated dividend id to the database
