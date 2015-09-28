@@ -6,11 +6,12 @@ import (
 	"net/http"
 
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 
+	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
 	"github.com/vennd/enu/log"
 )
 
@@ -166,6 +167,18 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	payment = database.GetPaymentByPaymentId(c, c.Value(consts.AccessKeyKey).(string), paymentId)
 	// errorhandling here!!
 
+	// Add the blockchain status
+	if payment.BroadcastTxId != "" {
+		confirmations, err := bitcoinapi.GetConfirmations(payment.BroadcastTxId)
+		if err == nil || confirmations == 0 {
+			payment.BlockchainStatus = "unconfimed"
+			payment.BlockchainConfirmations = 0
+		}
+
+		payment.BlockchainStatus = "confirmed"
+		payment.BlockchainConfirmations = confirmations
+	}
+
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(payment); err != nil {
 		panic(err)
@@ -210,6 +223,21 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 
 	payments := database.GetPaymentsByAddress(c, c.Value(consts.AccessKeyKey).(string), address)
 	// errorhandling here!!
+
+	// Add the blockchain status
+
+	for i, p := range payments {
+		if p.BroadcastTxId != "" {
+			confirmations, err := bitcoinapi.GetConfirmations(p.BroadcastTxId)
+			if err == nil || confirmations == 0 {
+				payments[i].BlockchainStatus = "unconfimed"
+				payments[i].BlockchainConfirmations = 0
+			}
+
+			payments[i].BlockchainStatus = "confirmed"
+			payments[i].BlockchainConfirmations = confirmations
+		}
+	}
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(payments); err != nil {

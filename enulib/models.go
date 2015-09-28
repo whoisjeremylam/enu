@@ -56,18 +56,20 @@ type Payment struct {
 type Payments []Payment
 
 type SimplePayment struct {
-	SourceAddress      string `json:"sourceAddress"`
-	DestinationAddress string `json:"destinationAddress"`
-	Asset              string `json:"asset"`
-	Amount             uint64 `json:"amount"`
-	PaymentId          string `json:"paymentId"`
-	TxFee              int64  `json:"txFee"`
-	BroadcastTxId      string `json:"broadcastTxId"`
-	PaymentTag         string `json:"paymentTag"`
-	Status             string `json:"status"`
-	ErrorMessage       string `json:"errorMessage"`
-	RequestId          string `json:"requestId"`
-	Nonce              int64  `json:"nonce"`
+	SourceAddress           string `json:"sourceAddress"`
+	DestinationAddress      string `json:"destinationAddress"`
+	Asset                   string `json:"asset"`
+	Amount                  uint64 `json:"amount"`
+	PaymentId               string `json:"paymentId"`
+	TxFee                   int64  `json:"txFee"`
+	BroadcastTxId           string `json:"broadcastTxId"`
+	BlockchainStatus        string `json:"blockchainStatus"`
+	BlockchainConfirmations uint64 `json:"blockchainConfirmations"`
+	PaymentTag              string `json:"paymentTag"`
+	Status                  string `json:"status"`
+	ErrorMessage            string `json:"errorMessage"`
+	RequestId               string `json:"requestId"`
+	Nonce                   int64  `json:"nonce"`
 }
 
 type Address struct {

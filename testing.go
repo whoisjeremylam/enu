@@ -72,7 +72,7 @@ func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int64,
 		panic(err)
 	}
 
-	log.Printf("Reply: %s\n", string(body))
+	log.Printf("Reply: %#v\n", string(body))
 
 	return body, 0, nil
 }
