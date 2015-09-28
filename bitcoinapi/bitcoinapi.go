@@ -10,10 +10,12 @@ import (
 	"os"
 
 	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcrpcclient"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
 	"github.com/vennd/enu/log"
 
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcjson"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcrpcclient"
+	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
@@ -246,4 +248,52 @@ func httpGet(c context.Context, url string) ([]byte, int64, error) {
 	}
 
 	return body, 0, nil
+}
+
+func GetRawTransaction(txid string) (*btcjson.TxRawResult, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Notice the notification parameter is nil since notifications are
+	// not supported in HTTP POST mode.
+	client, err := btcrpcclient.New(&config, nil)
+	if err != nil {
+		log.Println(err.Error())
+		return nil, err
+	}
+	defer client.Shutdown()
+
+	txHash, err := wire.NewShaHashFromStr(txid)
+	if err != nil {
+		log.Fluentf(consts.LOGERROR, err.Error())
+		return nil, err
+	}
+
+	txVerbose, err := client.GetRawTransactionVerbose(txHash)
+	if err != nil {
+		log.Fluentf(consts.LOGERROR, err.Error())
+		return nil, err
+	}
+
+	return txVerbose, nil
+}
+
+func GetConfirmations(txid string) (uint64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Testing
+	if txid == "success" {
+		return 777, nil
+	}
+
+	rawtx, err := GetRawTransaction(txid)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return rawtx.Confirmations, nil
 }
