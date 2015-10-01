@@ -67,6 +67,7 @@ type SimplePayment struct {
 	BlockchainConfirmations uint64 `json:"blockchainConfirmations"`
 	PaymentTag              string `json:"paymentTag"`
 	Status                  string `json:"status"`
+	ErrorCode               int64  `json:"errorCode"`
 	ErrorMessage            string `json:"errorMessage"`
 	RequestId               string `json:"requestId"`
 	Nonce                   int64  `json:"nonce"`
