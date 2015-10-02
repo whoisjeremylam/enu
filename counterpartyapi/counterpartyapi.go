@@ -3,6 +3,7 @@ package counterpartyapi
 import (
 	"bytes"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -14,6 +15,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	_ "code.google.com/p/go-sqlite/go1/sqlite3"
 
 	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
@@ -178,6 +181,12 @@ type ResultGetIssuances struct {
 	Result  []Issuance `json:"result"`
 }
 
+// Create wrapper for http response and error
+type ApiResult struct {
+	resp *http.Response
+	err  error
+}
+
 //   tx_index INTEGER PRIMARY KEY,
 //   tx_hash TEXT UNIQUE,
 //   block_index INTEGER,
@@ -244,6 +253,7 @@ var counterpartyHost string
 var counterpartyUser string
 var counterpartyPassword string
 var counterpartyTransactionEncoding string
+var counterpartyDBLocation string
 
 // Initialises global variables and database connection for all handlers
 func Init() {
@@ -301,18 +311,20 @@ func InitWithConfigPath(configFilePath string) {
 
 	m := configuration.(map[string]interface{})
 
-	// Bitcoin API parameters
+	// Counterparty API parameters
 	counterpartyHost = m["counterpartyhost"].(string)                               // End point for JSON RPC server
 	counterpartyUser = m["counterpartyuser"].(string)                               // Basic authentication user name
 	counterpartyPassword = m["counterpartypassword"].(string)                       // Basic authentication password
 	counterpartyTransactionEncoding = m["counterpartytransactionencoding"].(string) // The encoding that should be used for Counterparty transactions "auto" will let Counterparty select, valid values "multisig", "opreturn"
+	counterpartyDBLocation = m["counterpartydblocation"].(string)                   // Direct location of counterpartydb if we can't reach the API
 
 	isInit = true
 }
 
 func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
-	postDataJson := string(postData)
+	var apiResp ApiResult
 
+	postDataJson := string(postData)
 	log.FluentfContext(consts.LOGDEBUG, c, "counterpartyapi postAPI() posting: %s", postDataJson)
 
 	// Set headers
@@ -321,20 +333,37 @@ func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	clientPointer := &http.Client{}
-	resp, err := clientPointer.Do(req)
 
-	if err != nil {
-		return nil, 0, err
+	// Call counterparty JSON service with 10 second timeout
+	c1 := make(chan ApiResult, 1)
+	go func() {
+		var result ApiResult
+
+		resp, err := clientPointer.Do(req)
+		result.resp = resp
+		result.err = err
+
+		c1 <- result
+	}()
+
+	select {
+	case apiResp = <-c1:
+	case <-time.After(time.Second * 10):
+		return []byte("{code: -10000, data: \"Timeout when reaching counterparty daemon\", message: \"Server error\"}"), 503, errors.New("Timeout when reaching counterparty daemon")
 	}
 
-	if resp.StatusCode != 200 {
-		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", resp.StatusCode)
+	if apiResp.err != nil {
+		return nil, -1000, apiResp.err
+	}
 
-		body, err := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
+	if apiResp.resp.StatusCode != 200 {
+		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", apiResp.resp.StatusCode)
+
+		body, err := ioutil.ReadAll(apiResp.resp.Body)
+		defer apiResp.resp.Body.Close()
 
 		if err != nil {
-			return nil, 0, err
+			return nil, -1000, err
 		}
 
 		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
@@ -342,11 +371,11 @@ func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
 		return nil, -1000, errors.New(string(body))
 	}
 
-	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(apiResp.resp.Body)
+	defer apiResp.resp.Body.Close()
 
 	if err != nil {
-		return nil, 0, err
+		return nil, -1000, err
 	}
 
 	return body, 0, nil
@@ -387,7 +416,17 @@ func GetBalancesByAddress(c context.Context, address string) ([]Balance, error) 
 
 	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return nil, err
+		// Attempt to parse error if not empty in case it is something json-like from counterpartyd
+		var errResult map[string]interface{}
+		if unmarshallErr := json.Unmarshal([]byte(err.Error()), &errResult); unmarshallErr != nil {
+			return nil, err
+		}
+
+		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
+		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
+			log.FluentfContext(consts.LOGERROR, c, "Unable to read from counterpartyd, falling back to DB")
+			return GetBalancesByAddressDB(c, address)
+		}
 	}
 
 	if err := json.Unmarshal(responseData, &result); err != nil {
@@ -395,6 +434,58 @@ func GetBalancesByAddress(c context.Context, address string) ([]Balance, error) 
 	}
 
 	return result.Result, nil
+}
+
+func GetBalancesByAddressDB(c context.Context, address string) ([]Balance, error) {
+	var result []Balance
+
+	// sqlite drivers are not concurrency safe, so must create a connection each time
+	db, err := sql.Open("sqlite3", counterpartyDBLocation)
+	if err != nil {
+		panic("Couldn't open DB")
+	}
+
+	err = db.Ping()
+	if err != nil {
+		panic("Couldn't ping DB")
+	}
+
+	//	 Query DB
+	//	log.Fluentf(consts.LOGDEBUG, "select address, asset, quantity from balances where address = %s", address)
+	stmt, err := db.Prepare("select address, asset, quantity from balances where address = ?")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return result, err
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	rows, err := stmt.Query(address)
+	defer rows.Close()
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
+		return result, err
+	}
+
+	for rows.Next() {
+		var balance = Balance{}
+		var address []byte
+		var asset []byte
+		var quantity uint64
+
+		if err := rows.Scan(&address, &asset, &quantity); err == sql.ErrNoRows {
+			if err.Error() == "sql: no rows in result set" {
+			}
+		} else if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		} else {
+			balance = Balance{Address: string(address), Asset: string(asset), Quantity: quantity}
+		}
+
+		result = append(result, balance)
+	}
+
+	return result, nil
 }
 
 func GetBalancesByAsset(c context.Context, asset string) ([]Balance, error) {
@@ -422,7 +513,17 @@ func GetBalancesByAsset(c context.Context, asset string) ([]Balance, error) {
 
 	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return nil, err
+		// Attempt to parse error if not empty in case it is something json-like from counterpartyd
+		var errResult map[string]interface{}
+		if unmarshallErr := json.Unmarshal([]byte(err.Error()), &errResult); unmarshallErr != nil {
+			return nil, err
+		}
+
+		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
+		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
+			log.FluentfContext(consts.LOGERROR, c, "Unable to read from counterpartyd, falling back to DB")
+			return GetBalancesByAssetDB(c, asset)
+		}
 	}
 
 	//	log.Println(string(responseData))
@@ -432,6 +533,58 @@ func GetBalancesByAsset(c context.Context, asset string) ([]Balance, error) {
 	}
 
 	return result.Result, nil
+}
+
+func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, error) {
+	var result []Balance
+
+	// sqlite drivers are not concurrency safe, so must create a connection each time
+	db, err := sql.Open("sqlite3", counterpartyDBLocation)
+	if err != nil {
+		panic("Couldn't open DB")
+	}
+
+	err = db.Ping()
+	if err != nil {
+		panic("Couldn't ping DB")
+	}
+
+	//	 Query DB
+	//	log.Fluentf(consts.LOGDEBUG, "select address, asset, quantity from balances where asset = %s", asset)
+	stmt, err := db.Prepare("select address, asset, quantity from balances where asset = ?")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return result, err
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	rows, err := stmt.Query(asset)
+	defer rows.Close()
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
+		return result, err
+	}
+
+	for rows.Next() {
+		var balance = Balance{}
+		var address []byte
+		var asset []byte
+		var quantity uint64
+
+		if err := rows.Scan(&address, &asset, &quantity); err == sql.ErrNoRows {
+			if err.Error() == "sql: no rows in result set" {
+			}
+		} else if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		} else {
+			balance = Balance{Address: string(address), Asset: string(asset), Quantity: quantity}
+		}
+
+		result = append(result, balance)
+	}
+
+	return result, nil
 }
 
 func GetIssuances(c context.Context, asset string) ([]Issuance, error) {
@@ -459,7 +612,17 @@ func GetIssuances(c context.Context, asset string) ([]Issuance, error) {
 
 	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return nil, err
+		// Attempt to parse error if not empty in case it is something json-like from counterpartyd
+		var errResult map[string]interface{}
+		if unmarshallErr := json.Unmarshal([]byte(err.Error()), &errResult); unmarshallErr != nil {
+			return nil, err
+		}
+
+		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
+		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
+			log.FluentfContext(consts.LOGERROR, c, "Unable to read from counterpartyd, falling back to DB")
+			return GetIssuancesDB(c, asset)
+		}
 	}
 
 	log.Println(string(responseData))
@@ -470,6 +633,89 @@ func GetIssuances(c context.Context, asset string) ([]Issuance, error) {
 	}
 
 	return result.Result, nil
+}
+
+func GetIssuancesDB(c context.Context, asset string) ([]Issuance, error) {
+	var result []Issuance
+
+	// sqlite drivers are not concurrency safe, so must create a connection each time
+	db, err := sql.Open("sqlite3", counterpartyDBLocation)
+	if err != nil {
+		panic("Couldn't open DB")
+	}
+
+	err = db.Ping()
+	if err != nil {
+		panic("Couldn't ping DB")
+	}
+
+	//	 Query DB
+	//	log.Fluentf(consts.LOGDEBUG, "select tx_index, tx_hash, block_index, asset, quantity, divisible, source, issuer, transfer, description, fee_paid, locked, status from issuances where status='valid' and asset=%s", asset)
+	stmt, err := db.Prepare("select tx_index, tx_hash, block_index, asset, quantity, divisible, source, issuer, transfer, description, fee_paid, locked, status from issuances where status='valid' and asset=?")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return result, err
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	rows, err := stmt.Query(asset)
+	defer rows.Close()
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
+		return result, err
+	}
+
+	for rows.Next() {
+		var issuance = Issuance{}
+		var tx_index uint64
+		var tx_hash []byte
+		var block_index uint64
+		var asset []byte
+		var quantity uint64
+		var divisible []byte // returned as a string from the DB driver, we need to return as an int
+		var source []byte
+		var issuer []byte
+		var transfer []byte // returned as a string from the DB driver, we need to return as an int
+		var description []byte
+		var fee_paid uint64
+		var locked []byte // returned as a string from the DB driver, we need to return as an int
+		var status []byte
+
+		if err := rows.Scan(&tx_index, &tx_hash, &block_index, &asset, &quantity, &divisible, &source, &issuer, &transfer, &description, &fee_paid, &locked, &status); err == sql.ErrNoRows {
+			if err.Error() == "sql: no rows in result set" {
+			}
+		} else if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		} else {
+			var divisibleResult uint64
+			if string(divisible) == "true" {
+				divisibleResult = 1
+			} else {
+				divisibleResult = 0
+			}
+
+			var transferResult uint64
+			if string(transfer) == "true" {
+				transferResult = 1
+			} else {
+				transferResult = 0
+			}
+
+			var lockedResult uint64
+			if string(locked) == "true" {
+				lockedResult = 1
+			} else {
+				lockedResult = 0
+			}
+
+			issuance = Issuance{TxIndex: tx_index, TxHash: string(tx_hash), BlockIndex: block_index, Asset: string(asset), Quantity: quantity, Divisible: divisibleResult, Source: string(source), Issuer: string(issuer), Transfer: transferResult, Description: string(description), FeePaid: fee_paid, Locked: lockedResult, Status: string(status)}
+		}
+
+		result = append(result, issuance)
+	}
+
+	return result, nil
 }
 
 func CreateSend(c context.Context, sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, error) {

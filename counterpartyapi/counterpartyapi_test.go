@@ -1,6 +1,7 @@
 package counterpartyapi
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/vennd/enu/consts"
@@ -13,6 +14,55 @@ import (
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
 var sendAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
 var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
+
+// Use issuances for XBTC because we control the private key and won't be making more issuances
+var getIssuancesExpectedTestData []Issuance = []Issuance{
+	{4473, "9e87c48ffdbbd4bfa321de75181c05662fce6d24095ad3572defa8fd5be48452", 286437, "XBTC", 2100000000000000, 1, "1LHpjmevxx3ZWydTL5PfoSiUiuYNbkqknm", "1LHpjmevxx3ZWydTL5PfoSiUiuYNbkqknm", 0, "BTC", 500000000, 0, "valid"},
+	{543558, "7778b2b3f085b82fb37c089fbf2737ee0cc2b3f39da3f0cce1dd5433b52fefa9", 309624, "XBTC", 0, 1, "1LHpjmevxx3ZWydTL5PfoSiUiuYNbkqknm", "1LHpjmevxx3ZWydTL5PfoSiUiuYNbkqknm", 0, "BTC", 0, 1, "valid"},
+	{8829647, "a3af94b45f1c49557969a4932705b2bd1d80c83fc023346314471e20f29647d0", 328176, "XBTC", 0, 1, "1LHpjmevxx3ZWydTL5PfoSiUiuYNbkqknm", "1E6ifCRs2r6gb3pvZtBgsqnqbxuDHUSjU9", 1, "XBTC", 0, 0, "valid"},
+}
+
+func TestGetIssuances(t *testing.T) {
+
+	Init()
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+
+	resultGetIssuances, err := GetIssuances(c, "XBTC")
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if len(resultGetIssuances) == 0 {
+		t.Errorf("Expected: resultGetIssuances to contain value, Got: %+v\n", resultGetIssuances)
+	}
+
+	if reflect.DeepEqual(resultGetIssuances, getIssuancesExpectedTestData) != true {
+		t.Errorf("Expected: %s, got %s", getIssuancesExpectedTestData, resultGetIssuances)
+	}
+}
+
+func TestGetIssuancesDB(t *testing.T) {
+
+	Init()
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+
+	resultGetIssuances, err := GetIssuancesDB(c, "XBTC")
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	if len(resultGetIssuances) == 0 {
+		t.Errorf("Expected: resultGetIssuances to contain value, Got: %+v\n", resultGetIssuances)
+	}
+
+	if reflect.DeepEqual(resultGetIssuances, getIssuancesExpectedTestData) != true {
+		t.Errorf("Expected: %s, got %s", getIssuancesExpectedTestData, resultGetIssuances)
+	}
+}
 
 func TestGenerateRandomAssetName(t *testing.T) {
 	c := context.TODO()
@@ -31,12 +81,12 @@ func TestGenerateRandomAssetName(t *testing.T) {
 
 }
 
-func TestGetBalances(t *testing.T) {
+func TestGetBalancesByAsset(t *testing.T) {
 	Init()
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
-	resultGetBalances, err := GetBalancesByAsset(c, "XBTC")
+	resultGetBalances, err := GetBalancesByAsset(c, "MPUSD")
 
 	if err != nil {
 		t.Errorf(err.Error())
@@ -47,7 +97,7 @@ func TestGetBalances(t *testing.T) {
 	}
 }
 
-func TestGetBalancesByAsset(t *testing.T) {
+func TestGetBalancesByAddress(t *testing.T) {
 	Init()
 
 	c := context.TODO()
