@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
@@ -340,6 +341,22 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	dividend = database.GetDividendByDividendId(c, c.Value(consts.AccessKeyKey).(string), dividendId)
 	dividend.RequestId = requestId
 
+	// Add the blockchain status
+	if dividend.BroadcastTxId == "" {
+		dividend.BlockchainStatus = "unconfimed"
+		dividend.BlockchainConfirmations = 0
+	}
+	if dividend.BroadcastTxId != "" {
+		confirmations, err := bitcoinapi.GetConfirmations(dividend.BroadcastTxId)
+		if err == nil || confirmations == 0 {
+			dividend.BlockchainStatus = "unconfimed"
+			dividend.BlockchainConfirmations = 0
+		}
+
+		dividend.BlockchainStatus = "confirmed"
+		dividend.BlockchainConfirmations = confirmations
+	}
+
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(dividend); err != nil {
 		panic(err)
@@ -378,6 +395,18 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *appErr
 
 	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
 	asset.RequestId = requestId
+
+	// Add the blockchain status
+	if asset.BroadcastTxId != "" {
+		confirmations, err := bitcoinapi.GetConfirmations(asset.BroadcastTxId)
+		if err == nil || confirmations == 0 {
+			asset.BlockchainStatus = "unconfimed"
+			asset.BlockchainConfirmations = 0
+		}
+
+		asset.BlockchainStatus = "confirmed"
+		asset.BlockchainConfirmations = confirmations
+	}
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(asset); err != nil {
