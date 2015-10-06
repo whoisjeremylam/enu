@@ -1,3 +1,7 @@
+// Contains API to counterparty functions
+// Regarding errorhandling, if a lower level function returns an errorCode, propagate the error back upwards
+// If the function handling the error is not exposed directly to the HTTP handlers, it's better that the original error is propagated to preserve the error
+
 package counterpartyapi
 
 import (
@@ -13,6 +17,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -187,22 +192,6 @@ type ApiResult struct {
 	err  error
 }
 
-//   tx_index INTEGER PRIMARY KEY,
-//   tx_hash TEXT UNIQUE,
-//   block_index INTEGER,
-//   asset TEXT,
-//   quantity INTEGER,
-//   divisible BOOL,
-//   source TEXT,
-//   issuer TEXT,
-//   transfer BOOL,
-//   callable BOOL,
-//   call_date INTEGER,
-//   call_price REAL,
-//   description TEXT,
-//   fee_paid INTEGER,
-//   locked BOOL,
-//   status TEXT,
 type Issuance struct {
 	TxIndex     uint64 `json:"tx_index"`
 	TxHash      string `json:"tx_hash"`
@@ -242,8 +231,6 @@ type RunningInfo struct {
 	CounterpartydVersion string    `json:"counterpartyd_version"`
 	LastMessageIndex     uint64    `json:"last_message_index"`
 	RunningTestnet       bool      `json:"running_testnet"`
-	DbVersionMajor       uint64    `json:"db_version_major"`
-	DbVersionMinor       uint64    `json:"db_version_minor"`
 	LastBlock            LastBlock `json:"last_block"`
 }
 
@@ -321,11 +308,14 @@ func InitWithConfigPath(configFilePath string) {
 	isInit = true
 }
 
-func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
+// Posts to the given counterparty JSON RPC call. Returns a map[string]interface{} which has already unmarshalled the JSON result
+// Attempts to interpret the counterparty errors such that the caller doesn't need to work out what is going on
+func postAPI(c context.Context, postData []byte) (map[string]interface{}, int64, error) {
+	var result map[string]interface{}
 	var apiResp ApiResult
 
 	postDataJson := string(postData)
-	log.FluentfContext(consts.LOGDEBUG, c, "counterpartyapi postAPI() posting: %s", postDataJson)
+	//		log.FluentfContext(consts.LOGDEBUG, c, "counterpartyapi postAPI() posting: %s", postDataJson)
 
 	// Set headers
 	req, err := http.NewRequest("POST", counterpartyHost, bytes.NewBufferString(postDataJson))
@@ -337,7 +327,7 @@ func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
 	// Call counterparty JSON service with 10 second timeout
 	c1 := make(chan ApiResult, 1)
 	go func() {
-		var result ApiResult
+		var result ApiResult // Wrap the response into a struct so we can return both the error and response
 
 		resp, err := clientPointer.Do(req)
 		result.resp = resp
@@ -349,36 +339,104 @@ func postAPI(c context.Context, postData []byte) ([]byte, int64, error) {
 	select {
 	case apiResp = <-c1:
 	case <-time.After(time.Second * 10):
-		return []byte("{code: -10000, data: \"Timeout when reaching counterparty daemon\", message: \"Server error\"}"), 503, errors.New("Timeout when reaching counterparty daemon")
+		return result, consts.CounterpartyErrors.Timeout.Code, errors.New(consts.CounterpartyErrors.Timeout.Description)
 	}
 
 	if apiResp.err != nil {
-		return nil, -1000, apiResp.err
+		log.FluentfContext(consts.LOGERROR, c, apiResp.err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
+	// Unsuccessful
 	if apiResp.resp.StatusCode != 200 {
 		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", apiResp.resp.StatusCode)
 
+		// Even though we got an error, counterparty often sends back errors inside the body
 		body, err := ioutil.ReadAll(apiResp.resp.Body)
 		defer apiResp.resp.Body.Close()
-
 		if err != nil {
-			return nil, -1000, err
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			return nil, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 		}
 
-		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
+		//		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
 
-		return nil, -1000, errors.New(string(body))
+		// Attempt to parse body if not empty in case it is something json-like from counterpartyd
+		var errResult map[string]interface{}
+		if unmarshallErr := json.Unmarshal(body, &errResult); unmarshallErr != nil {
+			// If we couldn't parse the error properly, log error to fluent and return unhandled error
+			log.FluentfContext(consts.LOGERROR, c, err.Error())
+
+			return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		}
+
+		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
+		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
+			return result, consts.CounterpartyErrors.ReparsingOrUnavailable.Code, errors.New(consts.CounterpartyErrors.ReparsingOrUnavailable.Description)
+		}
 	}
 
+	// Success, read body and return
 	body, err := ioutil.ReadAll(apiResp.resp.Body)
 	defer apiResp.resp.Body.Close()
 
 	if err != nil {
-		return nil, -1000, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in ReadAll(): %s", err.Error())
+		return nil, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	return body, 0, nil
+	// Unmarshall body
+	if unmarshallErr := json.Unmarshal(body, &result); unmarshallErr != nil {
+		// If we couldn't parse the error properly, log error to fluent and return unhandled error
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	// If the body doesn't contain a result then the call must have failed. Attempt to read the payload to work out what happened
+	if result["result"] == nil {
+		// Uncomment this to work out what the hell counterparty sent back
+		//		log.FluentfContext(consts.LOGDEBUG, c, "Result not returned from counterpartyd. Got: %s", fmt.Sprintf("%#v", result))
+
+		// Got an error
+		if result["error"] != nil {
+			var dataMap map[string]interface{}
+			errorMap := result["error"].(map[string]interface{})
+
+			if errorMap["data"] != nil {
+				dataMap = errorMap["data"].(map[string]interface{})
+			}
+
+			// Only issuer can pay dividends
+			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CounterpartylibOnlyIssuerCanPayDividends) {
+				return result, consts.CounterpartyErrors.OnlyIssuerCanPayDividends.Code, errors.New(consts.CounterpartyErrors.OnlyIssuerCanPayDividends.Description)
+			}
+
+			// Insufficient asset in address
+			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CounterpartylibInsufficientFunds) {
+				return result, consts.CounterpartyErrors.InsufficientFunds.Code, errors.New(consts.CounterpartyErrors.InsufficientFunds.Description)
+			}
+
+			// Bad address
+			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CounterpartylibMalformedAddress) {
+				return result, consts.CounterpartyErrors.MalformedAddress.Code, errors.New(consts.CounterpartyErrors.MalformedAddress.Description)
+			}
+
+			// No such asset
+			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CountpartylibNoSuchAsset) {
+				return result, consts.CounterpartyErrors.NoSuchAsset.Code, errors.New(consts.CounterpartyErrors.NoSuchAsset.Description)
+			}
+
+			//Insufficient BTC at address
+			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CounterpartylibInsufficientBTC) {
+				return result, consts.CounterpartyErrors.InsufficientFees.Code, errors.New(consts.CounterpartyErrors.InsufficientFees.Description)
+			}
+		}
+
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	return result, 0, nil
 }
 
 func generateId(c context.Context) uint32 {
@@ -394,9 +452,9 @@ func generateId(c context.Context) uint32 {
 	return randomUint32
 }
 
-func GetBalancesByAddress(c context.Context, address string) ([]Balance, error) {
+func GetBalancesByAddress(c context.Context, address string) ([]Balance, int64, error) {
 	var payload payloadGetBalances
-	var result ResultGetBalances
+	var result []Balance
 
 	if isInit == false {
 		Init()
@@ -411,43 +469,48 @@ func GetBalancesByAddress(c context.Context, address string) ([]Balance, error) 
 
 	payloadJsonBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		// Attempt to parse error if not empty in case it is something json-like from counterpartyd
-		var errResult map[string]interface{}
-		if unmarshallErr := json.Unmarshal([]byte(err.Error()), &errResult); unmarshallErr != nil {
-			return nil, err
-		}
-
 		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
-		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
-			log.FluentfContext(consts.LOGERROR, c, "Unable to read from counterpartyd, falling back to DB")
+		if errorCode == consts.CounterpartyErrors.ReparsingOrUnavailable.Code || errorCode == consts.CounterpartyErrors.Timeout.Code {
 			return GetBalancesByAddressDB(c, address)
 		}
+
+		return result, errorCode, err
 	}
 
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		return nil, errors.New("Unable to unmarshal responseData")
+	// Range over the result from api and create the reply
+	if responseData["result"] != nil {
+		for _, b := range responseData["result"].([]interface{}) {
+			c := b.(map[string]interface{})
+			result = append(result,
+				Balance{Address: c["address"].(string),
+					Asset:    c["asset"].(string),
+					Quantity: uint64(c["quantity"].(float64))})
+		}
 	}
 
-	return result.Result, nil
+	return result, 0, nil
 }
 
-func GetBalancesByAddressDB(c context.Context, address string) ([]Balance, error) {
+func GetBalancesByAddressDB(c context.Context, address string) ([]Balance, int64, error) {
 	var result []Balance
 
 	// sqlite drivers are not concurrency safe, so must create a connection each time
 	db, err := sql.Open("sqlite3", counterpartyDBLocation)
 	if err != nil {
-		panic("Couldn't open DB")
+		log.FluentfContext(consts.LOGERROR, c, "Failed to open DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		panic("Couldn't ping DB")
+		log.FluentfContext(consts.LOGERROR, c, "Failed to ping DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	//	 Query DB
@@ -455,7 +518,7 @@ func GetBalancesByAddressDB(c context.Context, address string) ([]Balance, error
 	stmt, err := db.Prepare("select address, asset, quantity from balances where address = ?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
-		return result, err
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 	defer stmt.Close()
 
@@ -464,7 +527,7 @@ func GetBalancesByAddressDB(c context.Context, address string) ([]Balance, error
 	defer rows.Close()
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
-		return result, err
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	for rows.Next() {
@@ -485,12 +548,12 @@ func GetBalancesByAddressDB(c context.Context, address string) ([]Balance, error
 		result = append(result, balance)
 	}
 
-	return result, nil
+	return result, 0, nil
 }
 
-func GetBalancesByAsset(c context.Context, asset string) ([]Balance, error) {
+func GetBalancesByAsset(c context.Context, asset string) ([]Balance, int64, error) {
 	var payload payloadGetBalances
-	var result ResultGetBalances
+	var result []Balance
 
 	if isInit == false {
 		Init()
@@ -504,49 +567,49 @@ func GetBalancesByAsset(c context.Context, asset string) ([]Balance, error) {
 	payload.Id = generateId(c)
 
 	payloadJsonBytes, err := json.Marshal(payload)
-
-	//	log.Println(string(payloadJsonBytes))
-
 	if err != nil {
-		return nil, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		// Attempt to parse error if not empty in case it is something json-like from counterpartyd
-		var errResult map[string]interface{}
-		if unmarshallErr := json.Unmarshal([]byte(err.Error()), &errResult); unmarshallErr != nil {
-			return nil, err
-		}
-
 		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
-		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
-			log.FluentfContext(consts.LOGERROR, c, "Unable to read from counterpartyd, falling back to DB")
+		if errorCode == consts.CounterpartyErrors.ReparsingOrUnavailable.Code || errorCode == consts.CounterpartyErrors.Timeout.Code {
 			return GetBalancesByAssetDB(c, asset)
 		}
+
+		return result, errorCode, err
 	}
 
-	//	log.Println(string(responseData))
-
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		return nil, errors.New("Unable to unmarshal responseData")
+	// Range over the result from api and create the reply
+	if responseData["result"] != nil {
+		for _, b := range responseData["result"].([]interface{}) {
+			c := b.(map[string]interface{})
+			result = append(result,
+				Balance{Address: c["address"].(string),
+					Asset:    c["asset"].(string),
+					Quantity: uint64(c["quantity"].(float64))})
+		}
 	}
 
-	return result.Result, nil
+	return result, 0, nil
 }
 
-func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, error) {
+func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, int64, error) {
 	var result []Balance
 
 	// sqlite drivers are not concurrency safe, so must create a connection each time
 	db, err := sql.Open("sqlite3", counterpartyDBLocation)
 	if err != nil {
-		panic("Couldn't open DB")
+		log.FluentfContext(consts.LOGERROR, c, "Failed to open DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		panic("Couldn't ping DB")
+		log.FluentfContext(consts.LOGERROR, c, "Failed to ping DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	//	 Query DB
@@ -554,7 +617,7 @@ func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, error) {
 	stmt, err := db.Prepare("select address, asset, quantity from balances where asset = ?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
-		return result, err
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 	defer stmt.Close()
 
@@ -563,7 +626,7 @@ func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, error) {
 	defer rows.Close()
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
-		return result, err
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	for rows.Next() {
@@ -584,12 +647,12 @@ func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, error) {
 		result = append(result, balance)
 	}
 
-	return result, nil
+	return result, 0, nil
 }
 
-func GetIssuances(c context.Context, asset string) ([]Issuance, error) {
+func GetIssuances(c context.Context, asset string) ([]Issuance, int64, error) {
 	var payload payloadGetIssuances
-	var result ResultGetIssuances
+	var result []Issuance
 
 	if isInit == false {
 		Init()
@@ -607,46 +670,58 @@ func GetIssuances(c context.Context, asset string) ([]Issuance, error) {
 
 	payloadJsonBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		// Attempt to parse error if not empty in case it is something json-like from counterpartyd
-		var errResult map[string]interface{}
-		if unmarshallErr := json.Unmarshal([]byte(err.Error()), &errResult); unmarshallErr != nil {
-			return nil, err
-		}
-
 		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
-		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
-			log.FluentfContext(consts.LOGERROR, c, "Unable to read from counterpartyd, falling back to DB")
+		if errorCode == consts.CounterpartyErrors.ReparsingOrUnavailable.Code || errorCode == consts.CounterpartyErrors.Timeout.Code {
 			return GetIssuancesDB(c, asset)
 		}
+
+		return result, errorCode, err
 	}
 
-	log.Println(string(responseData))
-
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		//		return nil, errors.New("Unable to unmarshal responseData!")
-		return nil, err
+	// Range over the result from api and create the reply
+	if responseData["result"] != nil {
+		for _, b := range responseData["result"].([]interface{}) {
+			c := b.(map[string]interface{})
+			result = append(result,
+				Issuance{TxIndex: uint64(c["tx_index"].(float64)),
+					TxHash:      c["tx_hash"].(string),
+					BlockIndex:  uint64(c["block_index"].(float64)),
+					Asset:       c["asset"].(string),
+					Quantity:    uint64(c["quantity"].(float64)),
+					Divisible:   uint64(c["divisible"].(float64)),
+					Source:      c["source"].(string),
+					Issuer:      c["issuer"].(string),
+					Transfer:    uint64(c["transfer"].(float64)),
+					Description: c["description"].(string),
+					FeePaid:     uint64(c["fee_paid"].(float64)),
+					Locked:      uint64(c["locked"].(float64)),
+					Status:      c["status"].(string)})
+		}
 	}
 
-	return result.Result, nil
+	return result, 0, nil
 }
 
-func GetIssuancesDB(c context.Context, asset string) ([]Issuance, error) {
+func GetIssuancesDB(c context.Context, asset string) ([]Issuance, int64, error) {
 	var result []Issuance
 
 	// sqlite drivers are not concurrency safe, so must create a connection each time
 	db, err := sql.Open("sqlite3", counterpartyDBLocation)
 	if err != nil {
-		panic("Couldn't open DB")
+		log.FluentfContext(consts.LOGERROR, c, "Failed to open DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	err = db.Ping()
 	if err != nil {
-		panic("Couldn't ping DB")
+		log.FluentfContext(consts.LOGERROR, c, "Failed to ping DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	//	 Query DB
@@ -654,7 +729,7 @@ func GetIssuancesDB(c context.Context, asset string) ([]Issuance, error) {
 	stmt, err := db.Prepare("select tx_index, tx_hash, block_index, asset, quantity, divisible, source, issuer, transfer, description, fee_paid, locked, status from issuances where status='valid' and asset=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
-		return result, err
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 	defer stmt.Close()
 
@@ -663,7 +738,7 @@ func GetIssuancesDB(c context.Context, asset string) ([]Issuance, error) {
 	defer rows.Close()
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
-		return result, err
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	for rows.Next() {
@@ -715,12 +790,14 @@ func GetIssuancesDB(c context.Context, asset string) ([]Issuance, error) {
 		result = append(result, issuance)
 	}
 
-	return result, nil
+	return result, 0, nil
 }
 
-func CreateSend(c context.Context, sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, error) {
+// Generates a hex string serialed tx which contains the bitcoin transaction to send an asset from sourceAddress to destinationAddress
+// Not exposed to the public
+func createSend(c context.Context, sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, int64, error) {
 	var payload payloadCreateSend_Counterparty
-	var result ResultCreateSend_Counterparty
+	var result string
 
 	if isInit == false {
 		Init()
@@ -742,29 +819,25 @@ func CreateSend(c context.Context, sourceAddress string, destinationAddress stri
 	payload.Params.Fee = Counterparty_DefaultTxFee
 	payload.Params.DustSize = Counterparty_DefaultDustSize
 
-	// Encode the payload into JSON
+	// Marshal into json
 	payloadJsonBytes, err := json.Marshal(payload)
 	if err != nil {
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	// Post to the counterparty daemon backend
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	// Post the request to counterpartyd
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return "", err
+		return "", errorCode, err
 	}
 
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		//		return "", errors.New("Counterparty_CreateSend(): Unable to unmarshal responseData")
-		return "", err
+	// Get the result
+	if responseData["result"] != nil {
+		result = responseData["result"].(string)
 	}
 
-	// Try to see if we got a server error instead
-	if result.Result == "" {
-		return "", errors.New(string(responseData))
-	}
-
-	return result.Result, nil
+	return result, 0, nil
 }
 
 // When given the 12 word passphrase:
@@ -774,12 +847,12 @@ func CreateSend(c context.Context, sourceAddress string, destinationAddress stri
 //
 // Assumptions
 // 1) This is a Counterparty transaction so all inputs need to be signed with the same pubkeyhash
-func SignRawTransaction(c context.Context, passphrase string, rawTxHexString string) (string, error) {
+func signRawTransaction(c context.Context, passphrase string, rawTxHexString string) (string, error) {
 	// Convert the hex string to a byte array
 	txBytes, err := hex.DecodeString(rawTxHexString)
 	if err != nil {
-		log.Println(err.Error())
-		os.Exit(-103)
+		log.FluentfContext(consts.LOGERROR, c, "Error in DecodeString(): %s", err.Error())
+		return "", err
 	}
 
 	//	log.Printf("Unsigned tx: %s", rawTxHexString)
@@ -787,7 +860,8 @@ func SignRawTransaction(c context.Context, passphrase string, rawTxHexString str
 	// Deserialise the transaction
 	tx, err := btcutil.NewTxFromBytes(txBytes)
 	if err != nil {
-		log.Println(err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Error in NewTxFromBytes(): %s", err.Error())
+		return "", err
 	}
 	//	log.Printf("Deserialised ok!: %+v", tx)
 
@@ -812,6 +886,7 @@ func SignRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		//		scriptClass, addresses, reqSigs, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
 		scriptClass, _, _, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
 		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in ExtractPkScriptAddrs(): %s", err.Error())
 			return "", err
 		}
 
@@ -835,7 +910,7 @@ func SignRawTransaction(c context.Context, passphrase string, rawTxHexString str
 
 		privateKeyString, err := counterpartycrypto.GetPrivateKey(passphrase, address)
 		if err != nil {
-			log.Println(err.Error())
+			log.FluentfContext(consts.LOGERROR, c, "Error in counterpartycrypto.GetPrivateKey(): %s", err.Error())
 			return nil, false, nil
 		}
 
@@ -843,7 +918,7 @@ func SignRawTransaction(c context.Context, passphrase string, rawTxHexString str
 
 		privateKeyBytes, err := hex.DecodeString(privateKeyString)
 		if err != nil {
-			log.Println(err.Error())
+			log.FluentfContext(consts.LOGERROR, c, "Error in DecodeString(): %s", err.Error())
 			return nil, false, nil
 		}
 
@@ -924,10 +999,10 @@ func generateRandomAssetName(c context.Context) (string, error) {
 }
 
 // Generates unsigned hex encoded transaction to issue an asset on Counterparty
-// This function MUST NOT be called directly. The high level function Counterparty_CreateIssuanceAndSend() should be used instead.
-func CreateIssuance(c context.Context, sourceAddress string, asset string, description string, quantity uint64, divisible bool, pubKeyHexString string) (string, error) {
+// This function MUST NOT be accessed by the client directly. The high level function Counterparty_CreateIssuanceAndSend() should be used instead.
+func createIssuance(c context.Context, sourceAddress string, asset string, description string, quantity uint64, divisible bool, pubKeyHexString string) (string, int64, error) {
 	var payload payloadCreateIssuance_Counterparty
-	var result ResultCreateIssuance_Counterparty
+	var result string
 
 	if isInit == false {
 		Init()
@@ -946,35 +1021,34 @@ func CreateIssuance(c context.Context, sourceAddress string, asset string, descr
 	payload.Params.Fee = Counterparty_DefaultTxFee
 	payload.Params.DustSize = Counterparty_DefaultDustSize
 
+	// Marshal into json
 	payloadJsonBytes, err := json.Marshal(payload)
-
-	//	log.Println(string(payloadJsonBytes))
-
 	if err != nil {
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	// Post the request to counterpartyd
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return "", err
+		return "", errorCode, err
 	}
 
-	//	log.Println(string(responseData))
-
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		return "", errors.New("Counterparty_CreateIssuance() unable to unmarshal responseData")
+	// Get the result
+	if responseData["result"] != nil {
+		result = responseData["result"].(string)
 	}
 
-	// Try to see if we got a server error instead
-	if result.Result == "" {
-		return "", errors.New(string(responseData))
-	}
-
-	return result.Result, nil
+	return result, 0, nil
 }
 
 // Automatically generates a numeric asset name and generates unsigned hex encoded transaction to issue an asset on Counterparty
-func CreateNumericIssuance(c context.Context, sourceAddress string, asset string, quantity uint64, divisible bool, pubKeyHexString string) (string, string, error) {
+// Returns:
+// randomAssetName that was generated
+// hex string encoded transaction
+// errorCode
+// error
+func CreateNumericIssuance(c context.Context, sourceAddress string, asset string, quantity uint64, divisible bool, pubKeyHexString string) (string, string, int64, error) {
 	var description string
 
 	if isInit == false {
@@ -987,23 +1061,44 @@ func CreateNumericIssuance(c context.Context, sourceAddress string, asset string
 		description = asset
 	}
 
-	randomAssetName, err := generateRandomAssetName(c)
-	if err != nil {
-		return "", "", err
+	// Generate random asset name
+	var err error
+	var randomAssetName string
+	randomAssetName, err = generateRandomAssetName(c)
+
+	// If random asset name already exists, keep trying until we find a spare one
+	for balance, errorCode, err := GetBalancesByAsset(c, randomAssetName); len(balance) != 0; {
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in GetBalancesByAsset(): %s, errorCode: %d", err.Error(), errorCode)
+			return "", "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		}
+		randomAssetName, err = generateRandomAssetName(c)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in generateRandomAssetName(): %s", err.Error())
+			return "", "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		}
+
+		balance, errorCode, err = GetBalancesByAsset(c, randomAssetName)
 	}
 
-	result, err := CreateIssuance(c, sourceAddress, randomAssetName, description, quantity, divisible, pubKeyHexString)
 	if err != nil {
-		return "", "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error in after trying to check if asset exists: %s", err.Error())
+		return "", "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	return randomAssetName, result, nil
+	// Call counterparty to create the issuance
+	result, errorCode, err := createIssuance(c, sourceAddress, randomAssetName, description, quantity, divisible, pubKeyHexString)
+	if err != nil {
+		return "", "", errorCode, err
+	}
+
+	return randomAssetName, result, 0, nil
 }
 
 // Generates unsigned hex encoded transaction to pay a dividend on an asset on Counterparty
-func CreateDividend(c context.Context, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, pubKeyHexString string) (string, error) {
+func createDividend(c context.Context, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64, pubKeyHexString string) (string, int64, error) {
 	var payload payloadCreateDividend_Counterparty
-	var result ResultCreateDividend_Counterparty
+	var result string
 
 	if isInit == false {
 		Init()
@@ -1021,35 +1116,29 @@ func CreateDividend(c context.Context, sourceAddress string, asset string, divid
 	payload.Params.Fee = Counterparty_DefaultTxFee
 	payload.Params.DustSize = Counterparty_DefaultDustSize
 
+	// Marshal into json
 	payloadJsonBytes, err := json.Marshal(payload)
-
-	//		log.Println(string(payloadJsonBytes))
-
 	if err != nil {
-		return result.Result, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	// Post the request to counterpartyd
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return result.Result, err
+		return "", errorCode, err
 	}
 
-	log.Println(string(responseData))
-
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		return result.Result, errors.New("Unable to unmarshal responseData")
+	// Get the result
+	if responseData["result"] != nil {
+		result = responseData["result"].(string)
 	}
 
-	// Try to see if we got a server error instead
-	if result.Result == "" {
-		return result.Result, errors.New(string(responseData))
-	}
-
-	return result.Result, nil
+	return result, 0, nil
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedSend(c context.Context, accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, quantity uint64, paymentId string, paymentTag string) (string, error) {
+func DelegatedSend(c context.Context, accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, quantity uint64, paymentId string, paymentTag string) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -1062,7 +1151,9 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Err in GetPublicKey(): %s\n", err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.CounterpartyErrors.InvalidPassphrase.Code, consts.CounterpartyErrors.InvalidPassphrase.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
 	}
 
 	// Mutex lock this address
@@ -1088,21 +1179,21 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
 	// Create the send
-	createResult, err := CreateSend(c, sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
+	createResult, errorCode, err := createSend(c, sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in CreateSend(): %s", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
-		return "", err
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, errorCode, err.Error())
+		return "", errorCode, err
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, destinationAddress, createResult)
 
 	// Sign the transactions
-	signed, err := SignRawTransaction(c, passphrase, createResult)
+	signed, err := signRawTransaction(c, passphrase, createResult)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in SignRawTransaction(): %s\n", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
-		return "", err
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s", signed)
@@ -1116,8 +1207,8 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, err.Error())
-			return "", err
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
 		}
 
 		txId = txIdSignedTx
@@ -1129,11 +1220,11 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 
 	log.FluentfContext(consts.LOGINFO, c, "Complete.")
 
-	return txId, nil
+	return txId, 0, nil
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool) (string, error) {
+func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -1146,88 +1237,8 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		log.Printf("Error: %s\n", err)
-		return "", err
-	}
-
-	// Mutex lock this address
-	counterparty_Mutexes.Lock()
-	log.Println("Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
-
-	// If an entry doesn't currently exist in the map for that address
-	if counterparty_Mutexes.m[sourceAddress] == nil {
-		log.Printf("Created new entry in map for %s\n", sourceAddress)
-		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
-	}
-
-	counterparty_Mutexes.m[sourceAddress].Lock()
-	log.Printf("Locked: %s\n", sourceAddress)
-
-	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.Println("Sleeping")
-	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
-
-	defer counterparty_Mutexes.Unlock()
-	defer counterparty_Mutexes.m[sourceAddress].Unlock()
-
-	log.Println("Composing the CreateNumericIssuance transaction")
-	// Create the issuance
-	randomAssetName, createResult, err := CreateNumericIssuance(c, sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
-	if err != nil {
-		log.Printf("Err in CreateIssuance(): %s\n", err.Error())
-		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
-		return "", err
-	}
-
-	log.Printf("Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, randomAssetName, sourceAddress, createResult)
-	database.UpdateAssetNameByAssetId(c, accessKey, assetId, randomAssetName)
-
-	// Sign the transactions
-	signed, err := SignRawTransaction(c, passphrase, createResult)
-	if err != nil {
-		log.Printf("Err in SignRawTransaction(): %s\n", err.Error())
-		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
-		return "", err
-	}
-
-	log.Printf("Signed tx: %s\n", signed)
-
-	//	 Transmit the transaction if not in dev, otherwise stub out the return
-	var txId string
-	if env != "dev" {
-		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, err.Error())
-			return "", err
-		}
-
-		txId = txIdSignedTx
-	} else {
-		txId = "success"
-	}
-
-	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txId)
-
-	return txId, nil
-}
-
-// Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateDividend(c context.Context, accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64) (string, error) {
-	if isInit == false {
-		Init()
-	}
-
-	// Copy same context values to local variables which are often accessed
-	env := c.Value(consts.EnvKey).(string)
-
-	// Write the dividend with the generated dividend id to the database
-	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, "valid")
-
-	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error with GetPublicKey(): %s", err)
+		return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
 	}
 
 	// Mutex lock this address
@@ -1236,7 +1247,7 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 
 	// If an entry doesn't currently exist in the map for that address
 	if counterparty_Mutexes.m[sourceAddress] == nil {
-		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
+		log.Printf("Created new entry in map for %s\n", sourceAddress)
 		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
 	}
 
@@ -1250,22 +1261,23 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	defer counterparty_Mutexes.Unlock()
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
-	// Create the dividend
-	createResult, err := CreateDividend(c, sourceAddress, asset, dividendAsset, quantityPerUnit, sourceAddressPubKey)
+	log.FluentfContext(consts.LOGINFO, c, "Composing the CreateNumericIssuance transaction")
+	// Create the issuance
+	randomAssetName, createResult, errCode, err := CreateNumericIssuance(c, sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
-		return "", err
+		return "", errCode, err
 	}
 
-	log.FluentfContext(consts.LOGINFO, c, "Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
+	log.FluentfContext(consts.LOGINFO, c, "Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, randomAssetName, sourceAddress, createResult)
+	database.UpdateAssetNameByAssetId(c, accessKey, assetId, randomAssetName)
 
 	// Sign the transactions
-	signed, err := SignRawTransaction(c, passphrase, createResult)
+	signed, err := signRawTransaction(c, passphrase, createResult)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error in SignRawTransaction(): %s", err.Error())
+
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
@@ -1275,9 +1287,88 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	if env != "dev" {
 		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
 		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, err.Error())
-			return "", err
+			log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
+		}
+
+		txId = txIdSignedTx
+	} else {
+		txId = "success"
+	}
+
+	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txId)
+
+	return txId, 0, nil
+}
+
+// Concurrency safe to create and send transactions from a single address.
+func DelegatedCreateDividend(c context.Context, accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Copy same context values to local variables which are often accessed
+	env := c.Value(consts.EnvKey).(string)
+
+	// Write the dividend with the generated dividend id to the database
+	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, "valid")
+
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Err in GetPublicKey(): %s\n", err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.InvalidPassphrase.Code, consts.CounterpartyErrors.InvalidPassphrase.Description)
+		return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
+	}
+
+	// Mutex lock this address
+	counterparty_Mutexes.Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+
+	// If an entry doesn't currently exist in the map for that address
+	if counterparty_Mutexes.m[sourceAddress] == nil {
+		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
+		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
+	}
+
+	counterparty_Mutexes.m[sourceAddress].Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked: %s", sourceAddress)
+
+	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
+
+	defer counterparty_Mutexes.Unlock()
+	defer counterparty_Mutexes.m[sourceAddress].Unlock()
+
+	// Create the dividend
+	createResult, errorCode, err := createDividend(c, sourceAddress, asset, dividendAsset, quantityPerUnit, sourceAddressPubKey)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in CreateDividend(): %s errorCode: %d", err.Error(), errorCode)
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.ComposeError.Code, consts.CounterpartyErrors.ComposeError.Description)
+		return "", consts.CounterpartyErrors.ComposeError.Code, errors.New(consts.CounterpartyErrors.ComposeError.Description)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
+
+	// Sign the transactions
+	signed, err := signRawTransaction(c, passphrase, createResult)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SignRawTransaction: %s", err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s", signed)
+
+	//	 Transmit the transaction if not in dev, otherwise stub out the return
+	var txId string
+	if env != "dev" {
+		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+			database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
 		}
 
 		txId = txIdSignedTx
@@ -1287,12 +1378,13 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 
 	database.UpdateDividendCompleteByDividendId(c, accessKey, dividendId, txId)
 
-	return txId, nil
+	return txId, 0, nil
 }
 
-func GetRunningInfo(c context.Context) (RunningInfo, error) {
+// For internal use only - don't expose to customers
+func GetRunningInfo(c context.Context) (RunningInfo, int64, error) {
 	var payload payloadGetRunningInfo
-	var result ResultGetRunningInfo
+	var result RunningInfo
 
 	if isInit == false {
 		Init()
@@ -1303,30 +1395,41 @@ func GetRunningInfo(c context.Context) (RunningInfo, error) {
 	payload.Id = generateId(c)
 
 	payloadJsonBytes, err := json.Marshal(payload)
-
-	//	log.Println(string(payloadJsonBytes))
-
 	if err != nil {
-		return result.Result, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
 	responseData, _, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
-		return result.Result, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in postAPI(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	//	log.Println(string(responseData))
-
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		log.Println(string(responseData))
-		return result.Result, errors.New("Unable to unmarshal responseData")
+	// Get result from api and create the reply
+	if responseData["result"] != nil {
+		resultMap := responseData["result"].(map[string]interface{})
+		lastBlockMap := resultMap["last_block"].(map[string]interface{})
+		//		log.Printf("%#v\n", resultMap)
+		//		log.Printf("%#v\n", lastBlockMap)
+		result = RunningInfo{
+			DbCaughtUp:           resultMap["db_caught_up"].(bool),
+			BitCoinBlockCount:    uint64(resultMap["bitcoin_block_count"].(float64)),
+			CounterpartydVersion: string(uint64(resultMap["version_major"].(float64))) + "." + string(uint64(resultMap["version_minor"].(float64))) + "." + string(uint64(resultMap["version_revision"].(float64))),
+			LastMessageIndex:     uint64(resultMap["last_message_index"].(float64)),
+			RunningTestnet:       resultMap["running_testnet"].(bool),
+			LastBlock: LastBlock{
+				BlockIndex: uint64(lastBlockMap["block_index"].(float64)),
+				BlockHash:  lastBlockMap["block_hash"].(string),
+			},
+		}
 	}
 
-	return result.Result, nil
+	return result, 0, nil
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedActivateAddress(c context.Context, addressToActivate string, amount uint64, activationId string) (string, error) {
+func DelegatedActivateAddress(c context.Context, addressToActivate string, amount uint64, activationId string) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -1350,21 +1453,23 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	var randomNumber int = 0
 	var sourceAddress = wallets[randomNumber].Address
 
+	// Write the dividend with the generated dividend id to the database
+	database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amount)
+
 	// Calculate the quantity of BTC to send by the amount specified
 	// For Counterparty: each transaction = dust_size + miners_fee
 	quantity, asset, err := CalculateFeeAmount(c, amount)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Could not calculate fee: %s", err.Error())
-		return "", err
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.MiscError.Code, consts.CounterpartyErrors.MiscError.Description)
+		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
-
-	// Write the dividend with the generated dividend id to the database
-	go database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amount)
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(wallets[randomNumber].Passphrase, sourceAddress)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Err in GetPublicKey(): %s\n", err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.InvalidPassphrase.Code, consts.CounterpartyErrors.InvalidPassphrase.Description)
+		return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
 	}
 
 	// Mutex lock this address
@@ -1391,21 +1496,21 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	go database.InsertPayment(c, accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "")
 
 	// Create the send from the internal wallet to the destination address
-	createResult, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
+	createResult, errorCode, err := createSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error in createSend(): %s", err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, errorCode, err.Error())
+		return "", errorCode, err
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, addressToActivate, createResult)
 
 	// Sign the transactions
-	signed, err := SignRawTransaction(c, wallets[randomNumber].Passphrase, createResult)
+	signed, err := signRawTransaction(c, wallets[randomNumber].Passphrase, createResult)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
-		return "", err
+		log.FluentfContext(consts.LOGERROR, c, "Error in signRawTransaction(): %s", err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
@@ -1415,9 +1520,9 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	if env != "dev" {
 		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
 		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, err.Error())
-			return "", err
+			log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
 		}
 
 		txId = txIdSignedTx
@@ -1427,7 +1532,7 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 
 	database.UpdatePaymentCompleteByPaymentId(c, accessKey, activationId, txId)
 
-	return txId, nil
+	return txId, 0, nil
 }
 
 // Returns the total BTC that is required for the given number of transactions

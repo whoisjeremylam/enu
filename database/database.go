@@ -129,7 +129,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	// Set some initial values
 	var assetStruct = enulib.Asset{}
 	assetStruct.AssetId = assetId
-	assetStruct.Status = "Not found"
+	assetStruct.Status = consts.NotFound
 
 	//	 Query DB
 	log.FluentfContext(consts.LOGINFO, c, "select rowId, assetId, sourceAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=%s and accessKey=%s", assetId, accessKey)
@@ -169,7 +169,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	return assetStruct
 }
 
-func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId string, errorDescription string) error {
+func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId string, errorCode int64, errorDescription string) error {
 	if isInit == false {
 		Init()
 	}
@@ -182,13 +182,13 @@ func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId 
 		return errors.New(errorString)
 	}
 
-	stmt, err := Db.Prepare("update assets set status='error', errorDescription=? where accessKey=? and assetId = ?")
+	stmt, err := Db.Prepare("update assets set status='error', errorCode=? errorDescription=? where accessKey=? and assetId = ?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err2 := stmt.Exec(errorDescription, accessKey, assetId)
+	_, err2 := stmt.Exec(errorCode, errorDescription, accessKey, assetId)
 	if err2 != nil {
 		return err2
 	}
@@ -300,7 +300,7 @@ func InsertDividend(accessKey string, dividendId string, sourceAddressValue stri
 	defer stmt.Close()
 }
 
-func GetDividendByDividendId(c context.Context, accessKey string, dividendId string) enulib.Dividend {
+func GetDividendByDividendId(c context.Context, accessKey string, dividendId string) (enulib.Dividend, error) {
 	if isInit == false {
 		Init()
 	}
@@ -308,14 +308,14 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	// Initialise some initial values
 	var dividendStruct = enulib.Dividend{}
 	dividendStruct.DividendId = dividendId
-	dividendStruct.Status = "Not found"
+	dividendStruct.Status = consts.NotFound
 
 	//	 Query DB
-	log.FluentfContext(consts.LOGERROR, c, "select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, errorDescription, broadcastTxId from dividends where dividendId=%s and accessKey=%s", dividendId, accessKey)
+	//	log.FluentfContext(consts.LOGDEBUG, c, "select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, errorDescription, broadcastTxId from dividends where dividendId=%s and accessKey=%s", dividendId, accessKey)
 	stmt, err := Db.Prepare("select rowId, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, status, errorDescription, broadcastTxId from dividends where dividendId=? and accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
-		return dividendStruct
+		return dividendStruct, err
 	}
 	defer stmt.Close()
 
@@ -323,7 +323,7 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	row := stmt.QueryRow(dividendId, accessKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to QueryRow. Reason: %s", err.Error())
-		return dividendStruct
+		return dividendStruct, err
 	}
 
 	var rowId string
@@ -336,8 +336,9 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 	var broadcastTxId []byte
 
 	if err := row.Scan(&rowId, &dividendId, &sourceAddress, &asset, &dividendAsset, &quantityPerUnit, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
-		if err.Error() == "sql: no rows in result set" {
-			return dividendStruct
+		if err.Error() == consts.SqlNotFound {
+			dividendStruct.Status = consts.NotFound
+			return dividendStruct, err
 		}
 	} else if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
@@ -345,29 +346,27 @@ func GetDividendByDividendId(c context.Context, accessKey string, dividendId str
 		dividendStruct = enulib.Dividend{SourceAddress: string(sourceAddress), Asset: string(asset), DividendAsset: string(dividendAsset), QuantityPerUnit: quantityPerUnit, DividendId: dividendId, Status: string(status), ErrorMessage: string(errorMessage), BroadcastTxId: string(broadcastTxId)}
 	}
 
-	return dividendStruct
+	return dividendStruct, nil
 }
 
-func UpdateDividendWithErrorByDividendId(c context.Context, accessKey string, dividendId string, errorDescription string) error {
+func UpdateDividendWithErrorByDividendId(c context.Context, accessKey string, dividendId string, errorCode int64, errorDescription string) error {
 	if isInit == false {
 		Init()
 	}
 
-	dividend := GetDividendByDividendId(c, accessKey, dividendId)
+	dividend, err := GetDividendByDividendId(c, accessKey, dividendId)
 
-	if dividend.DividendId == "" {
-		errorString := fmt.Sprintf("Dividend does not exist or cannot be accessed by %s\n", accessKey)
-
-		return errors.New(errorString)
+	if dividend.Status == consts.NotFound || err != nil {
+		return errors.New(consts.GenericErrors.NotFound.Description)
 	}
 
-	stmt, err := Db.Prepare("update dividends set status='error', errorDescription=? where accessKey=? and dividendId = ?")
+	stmt, err := Db.Prepare("update dividends set status='error', errorCode=?, errorDescription=? where accessKey=? and dividendId = ?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err2 := stmt.Exec(errorDescription, accessKey, dividendId)
+	_, err2 := stmt.Exec(errorCode, errorDescription, accessKey, dividendId)
 	if err2 != nil {
 		return err2
 	}
@@ -380,9 +379,10 @@ func UpdateDividendCompleteByDividendId(c context.Context, accessKey string, div
 		Init()
 	}
 
-	dividend := GetDividendByDividendId(c, accessKey, dividendId)
+	dividend, err := GetDividendByDividendId(c, accessKey, dividendId)
 
-	if dividend.DividendId == "" {
+	if dividend.DividendId == "" || err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
 		errorString := fmt.Sprintf("Dividend does not exist or cannot be accessed by %s\n", accessKey)
 
 		return errors.New(errorString)
@@ -463,7 +463,7 @@ func GetPaymentByPaymentId(c context.Context, accessKey string, paymentId string
 		payment = enulib.SimplePayment{}
 		if err.Error() == "sql: no rows in result set" {
 			payment.PaymentId = paymentId
-			payment.Status = "Not found"
+			payment.Status = consts.NotFound
 		}
 	} else if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
@@ -511,7 +511,7 @@ func GetPaymentByPaymentTag(c context.Context, accessKey string, paymentTag stri
 		payment = enulib.SimplePayment{}
 		if err.Error() == "sql: no rows in result set" {
 			payment.PaymentTag = paymentTag
-			payment.Status = "Not found"
+			payment.Status = consts.NotFound
 		}
 	} else {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
@@ -565,7 +565,7 @@ func GetPaymentsByAddress(c context.Context, accessKey string, address string) [
 		if err := rows.Scan(&rowId, &blockId, &sourceTxId, &sourceAddress, &destinationAddress, &asset, &amount, &status, &lastUpdatedBlockId, &txFee, &broadcastTxId, &paymentTag, &errorMessage); err == sql.ErrNoRows {
 			payment = enulib.SimplePayment{}
 			if err.Error() == "sql: no rows in result set" {
-				payment.Status = "Not found"
+				payment.Status = consts.NotFound
 			}
 		} else if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
@@ -606,7 +606,7 @@ func UpdatePaymentStatusByPaymentId(c context.Context, accessKey string, payment
 	return nil
 }
 
-func UpdatePaymentWithErrorByPaymentId(c context.Context, accessKey string, paymentId string, errorDescription string) error {
+func UpdatePaymentWithErrorByPaymentId(c context.Context, accessKey string, paymentId string, errorCode int64, errorDescription string) error {
 	if isInit == false {
 		Init()
 	}
@@ -619,13 +619,13 @@ func UpdatePaymentWithErrorByPaymentId(c context.Context, accessKey string, paym
 		return errors.New(errorString)
 	}
 
-	stmt, err := Db.Prepare("update payments set status='error', errorDescription=? where accessKey=? and sourceTxId = ?")
+	stmt, err := Db.Prepare("update payments set status='error', errorCode=?, errorDescription=? where accessKey=? and sourceTxId = ?")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
-	_, err2 := stmt.Exec(errorDescription, accessKey, paymentId)
+	_, err2 := stmt.Exec(errorCode, errorDescription, accessKey, paymentId)
 	if err2 != nil {
 		return err2
 	}
@@ -1044,7 +1044,7 @@ func GetActivationByActivationId(c context.Context, accessKey string, activation
 		if err.Error() == "sql: no rows in result set" {
 			var result = map[string]interface{}{
 				"activationId": activationId,
-				"status":       "Not found",
+				"status":       consts.NotFound,
 			}
 
 			return result

@@ -22,20 +22,30 @@ var getIssuancesExpectedTestData []Issuance = []Issuance{
 	{8829647, "a3af94b45f1c49557969a4932705b2bd1d80c83fc023346314471e20f29647d0", 328176, "XBTC", 0, 1, "1LHpjmevxx3ZWydTL5PfoSiUiuYNbkqknm", "1E6ifCRs2r6gb3pvZtBgsqnqbxuDHUSjU9", 1, "XBTC", 0, 0, "valid"},
 }
 
-func TestGetIssuances(t *testing.T) {
+// Use balances for MPUSD - it looks abandoned
+var getBalancesByAssetExpectedTestData []Balance = []Balance{
+	{Quantity: 111100000092, Asset: "MPUSD", Address: "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy"},
+	{Quantity: 888899999908, Asset: "MPUSD", Address: "1Do5J89372i9bv3UQe6Uf6NG74ZW1Riwaa"},
+}
 
+// Use balances for 1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy - it looks abandoned
+var getBalancesByAddressExpectedTestData []Balance = []Balance{
+	{Quantity: 537758615, Asset: "MPBTC", Address: "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy"},
+	{Quantity: 111100000092, Asset: "MPUSD", Address: "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy"},
+	{Quantity: 250482117835, Asset: "XCP", Address: "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy"},
+}
+
+func TestGetIssuances(t *testing.T) {
 	Init()
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
-	resultGetIssuances, err := GetIssuances(c, "XBTC")
-
+	resultGetIssuances, errorCode, err := GetIssuances(c, "XBTC")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
-
 	if len(resultGetIssuances) == 0 {
-		t.Errorf("Expected: resultGetIssuances to contain value, Got: %+v\n", resultGetIssuances)
+		t.Errorf("Expected: resultGetIssuances to contain value, Got: %+v errorCode=%d\n", resultGetIssuances, errorCode)
 	}
 
 	if reflect.DeepEqual(resultGetIssuances, getIssuancesExpectedTestData) != true {
@@ -44,19 +54,18 @@ func TestGetIssuances(t *testing.T) {
 }
 
 func TestGetIssuancesDB(t *testing.T) {
-
 	Init()
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
-	resultGetIssuances, err := GetIssuancesDB(c, "XBTC")
+	resultGetIssuances, errorCode, err := GetIssuancesDB(c, "XBTC")
 
 	if err != nil {
 		t.Errorf(err.Error())
 	}
 
 	if len(resultGetIssuances) == 0 {
-		t.Errorf("Expected: resultGetIssuances to contain value, Got: %+v\n", resultGetIssuances)
+		t.Errorf("Expected: resultGetIssuances to contain value, Got: %+v errorCode=%d\n", resultGetIssuances, errorCode)
 	}
 
 	if reflect.DeepEqual(resultGetIssuances, getIssuancesExpectedTestData) != true {
@@ -86,14 +95,23 @@ func TestGetBalancesByAsset(t *testing.T) {
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
-	resultGetBalances, err := GetBalancesByAsset(c, "MPUSD")
-
+	// Not a real asset
+	resultGetBalances, errorCode, err := GetBalancesByAsset(c, "NOTASSETREALLY")
 	if err != nil {
 		t.Errorf(err.Error())
 	}
+	if len(resultGetBalances) != 0 {
+		t.Errorf("Expected: resultGetBalances to be empty value, Got: %+v status: %d\n", resultGetBalances, errorCode)
+	}
 
-	if len(resultGetBalances) == 0 {
-		t.Errorf("Expected: resultGetBalances to contain value, Got: %+v\n", resultGetBalances)
+	// Abandoned asset
+	resultGetBalances, errorCode, err = GetBalancesByAsset(c, "MPUSD")
+	if err != nil || errorCode != 0 {
+		t.Errorf(err.Error())
+	}
+
+	if reflect.DeepEqual(resultGetBalances, getBalancesByAssetExpectedTestData) != true {
+		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAssetExpectedTestData, resultGetBalances)
 	}
 }
 
@@ -103,30 +121,40 @@ func TestGetBalancesByAddress(t *testing.T) {
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
-	resultGetBalances, err := GetBalancesByAddress(c, "1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
-
-	if err != nil {
+	// Retrieve address which is empty
+	resultGetBalances, errorCode, err := GetBalancesByAddress(c, "1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
+	if err != nil || errorCode != 0 {
 		t.Errorf(err.Error())
 	}
-
 	if len(resultGetBalances) != 0 {
 		t.Errorf("Expected: resultGetBalances = [], Got: %s\n", resultGetBalances)
 	}
+
+	// Retrieve 1enuEmptyAdd8ALj6mfBsbifRoD4miY36v which is abandoned
+	resultGetBalances, errorCode, err = GetBalancesByAddress(c, "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy")
+	if err != nil || errorCode != 0 {
+		t.Errorf(err.Error())
+	}
+
+	if reflect.DeepEqual(resultGetBalances, getBalancesByAddressExpectedTestData) != true {
+		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAddressExpectedTestData, resultGetBalances)
+	}
+
 }
 
 func TestCreateSend(t *testing.T) {
 	var testData = []struct {
-		From           string
-		To             string
-		Asset          string
-		Amount         uint64
-		ExpectedResult string
-		//		ExpectedError   string
-		CaseDescription string
+		From              string
+		To                string
+		Asset             string
+		Amount            uint64
+		ExpectedResult    string
+		ExpectedErrorCode int64
+		CaseDescription   string
 	}{
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1cf4dd66ab2270b6d5fe5cd684372883bc787751725b08ac68c6835847468f0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "Successful case"},
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 9999, "", "Insufficient counterparty token"},
-		{"1Badaddress", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "", "Address cannot be derived from passphrase"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1cf4dd66ab2270b6d5fe5cd684372883bc787751725b08ac68c6835847468f0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Successful case"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 9999, "", consts.CounterpartyErrors.InsufficientFunds.Code, "Insufficient counterparty token"},
+		{"1Badaddress", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "", consts.CounterpartyErrors.MalformedAddress.Code, "Address cannot be derived from passphrase"},
 	}
 
 	Init()
@@ -141,17 +169,12 @@ func TestCreateSend(t *testing.T) {
 			t.Error(err.Error())
 		}
 
-		resultCreateSend, err := CreateSend(c, s.From, s.To, "SHIMA", s.Amount, pubKey)
+		resultCreateSend, errorCode, err := createSend(c, s.From, s.To, "SHIMA", s.Amount, pubKey)
 
-		if s.ExpectedResult != resultCreateSend {
-			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateSend, s.CaseDescription)
-
-			if err != nil && err.Error() != "Private and public keys not found for address: 1Badaddress" {
-				t.Error(err.Error())
-			}
+		if s.ExpectedResult != resultCreateSend || s.ExpectedErrorCode != errorCode {
+			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateSend, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
 		}
 	}
-
 }
 
 func TestSignRawTransaction(t *testing.T) {
@@ -171,7 +194,7 @@ func TestSignRawTransaction(t *testing.T) {
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
-		result, err := SignRawTransaction(c, s.Passphrase, s.UnsignedTx)
+		result, err := signRawTransaction(c, s.Passphrase, s.UnsignedTx)
 
 		if s.ExpectedResult != result {
 			t.Errorf("Expected: %s, Got: %s\n", s.ExpectedResult, result)
@@ -181,7 +204,6 @@ func TestSignRawTransaction(t *testing.T) {
 			}
 		}
 	}
-
 }
 
 func TestSendRawTransaction(t *testing.T) {
@@ -197,14 +219,14 @@ func TestSendRawTransaction(t *testing.T) {
 		return
 	}
 
-	payload, err := CreateSend(c, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 2000, pubKey)
-	if err != nil {
+	payload, errorCode, err := createSend(c, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 2000, pubKey)
+	if err != nil || errorCode != 0 {
 		t.Error(err.Error())
 
 		return
 	}
 
-	signedRawTransactionHexString, err := SignRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
+	signedRawTransactionHexString, err := signRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -223,19 +245,19 @@ func TestSendRawTransaction(t *testing.T) {
 
 func TestCreateIssuance(t *testing.T) {
 	var testData = []struct {
-		SourceAddress  string
-		Asset          string
-		Description    string
-		Quantity       uint64
-		Divisible      bool
-		ExpectedResult string
-		//		ExpectedError   string
-		CaseDescription string
+		SourceAddress     string
+		Asset             string
+		Description       string
+		Quantity          uint64
+		Divisible         bool
+		ExpectedResult    string
+		ExpectedErrorCode int64
+		CaseDescription   string
 	}{
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "JOGHJOHV", "JOGHJOHV", 1000000, true, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e0000000000006951210298d07cad2072b0d8a75cd684232883bc69d2f8908008ac68c68354ed3a639c032102478c64444c18c4916693d58aa155339adfef540e1d412ad249528f36fbdc7af821026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae04860700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "Alphabetic asset name"},
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "A8133401331811274061", "TEST ASSET", 1000000, true, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e0000000000006951210286d07cad2072b0d8a75cd68423585c19132667af1608ac68c68354ed3a639c8d2103478c64444c18c491648ddf9ebd3f3d81daaa000e1d412ad249528f36fbdc7a1921026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae04860700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "Numeric asset name"},
-		{"19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A", "JOGHJOHV", "JOGHJOHV", 1000000, true, "", "Alphabetic asset name from address with insufficient XCP"},
-		{"19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A", "A8133401331811274061", "TEST ASSET", 1000000, true, "", "Numeric asset name from address with insufficient BTC"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "JOGHJOHV", "JOGHJOHV", 1000000, true, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e0000000000006951210298d07cad2072b0d8a75cd684232883bc69d2f8908008ac68c68354ed3a639c032102478c64444c18c4916693d58aa155339adfef540e1d412ad249528f36fbdc7af821026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae04860700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Alphabetic asset name"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "A8133401331811274061", "TEST ASSET", 1000000, true, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e0000000000006951210286d07cad2072b0d8a75cd68423585c19132667af1608ac68c68354ed3a639c8d2103478c64444c18c491648ddf9ebd3f3d81daaa000e1d412ad249528f36fbdc7a1921026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae04860700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Numeric asset name"},
+		{"19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A", "JOGHJOHV", "JOGHJOHV", 1000000, true, "", consts.CounterpartyErrors.InsufficientFunds.Code, "Alphabetic asset name from address with insufficient XCP"},
+		{"19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A", "A8133401331811274061", "TEST ASSET", 1000000, true, "", consts.CounterpartyErrors.InsufficientFees.Code, "Numeric asset name from address with insufficient BTC"},
 	}
 
 	Init()
@@ -253,32 +275,26 @@ func TestCreateIssuance(t *testing.T) {
 			t.Errorf("Unable to retrieve pubkey for: %s\n", s.SourceAddress)
 		}
 
-		resultCreateIssuance, err := CreateIssuance(c, s.SourceAddress, s.Asset, s.Description, s.Quantity, s.Divisible, pubKey)
+		resultCreateIssuance, errorCode, err := createIssuance(c, s.SourceAddress, s.Asset, s.Description, s.Quantity, s.Divisible, pubKey)
 
-		if s.ExpectedResult != resultCreateIssuance {
-			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateIssuance, s.CaseDescription)
-
-			// Additionally log the error if we got an error
-			if err != nil {
-				t.Error(err.Error())
-			}
+		if s.ExpectedResult != resultCreateIssuance || s.ExpectedErrorCode != errorCode {
+			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateIssuance, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
 		}
-
 	}
-
 }
 
 func TestCreateDividend(t *testing.T) {
 	var testData = []struct {
-		SourceAddress   string
-		Asset           string
-		DividendAsset   string
-		QuantityPerUnit uint64
-		ExpectedResult  string
-		CaseDescription string
+		SourceAddress     string
+		Asset             string
+		DividendAsset     string
+		QuantityPerUnit   uint64
+		ExpectedResult    string
+		ExpectedErrorCode int64
+		CaseDescription   string
 	}{
-		{"18GgqxHNFeRiPe1yW1VsBdUp38WGeyBEpp", "JOGHJOHV", "XCP", 1, "", "No such asset"},
-		{"18GgqxHNFeRiPe1yW1VsBdUp38WGeyBEpp", "FLDC", "XCP", 1000, "", "Only issuer can pay dividends"},
+		{"18GgqxHNFeRiPe1yW1VsBdUp38WGeyBEpp", "CREATEDIVIDENDBADNAME", "XCP", 1, "", consts.CounterpartyErrors.NoSuchAsset.Code, "No such asset"},
+		{"18GgqxHNFeRiPe1yW1VsBdUp38WGeyBEpp", "FLDC", "XCP", 1000, "", consts.CounterpartyErrors.OnlyIssuerCanPayDividends.Code, "Only issuer can pay dividends"},
 	}
 
 	Init()
@@ -296,15 +312,10 @@ func TestCreateDividend(t *testing.T) {
 			t.Errorf("Unable to retrieve pubkey for: %s\n", s.SourceAddress)
 		}
 
-		resultCreateIssuance, err := CreateDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
+		resultCreateIssuance, errorCode, err := createDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
 
-		if s.ExpectedResult != resultCreateIssuance {
-			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, resultCreateIssuance, s.CaseDescription)
-
-			// Additionally log the error if we got an error
-			if err != nil {
-				t.Error(err.Error())
-			}
+		if s.ExpectedResult != resultCreateIssuance || s.ExpectedErrorCode != errorCode {
+			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateIssuance, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
 		}
 	}
 }
@@ -315,10 +326,11 @@ func TestActivateAddress(t *testing.T) {
 		Amount            uint64
 		ActivationId      string
 		ExpectedResult    string
+		ExpectedErrorCode int64
 		CaseDescription   string
 	}{
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10, "TestActivateAddress1", "success", "Successful case"},
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "", "Insufficient BTC case"},
+		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10, "TestActivateAddress1", "success", 0, "Successful case"},
+		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "", consts.CounterpartyErrors.InsufficientFees.Code, "Insufficient BTC case"},
 	}
 
 	Init()
@@ -330,10 +342,10 @@ func TestActivateAddress(t *testing.T) {
 	c = context.WithValue(c, consts.EnvKey, "dev")
 
 	for _, s := range testData {
-		txId, err := DelegatedActivateAddress(c, s.AddressToActivate, s.Amount, s.ActivationId)
+		txId, errorCode, err := DelegatedActivateAddress(c, s.AddressToActivate, s.Amount, s.ActivationId)
 
-		if txId != s.ExpectedResult {
-			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.ExpectedResult, txId, s.CaseDescription)
+		if txId != s.ExpectedResult || errorCode != s.ExpectedErrorCode {
+			t.Errorf("Expected: %s errorCode: %d, Got: %s errorCode: %d\nCase: %s\n", s.ExpectedResult, s.ExpectedErrorCode, txId, errorCode, s.CaseDescription)
 
 			// Additionally log the error if we got an error
 			if err != nil {
@@ -350,9 +362,9 @@ func TestGetRunningInfo(t *testing.T) {
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
-	result, err := GetRunningInfo(c)
+	result, errorCode, err := GetRunningInfo(c)
 	if err != nil {
-		t.Error(err.Error())
+		t.Errorf("errorCode=%d, error=%s, RequestId=%s\n", errorCode, err.Error(), c.Value(consts.RequestIdKey))
 	}
 
 	if result.DbCaughtUp != true {

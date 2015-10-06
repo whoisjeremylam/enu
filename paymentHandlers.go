@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -66,7 +67,10 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	// Return to the client the paymentId
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(simplePayment); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil
@@ -96,8 +100,9 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 
 	// Payment not found
 	if payment.Status == "Not found" || payment.Status == "" {
-		log.FluentfContext(consts.LOGERROR, c, "PaymentId: %s not found", paymentId)
-		ReturnNotFound(c, w)
+		errorString := fmt.Sprintf("PaymentId: %s not found", paymentId)
+		log.FluentfContext(consts.LOGERROR, c, errorString)
+		ReturnNotFound(c, w, consts.GenericErrors.NotFound.Code, errors.New(errorString))
 		return nil
 	}
 
@@ -105,20 +110,22 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	if payment.Status != "error" && payment.Status != "manual" {
 		errorString := fmt.Sprintf("PaymentId: %s is not in an 'error' or 'manual' state. It is in '%s' state.", paymentId, payment.Status)
 		log.FluentfContext(consts.LOGINFO, c, errorString)
-		ReturnNotFoundWithCustomError(c, w, errorString)
+		ReturnNotFoundWithCustomError(c, w, consts.GenericErrors.NotFound.Code, errorString)
 		return nil
 	}
 
 	err = database.UpdatePaymentStatusByPaymentId(c, c.Value(consts.AccessKeyKey).(string), paymentId, "authorized")
-
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		ReturnUnprocessableEntity(c, w, err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in UpdatePaymentStatusByPaymentId(): %s", err.Error())
+		ReturnUnprocessableEntity(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
 	}
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(payment); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil
@@ -145,7 +152,10 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect paymentId"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+			return nil
 		}
 		return nil
 
@@ -170,7 +180,10 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(payment); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil
@@ -197,7 +210,10 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect address"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+			return nil
 		}
 		return nil
 	}
@@ -224,7 +240,10 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(payments); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil

@@ -20,13 +20,13 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-func ReturnUnauthorised(c context.Context, w http.ResponseWriter, e error) {
+func ReturnUnauthorised(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
 	var returnCode enulib.ReturnCode
 
 	if e == nil {
-		returnCode = enulib.ReturnCode{Code: -1, Description: "Forbidden", RequestId: c.Value(consts.RequestIdKey).(string)}
+		returnCode = enulib.ReturnCode{Code: errorCode, Description: "Forbidden", RequestId: c.Value(consts.RequestIdKey).(string)}
 	} else {
-		returnCode = enulib.ReturnCode{Code: -1, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
+		returnCode = enulib.ReturnCode{Code: errorCode, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -36,13 +36,29 @@ func ReturnUnauthorised(c context.Context, w http.ResponseWriter, e error) {
 	}
 }
 
-func ReturnUnprocessableEntity(c context.Context, w http.ResponseWriter, e error) {
+func ReturnBadRequest(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
 	var returnCode enulib.ReturnCode
 
 	if e == nil {
-		returnCode = enulib.ReturnCode{Code: -2, Description: "Unprocessable entity", RequestId: c.Value(consts.RequestIdKey).(string)}
+		returnCode = enulib.ReturnCode{Code: errorCode, Description: "Bad Request", RequestId: c.Value(consts.RequestIdKey).(string)}
 	} else {
-		returnCode = enulib.ReturnCode{Code: -2, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
+		returnCode = enulib.ReturnCode{Code: errorCode, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
+	}
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusBadRequest)
+	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+		panic(err)
+	}
+}
+
+func ReturnUnprocessableEntity(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
+	var returnCode enulib.ReturnCode
+
+	if e == nil {
+		returnCode = enulib.ReturnCode{Code: errorCode, Description: "Unprocessable entity", RequestId: c.Value(consts.RequestIdKey).(string)}
+	} else {
+		returnCode = enulib.ReturnCode{Code: errorCode, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
 	}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -72,7 +88,7 @@ func ReturnOK(c context.Context, w http.ResponseWriter) {
 	}
 }
 
-func ReturnNotFound(c context.Context, w http.ResponseWriter) {
+func ReturnNotFound(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
 	returnCode := enulib.ReturnCode{Code: -3, Description: "Not found", RequestId: c.Value(consts.RequestIdKey).(string)}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -82,7 +98,7 @@ func ReturnNotFound(c context.Context, w http.ResponseWriter) {
 	}
 }
 
-func ReturnNotFoundWithCustomError(c context.Context, w http.ResponseWriter, errorString string) {
+func ReturnNotFoundWithCustomError(c context.Context, w http.ResponseWriter, errorCode int64, errorString string) {
 	returnCode := enulib.ReturnCode{Code: -3, Description: errorString, RequestId: c.Value(consts.RequestIdKey).(string)}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
@@ -92,7 +108,7 @@ func ReturnNotFoundWithCustomError(c context.Context, w http.ResponseWriter, err
 	}
 }
 
-func ReturnServerError(c context.Context, w http.ResponseWriter, e error) {
+func ReturnServerError(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
 	var returnCode enulib.ReturnCode
 
 	if e == nil {
@@ -110,6 +126,7 @@ func ReturnServerError(c context.Context, w http.ResponseWriter, e error) {
 	}
 }
 
+// Handles the '/' path and returns a random quote
 func Index(w http.ResponseWriter, r *http.Request) {
 	rand.Seed(time.Now().UnixNano())
 	number := rand.Intn(len(quotes))
@@ -125,18 +142,16 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 
 	// Headers weren't set properly, return forbidden
 	if accessKey == "" || signature == "" {
-		err = errors.New("Request headers were not set correctly, ensure the following headers are set: accessKey, signature")
 		log.FluentfContext(consts.LOGERROR, c, "Headers set incorrectly: accessKey=%s, signature=%s\n", accessKey, signature)
-		ReturnUnauthorised(c, w, err)
+		ReturnUnauthorised(c, w, consts.GenericErrors.HeadersIncorrect.Code, errors.New(consts.GenericErrors.HeadersIncorrect.Description))
 
 		return accessKey, err
 	} else if database.UserKeyExists(accessKey) == false {
-		returnErr := errors.New("Attempt to access API with unknown user key")
 		// User key doesn't exist
 		log.FluentfContext(consts.LOGERROR, c, "Attempt to access API with unknown user key: %s", accessKey)
-		ReturnUnauthorised(c, w, returnErr)
+		ReturnUnauthorised(c, w, consts.GenericErrors.UnknownAccessKey.Code, errors.New(consts.GenericErrors.UnknownAccessKey.Description))
 
-		return accessKey, returnErr
+		return accessKey, errors.New(consts.GenericErrors.UnknownAccessKey.Description)
 	}
 
 	return accessKey, nil
@@ -152,19 +167,25 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	// Limit amount read to 512,000 bytes and parse body
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 512000))
 	if err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil, err
 	}
 	if err := r.Body.Close(); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Body.Close(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil, err
 	}
 
 	// If the body is an empty byte array then don't attempt to unmarshall the JSON and set a default
 	if bytes.Compare(body, make([]byte, 0)) != 0 {
 		if err := json.Unmarshal(body, &payload); err != nil {
 			log.FluentfContext(consts.LOGINFO, c, "Malformed body: %s", string(body))
-			returnErr := errors.New("Invalid JSON object in request")
-			log.FluentfContext(consts.LOGERROR, c, err.Error()) // Log the real error
-			ReturnUnprocessableEntity(c, w, returnErr)          // Send back sanitised error
+			returnErr := errors.New("The request did not contain a valid JSON object")
+			log.FluentfContext(consts.LOGERROR, c, err.Error())                                   // Log the real error
+			ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, returnErr) // Send back sanitised error
 
 			return nil, returnErr
 		}
@@ -173,7 +194,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		log.FluentfContext(consts.LOGINFO, c, "Empty body received")
 		returnErr := errors.New("Empty body received. If you aren't sending a payload then send an empty JSON object: {}")
 		log.FluentfContext(consts.LOGERROR, c, returnErr.Error())
-		ReturnUnprocessableEntity(c, w, returnErr)
+		ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, returnErr)
 
 		return nil, returnErr
 	}
@@ -186,7 +207,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if calculatedSignature != signature {
 		errorString := fmt.Sprintf("Could not verify HMAC signature. Expected: %s, received: %s", calculatedSignature, signature)
 		err := errors.New(errorString)
-		ReturnUnauthorised(c, w, err)
+		ReturnUnauthorised(c, w, consts.GenericErrors.InvalidSignature.Code, err)
 
 		return nil, err
 	}
@@ -205,10 +226,9 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if nonceInt > 0 {
 		nonceDB = database.GetNonceByAccessKey(accessKey)
 		if nonceInt <= nonceDB {
-			err = errors.New("Invalid nonce value")
 			//Nonce is not greater than the nonce in the DB
 			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %d <= %d\n", accessKey, nonceInt, nonceDB)
-			ReturnUnauthorised(c, w, err)
+			ReturnUnauthorised(c, w, consts.GenericErrors.InvalidNonce.Code, errors.New(consts.GenericErrors.InvalidNonce.Description))
 
 			return nil, err
 		} else {
@@ -216,7 +236,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			database.UpdateNonce(accessKey, nonceInt)
 			if err != nil {
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
-				ReturnUnauthorised(c, w, errors.New("Nonce update failed"))
+				ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New("Nonce handling failed"))
 
 				return nil, err
 			}
@@ -265,9 +285,9 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 				errorList = errorList + fmt.Sprintf("%s. ", desc)
 
 			}
-			err := errors.New("The request was not properly formed. Please correct these errors : " + errorList)
+			err := errors.New("There was a problem with the parameters in your JSON request. Please correct these errors : " + errorList)
 			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			ReturnUnprocessableEntity(c, w, err)
+			ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, err)
 
 			return m, err
 		}

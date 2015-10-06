@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/vennd/enu/bitcoinapi"
@@ -26,22 +27,27 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	// check generic args and parse
 	_, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
-		ReturnServerError(c, w, err)
 		return nil
 	}
 
 	// Create the wallet
 	wallet, err = counterpartycrypto.CreateWallet()
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Unable to create a Counterparty wallet. Error: %s\n", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Error in CreateWallet(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
 		return nil
 	}
 	log.FluentfContext(consts.LOGINFO, c, "Created a new wallet with first address: %s for access key: %s\n (requestID: %s)", wallet.Addresses[0], c.Value(consts.AccessKeyKey).(string), requestId)
+
 	// Return the wallet
 	wallet.RequestId = requestId
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(wallet); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil
@@ -89,8 +95,12 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	walletPayment.DestinationAddress = destinationAddress
 	walletPayment.Quantity = quantity
 	w.WriteHeader(http.StatusCreated)
+
 	if err = json.NewEncoder(w).Encode(walletPayment); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	go counterpartyapi.DelegatedSend(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, destinationAddress, asset, quantity, paymentId, paymentTag)
@@ -120,18 +130,21 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
-		return nil
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
 
+			return nil
+		}
+
+		return nil
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "WalletBalance: received request address: %s from accessKey: %s\n", address, c.Value(consts.AccessKeyKey).(string))
 
 	// Get counterparty balances
-	result, err := counterpartyapi.GetBalancesByAddress(c, address)
+	result, errorCode, err := counterpartyapi.GetBalancesByAddress(c, address)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		ReturnServerError(c, w, errorCode, err)
 		return nil
 	}
 
@@ -161,7 +174,10 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *a
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(walletbalance); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil
@@ -188,7 +204,10 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+			return nil
 		}
 		return nil
 
@@ -221,7 +240,10 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) 
 
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(result); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	go counterpartyapi.DelegatedActivateAddress(c, address, amount, activationId)
