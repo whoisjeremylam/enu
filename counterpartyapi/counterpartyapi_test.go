@@ -169,7 +169,7 @@ func TestCreateSend(t *testing.T) {
 			t.Error(err.Error())
 		}
 
-		resultCreateSend, errorCode, err := createSend(c, s.From, s.To, "SHIMA", s.Amount, pubKey)
+		resultCreateSend, errorCode, err := CreateSend(c, s.From, s.To, "SHIMA", s.Amount, pubKey)
 
 		if s.ExpectedResult != resultCreateSend || s.ExpectedErrorCode != errorCode {
 			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateSend, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
@@ -219,7 +219,7 @@ func TestSendRawTransaction(t *testing.T) {
 		return
 	}
 
-	payload, errorCode, err := createSend(c, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 2000, pubKey)
+	payload, errorCode, err := CreateSend(c, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 2000, pubKey)
 	if err != nil || errorCode != 0 {
 		t.Error(err.Error())
 
