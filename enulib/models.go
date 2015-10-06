@@ -67,6 +67,7 @@ type SimplePayment struct {
 	BlockchainConfirmations uint64 `json:"blockchainConfirmations"`
 	PaymentTag              string `json:"paymentTag"`
 	Status                  string `json:"status"`
+	ErrorCode               int64  `json:"errorCode"`
 	ErrorMessage            string `json:"errorMessage"`
 	RequestId               string `json:"requestId"`
 	Nonce                   int64  `json:"nonce"`
@@ -90,18 +91,20 @@ type AddressBalances struct {
 }
 
 type Asset struct {
-	Passphrase    string `json:"passphrase"`
-	SourceAddress string `json:"sourceAddress"`
-	AssetId       string `json:"assetId"`
-	Asset         string `json:"asset"`
-	Description   string `json:"description"`
-	Quantity      uint64 `json:"quantity"`
-	Divisible     bool   `json:"divisible"`
-	BroadcastTxId string `json:"broadcastTxId"`
-	Status        string `json:"status"`
-	ErrorMessage  string `json:"errorMessage"`
-	RequestId     string `json:"requestId"`
-	Nonce         int64  `json:"nonce"`
+	Passphrase              string `json:"passphrase"`
+	SourceAddress           string `json:"sourceAddress"`
+	AssetId                 string `json:"assetId"`
+	Asset                   string `json:"asset"`
+	Description             string `json:"description"`
+	Quantity                uint64 `json:"quantity"`
+	Divisible               bool   `json:"divisible"`
+	BroadcastTxId           string `json:"broadcastTxId"`
+	BlockchainStatus        string `json:"blockchainStatus"`
+	BlockchainConfirmations uint64 `json:"blockchainConfirmations"`
+	Status                  string `json:"status"`
+	ErrorMessage            string `json:"errorMessage"`
+	RequestId               string `json:"requestId"`
+	Nonce                   int64  `json:"nonce"`
 }
 
 type ReturnCode struct {
@@ -111,17 +114,19 @@ type ReturnCode struct {
 }
 
 type Dividend struct {
-	Passphrase      string `json:"passphrase"`
-	SourceAddress   string `json:"sourceAddress"`
-	DividendId      string `json:"dividendId"`
-	Asset           string `json:"asset"`
-	DividendAsset   string `json:"dividendAsset"`
-	QuantityPerUnit uint64 `json:"quantityPerUnit"`
-	Status          string `json:"status"`
-	ErrorMessage    string `json:"errorMessage"`
-	RequestId       string `json:"requestId"`
-	Nonce           int64  `json:"nonce"`
-	BroadcastTxId   string `json:"broadcastTxId"`
+	Passphrase              string `json:"passphrase"`
+	SourceAddress           string `json:"sourceAddress"`
+	DividendId              string `json:"dividendId"`
+	Asset                   string `json:"asset"`
+	DividendAsset           string `json:"dividendAsset"`
+	QuantityPerUnit         uint64 `json:"quantityPerUnit"`
+	Status                  string `json:"status"`
+	ErrorMessage            string `json:"errorMessage"`
+	RequestId               string `json:"requestId"`
+	Nonce                   int64  `json:"nonce"`
+	BroadcastTxId           string `json:"broadcastTxId"`
+	BlockchainStatus        string `json:"blockchainStatus"`
+	BlockchainConfirmations uint64 `json:"blockchainConfirmations"`
 }
 
 type Issuance struct {

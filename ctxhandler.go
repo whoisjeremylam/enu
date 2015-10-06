@@ -72,7 +72,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if blockchainValid == false && userBlockchainIdValid == false {
 		log.FluentfContext(consts.LOGINFO, ctx, "Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
-		ReturnServerError(ctx, w, errors.New(e))
+		ReturnServerError(ctx, w, consts.GenericErrors.UnsupportedBlockchain.Code, errors.New(e))
 
 		return
 	}

@@ -173,3 +173,25 @@ func TestGetPaymentsByAddress(t *testing.T) {
 		}
 	}
 }
+
+func TestUpdateDividendWithErrorByDividendId(t *testing.T) {
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.AccessKeyKey, "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16")
+	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
+	c = context.WithValue(c, consts.EnvKey, "dev")
+
+	// Update existing dividend
+	err := UpdateDividendWithErrorByDividendId(c, c.Value(consts.AccessKeyKey).(string), "3bff0a8e661d8000388971564d0f82ff", 999999999999999, "Unit testing error")
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	// Dividend doesn't exist
+	err = UpdateDividendWithErrorByDividendId(c, c.Value(consts.AccessKeyKey).(string), "3bff0a8e661d8000388971564d0f82ffxxxxxx", 999999999999999, "Unit testing error")
+	if err == nil || err.Error() != consts.GenericErrors.NotFound.Description {
+		t.Errorf("Expected: %s, Got: %s", consts.GenericErrors.NotFound.Description, err)
+	}
+}

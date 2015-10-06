@@ -2,8 +2,10 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
+	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
@@ -108,7 +110,10 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 
 		returnCode := enulib.ReturnCode{RequestId: requestId, Code: -3, Description: err.Error()}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+			return nil
 		}
 		return nil
 	}
@@ -127,7 +132,10 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(dividendStruct); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	// Start dividend creation in async mode
@@ -158,15 +166,18 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 		w.WriteHeader(http.StatusBadRequest)
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of asset code received in the request"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+			return nil
 		}
 		return nil
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
-	result, err := counterpartyapi.GetIssuances(c, asset)
+	result, errorCode, err := counterpartyapi.GetIssuances(c, asset)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		ReturnServerError(c, w, errorCode, err)
 
 		return nil
 	}
@@ -208,7 +219,10 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(issuanceForAsset); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
 
 	return nil
@@ -244,15 +258,15 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 
 	log.FluentfContext(consts.LOGINFO, c, "AssetLedger: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 
-	result, err := counterpartyapi.GetBalancesByAsset(c, asset)
+	result, errorCode, err := counterpartyapi.GetBalancesByAsset(c, asset)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		ReturnServerError(c, w, errorCode, err)
 		return nil
 	}
 
-	resultIssuances, err := counterpartyapi.GetIssuances(c, asset)
+	resultIssuances, errorCode, err := counterpartyapi.GetIssuances(c, asset)
 	if err != nil {
-		ReturnServerError(c, w, err)
+		ReturnServerError(c, w, errorCode, err)
 		return nil
 	}
 
@@ -302,10 +316,14 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *app
 		assetBalances.Balances = append(assetBalances.Balances, balance)
 	}
 
-	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
 	}
+
+	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -326,25 +344,44 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	dividendId := vars["dividendId"]
 
 	if dividendId == "" || len(dividendId) < 16 {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Invalid dividendId"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
+		ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDividendId.Code, errors.New(consts.GenericErrors.InvalidDividendId.Description))
+
 		return nil
 
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "GetDividend called for '%s' by '%s'\n", dividendId, c.Value(consts.AccessKeyKey).(string))
 
-	dividend = database.GetDividendByDividendId(c, c.Value(consts.AccessKeyKey).(string), dividendId)
+	dividend, err = database.GetDividendByDividendId(c, c.Value(consts.AccessKeyKey).(string), dividendId)
+	if err != nil {
+
+	}
 	dividend.RequestId = requestId
 
-	w.WriteHeader(http.StatusOK)
-	if err = json.NewEncoder(w).Encode(dividend); err != nil {
-		panic(err)
+	// Add the blockchain status
+	if dividend.BroadcastTxId == "" {
+		dividend.BlockchainStatus = "unconfimed"
+		dividend.BlockchainConfirmations = 0
+	}
+	if dividend.BroadcastTxId != "" {
+		confirmations, err := bitcoinapi.GetConfirmations(dividend.BroadcastTxId)
+		if err == nil || confirmations == 0 {
+			dividend.BlockchainStatus = "unconfimed"
+			dividend.BlockchainConfirmations = 0
+		}
+
+		dividend.BlockchainStatus = "confirmed"
+		dividend.BlockchainConfirmations = confirmations
 	}
 
+	if err = json.NewEncoder(w).Encode(dividend); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
+	}
+
+	w.WriteHeader(http.StatusOK)
 	return nil
 }
 
@@ -365,11 +402,8 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *appErr
 	assetId := vars["assetId"]
 
 	if assetId == "" || len(assetId) < 16 {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Invalid assetId"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
+		ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDividendId.Code, errors.New(consts.GenericErrors.InvalidDividendId.Description))
+
 		return nil
 
 	}
@@ -379,10 +413,25 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *appErr
 	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
 	asset.RequestId = requestId
 
-	w.WriteHeader(http.StatusOK)
-	if err = json.NewEncoder(w).Encode(asset); err != nil {
-		panic(err)
+	// Add the blockchain status
+	if asset.BroadcastTxId != "" {
+		confirmations, err := bitcoinapi.GetConfirmations(asset.BroadcastTxId)
+		if err == nil || confirmations == 0 {
+			asset.BlockchainStatus = "unconfimed"
+			asset.BlockchainConfirmations = 0
+		}
+
+		asset.BlockchainStatus = "confirmed"
+		asset.BlockchainConfirmations = confirmations
 	}
 
+	if err = json.NewEncoder(w).Encode(asset); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
+	}
+
+	w.WriteHeader(http.StatusOK)
 	return nil
 }

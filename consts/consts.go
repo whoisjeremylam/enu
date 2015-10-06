@@ -28,3 +28,5 @@ const LOGERROR = "ERROR"
 const LOGDEBUG = "DEBUG"
 
 const CounterpartyAddressActivationAmount = 100 // Number of transactions to activate Counterparty addresses by default
+
+const NotFound = "Not found"

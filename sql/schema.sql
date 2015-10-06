@@ -1,6 +1,6 @@
 -- MySQL dump 10.13  Distrib 5.6.24, for Win64 (x86_64)
 --
--- Host: localhost    Database: vennd
+-- Host: 127.0.0.1    Database: vennd
 -- ------------------------------------------------------
 -- Server version	5.6.25
 
@@ -30,7 +30,7 @@ CREATE TABLE `activations` (
   `addressToActivate` varchar(200) NOT NULL,
   `amount` bigint(10) NOT NULL,
   PRIMARY KEY (`rowid`)
-) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=259 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -45,7 +45,7 @@ CREATE TABLE `addresses` (
   `accessKey` varchar(64) DEFAULT NULL,
   `sourceAddress` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
-) ENGINE=InnoDB AUTO_INCREMENT=161 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -93,6 +93,8 @@ CREATE TABLE `assets` (
   `divisible` tinyint(1) DEFAULT NULL,
   `status` varchar(200) DEFAULT NULL,
   `broadcastTxId` varchar(200) DEFAULT NULL,
+  `blockchainStatus` varchar(10) DEFAULT NULL,
+  `errorCode` bigint(20) DEFAULT NULL,
   `errorDescription` varchar(512) DEFAULT NULL,
   `requestId` varchar(200) DEFAULT NULL,
   `retryCount` tinyint(4) DEFAULT NULL,
@@ -213,6 +215,8 @@ CREATE TABLE `dividends` (
   `quantityPerUnit` bigint(20) DEFAULT NULL,
   `status` varchar(200) DEFAULT NULL,
   `broadcastTxId` varchar(200) DEFAULT NULL,
+  `blockchainStatus` varchar(10) DEFAULT NULL,
+  `errorCode` bigint(20) DEFAULT NULL,
   `errorDescription` varchar(512) DEFAULT NULL,
   `retryCount` tinyint(4) DEFAULT NULL,
   `signedRawTx` text,
@@ -293,13 +297,15 @@ CREATE TABLE `payments` (
   `lastUpdatedBlockId` bigint(20) DEFAULT NULL,
   `txFee` bigint(20) DEFAULT NULL,
   `broadcastTxId` varchar(200) DEFAULT NULL,
+  `blockchainStatus` varchar(10) DEFAULT NULL,
+  `errorCode` bigint(20) DEFAULT NULL,
   `errorDescription` varchar(512) DEFAULT NULL,
   `paymentTag` varchar(512) DEFAULT NULL,
   `retryCount` tinyint(4) DEFAULT NULL,
   `signedRawTx` text,
   PRIMARY KEY (`rowid`),
   KEY `payments1` (`blockId`)
-) ENGINE=InnoDB AUTO_INCREMENT=180 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=397 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -355,7 +361,7 @@ CREATE TABLE `userkeys` (
   `blockchainId` varchar(100) DEFAULT NULL,
   `status` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
-) ENGINE=InnoDB AUTO_INCREMENT=140 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=187 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -367,4 +373,4 @@ CREATE TABLE `userkeys` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-09-17 10:34:46
+-- Dump completed on 2015-10-03  8:40:22
