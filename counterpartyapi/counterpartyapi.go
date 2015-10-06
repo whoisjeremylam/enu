@@ -795,7 +795,7 @@ func GetIssuancesDB(c context.Context, asset string) ([]Issuance, int64, error) 
 
 // Generates a hex string serialed tx which contains the bitcoin transaction to send an asset from sourceAddress to destinationAddress
 // Not exposed to the public
-func createSend(c context.Context, sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, int64, error) {
+func CreateSend(c context.Context, sourceAddress string, destinationAddress string, asset string, quantity uint64, pubKeyHexString string) (string, int64, error) {
 	var payload payloadCreateSend_Counterparty
 	var result string
 
@@ -1179,7 +1179,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
 	// Create the send
-	createResult, errorCode, err := createSend(c, sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
+	createResult, errorCode, err := CreateSend(c, sourceAddress, destinationAddress, asset, quantity, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Err in CreateSend(): %s", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, errorCode, err.Error())
@@ -1496,7 +1496,7 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	go database.InsertPayment(c, accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "")
 
 	// Create the send from the internal wallet to the destination address
-	createResult, errorCode, err := createSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
+	createResult, errorCode, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in createSend(): %s", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, errorCode, err.Error())

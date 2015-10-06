@@ -42,9 +42,9 @@ func main() {
 	// First check the internal block height via our API
 	c1 := make(chan uint64, 1)
 	go func() {
-		result, err := counterpartyapi.GetRunningInfo(c)
+		result, errorCode, err := counterpartyapi.GetRunningInfo(c)
 
-		if err != nil {
+		if err != nil || errorCode != 0 {
 			log.Fluentf(consts.LOGERROR, "Error retrieving our block height")
 			log.Fluentf(consts.LOGERROR, err.Error())
 			os.Exit(-1)
@@ -114,9 +114,9 @@ func main() {
 			log.Fluentf(consts.LOGERROR, err.Error())
 		}
 
-		resultCreateSend, err2 := counterpartyapi.CreateSend(c, sendAddress, destinationAddress, "SHIMA", 1000, pubKey)
+		resultCreateSend, errorCode2, err2 := counterpartyapi.CreateSend(c, sendAddress, destinationAddress, "SHIMA", 1000, pubKey)
 
-		if err2 != nil {
+		if err2 != nil || errorCode2 != 0 {
 			log.Fluentf(consts.LOGERROR, "Error creating counterparty send")
 			log.Fluentf(consts.LOGERROR, err2.Error())
 		}
