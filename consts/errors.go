@@ -62,7 +62,7 @@ var GenericErrors = GenericStruct{
 	InvalidDocument:       ErrCodes{1, "There was a problem with the parameters in your JSON request. Please correct the request."},
 	InvalidDividendId:     ErrCodes{2, "The specified dividend id is invalid."},
 	UnsupportedBlockchain: ErrCodes{3, "The specified blockchain is not supported."},
-	HeadersIncorrect:      ErrCodes{4, "Request headers were not set correctly, ensure the following headers are set: accessKey, signature."},
+	HeadersIncorrect:      ErrCodes{4, "Request headers were not set correctly, ensure the following headers are set: accessKey and signature."},
 	UnknownAccessKey:      ErrCodes{5, "Attempt to access API with unknown user key"},
 	InvalidSignature:      ErrCodes{6, "Could not verify HMAC signature"},
 	InvalidNonce:          ErrCodes{7, "Invalid nonce"},
