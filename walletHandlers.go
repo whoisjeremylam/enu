@@ -24,14 +24,23 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	wallet.RequestId = requestId
 
+	// Add to the context the RequestType
+	c = context.WithValue(c, consts.RequestTypeKey, "walletCreate")
+
 	// check generic args and parse
-	_, err := CheckAndParseJsonCTX(c, w, r)
+	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
+	var number int
+	if m["numberOfAddresses"] != nil {
+		number = int(m["numberOfAddresses"].(float64))
+	}
+
 	// Create the wallet
-	wallet, err = counterpartycrypto.CreateWallet()
+	wallet, err = counterpartycrypto.CreateWallet(number)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in CreateWallet(): %s", err.Error())
 		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))

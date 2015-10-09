@@ -257,6 +257,10 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			`
 		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"dividendAsset":{"type":"string"},"quantityPerUnit":{"type":"integer"}},"required":["sourceAddress","asset","dividendAsset","quantityPerUnit"]}
 	`
+		check["walletCreate"] =
+			`
+		{"properties":{"numberOfAddresses":{"type":"integer"}}}
+	`
 		check["walletPayment"] =
 			`
 		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"destinationAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"quantity":{"type":"integer"}},"required":["sourceAddress","asset","quantity","destinationAddress"]}

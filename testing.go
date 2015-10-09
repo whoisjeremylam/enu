@@ -28,7 +28,7 @@ func InitTesting() {
 	log.Println(http.ListenAndServe("localhost:8081", router).Error())
 }
 
-func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int64, error) {
+func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int, error) {
 	if method != "POST" && method != "GET" {
 		return nil, -1000, errors.New("DoEnuAPI must be called for a POST or GET method only")
 	}
@@ -51,7 +51,7 @@ func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int64,
 
 	// Did not receive an OK or Accepted
 	if resp.StatusCode != 201 && resp.StatusCode != 200 {
-		log.Printf("Request failed. Status code: %d\n", resp.StatusCode)
+		//		log.Printf("Request failed. Status code: %d\n", resp.StatusCode)
 
 		body, err := ioutil.ReadAll(resp.Body)
 		defer resp.Body.Close()
@@ -62,7 +62,7 @@ func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int64,
 
 		//		log.Printf("Reply: %s\n", string(body))
 
-		return body, -2000, errors.New(string(body))
+		return body, resp.StatusCode, errors.New(string(body))
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
