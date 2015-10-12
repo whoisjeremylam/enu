@@ -19,7 +19,9 @@ func printHeader(f *os.File) {
 func printGroup(f *os.File, groupName string, group interface{}) {
 	v := reflect.ValueOf(group)
 	for i := 0; i < v.NumField(); i++ {
-		fmt.Printf("\"%s\", %d, \"%s\"\n", groupName, v.Field(i).Interface().(consts.ErrCodes).Code, v.Field(i).Interface().(consts.ErrCodes).Description)
+		t := fmt.Sprintf("\"%s\", %d, \"%s\"\n", groupName, v.Field(i).Interface().(consts.ErrCodes).Code, v.Field(i).Interface().(consts.ErrCodes).Description)
+		fmt.Printf(t)
+		f.Write([]byte(t))
 	}
 }
 

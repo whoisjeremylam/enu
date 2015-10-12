@@ -81,8 +81,17 @@ func getAddressFromPassphrase(passphrase string, position uint32) (CounterpartyA
 	return returnValue, nil
 }
 
-func CreateWallet() (CounterpartyWallet, error) {
+func CreateWallet(numberOfAddressesToGenerate int) (CounterpartyWallet, error) {
 	var wallet CounterpartyWallet
+	var numAddresses int
+
+	if numberOfAddressesToGenerate <= 0 {
+		numAddresses = 20
+	} else if numberOfAddressesToGenerate > 100 {
+		numAddresses = 100
+	} else {
+		numAddresses = numberOfAddressesToGenerate
+	}
 
 	m := mneumonic.GenerateRandom(128)
 	wallet.Passphrase = strings.Join(m.ToWords(), " ")
@@ -112,8 +121,8 @@ func CreateWallet() (CounterpartyWallet, error) {
 		return wallet, err
 	}
 
-	// Derive extended key (repeat this from 0 to 19)
-	for i := 0; i <= 19; i++ {
+	// Derive extended key (repeat this from 0 to number of addresses-1)
+	for i := 0; i <= numAddresses-1; i++ {
 		var counterpartyAddress CounterpartyAddress
 
 		key, err := extAcct0.Child(uint32(i))
