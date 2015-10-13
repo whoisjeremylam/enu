@@ -47,7 +47,7 @@ func main() {
 		if err != nil || errorCode != 0 {
 			log.Fluentf(consts.LOGERROR, "Error retrieving our block height")
 			log.Fluentf(consts.LOGERROR, err.Error())
-			os.Exit(-1)
+			os.Exit(int(errorCode))
 		}
 		c1 <- result.LastBlock.BlockIndex
 	}()
@@ -118,7 +118,8 @@ func main() {
 
 		if err2 != nil || errorCode2 != 0 {
 			log.Fluentf(consts.LOGERROR, "Error creating counterparty send")
-			log.Fluentf(consts.LOGERROR, err2.Error())
+			log.Fluentf(consts.LOGERROR, err.Error())
+			os.Exit(int(errorCode2))
 		}
 
 		c3 <- resultCreateSend

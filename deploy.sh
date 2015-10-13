@@ -32,7 +32,9 @@ chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/pingbit
 chmod u+x /home/api/api/src/github.com/vennd/enu/deploy.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingbitcoind/restartAndAlertBitcoin.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingcounterpartyd/restartAndAlertCounterparty.sh
+chmod u+x /home/api/api/src/github.com/vennd/enu/monitoring/pingcounterpartyd/alertCounterpartyUnavailable.sh
 chmod u+x /home/api/api/src/github.com/vennd/enu/launchProcess.sh
+
 
 # Restart processes
 cd $GOPATH/bin
