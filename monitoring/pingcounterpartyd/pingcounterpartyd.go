@@ -33,6 +33,7 @@ var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
 // Returns 3 if there is a different > 5 blocks between counterpartyd last processed block and blockchain.info
 // Returns 4 if the construction of a send with counterpartyd didn't complete successfully (or within 10 seconds)
 // Returns 5 if there was a unexpected error
+// Returns 6 if Counterparty returned a 503
 func main() {
 	var result1, result2 uint64
 	var result3 string
@@ -46,8 +47,13 @@ func main() {
 		result, errorCode, err := counterpartyapi.GetRunningInfo(c)
 
 		if err != nil || errorCode != 0 {
-			log.Fluentf(consts.LOGERROR, "Error retrieving our block height: %s", err.Error())
-			os.Exit(int(5))
+			log.Fluentf(consts.LOGERROR, "Error retrieving our block height: %s, errorCode: %d", err.Error(), errorCode)
+			if errorCode == 1000 {
+				os.Exit(int(6))
+			} else {
+				os.Exit(int(5))
+			}
+
 		}
 		c1 <- result.LastBlock.BlockIndex
 	}()
