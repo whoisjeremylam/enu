@@ -28,10 +28,11 @@ var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
 // If the difference is < 5 blocks pass, otherwise fail test
 // Attempt to construct a send with counterparty. The send construction should complete within 10 seconds, or consider bitcoind and counterpartyd stalled
 //
-// Returns -1 if there was a problem reading the counterpartyd last processed block
-// Returns -2 if there was a problem reading from blockchain.info
-// Returns -3 if there is a different > 5 blocks between counterpartyd last processed block and blockchain.info
-// Returns -4 if the construction of a send with counterpartyd didn't complete successfully (or within 10 seconds)
+// Returns 1 if there was a problem reading the counterpartyd last processed block
+// Returns 2 if there was a problem reading from blockchain.info
+// Returns 3 if there is a different > 5 blocks between counterpartyd last processed block and blockchain.info
+// Returns 4 if the construction of a send with counterpartyd didn't complete successfully (or within 10 seconds)
+// Returns 5 if there was a unexpected error
 func main() {
 	var result1, result2 uint64
 	var result3 string
@@ -45,9 +46,8 @@ func main() {
 		result, errorCode, err := counterpartyapi.GetRunningInfo(c)
 
 		if err != nil || errorCode != 0 {
-			log.Fluentf(consts.LOGERROR, "Error retrieving our block height")
-			log.Fluentf(consts.LOGERROR, err.Error())
-			os.Exit(int(errorCode))
+			log.Fluentf(consts.LOGERROR, "Error retrieving our block height: %s", err.Error())
+			os.Exit(int(5))
 		}
 		c1 <- result.LastBlock.BlockIndex
 	}()
@@ -57,7 +57,7 @@ func main() {
 		log.Fluentf(consts.LOGINFO, "Counterpartyd last processed block: %d\n", result1)
 	case <-time.After(time.Second * 10):
 		log.Fluentf(consts.LOGERROR, "Timeout when retrieving last processed counterpartyd block")
-		os.Exit(-1)
+		os.Exit(1)
 	}
 
 	// Then check the block height from blockchain.info
@@ -71,7 +71,7 @@ func main() {
 		if err != nil {
 			log.Fluentf(consts.LOGERROR, "Error reading from blockchain.info")
 			log.Fluentf(consts.LOGERROR, err.Error())
-			os.Exit(-2)
+			os.Exit(2)
 		}
 
 		result, err2 := strconv.ParseUint(string(response), 10, 64)
@@ -79,7 +79,7 @@ func main() {
 		if err2 != nil {
 			log.Fluentf(consts.LOGERROR, "Error reading from blockchain.info")
 			log.Fluentf(consts.LOGERROR, err2.Error())
-			os.Exit(-2)
+			os.Exit(2)
 		}
 
 		c2 <- result
@@ -90,7 +90,7 @@ func main() {
 		log.Fluentf(consts.LOGINFO, "Blockchain.info block height: %d\n", result2)
 	case <-time.After(time.Second * 10):
 		log.Fluentf(consts.LOGERROR, "Timeout when retrieving blockchain.info block height")
-		os.Exit(-2)
+		os.Exit(2)
 	}
 
 	var difference uint64
@@ -101,7 +101,7 @@ func main() {
 	}
 	// Check the difference < 5
 	if difference > 5 {
-		os.Exit(-3)
+		os.Exit(3)
 	}
 
 	// Attempt to create a send
@@ -119,7 +119,7 @@ func main() {
 		if err2 != nil || errorCode2 != 0 {
 			log.Fluentf(consts.LOGERROR, "Error creating counterparty send")
 			log.Fluentf(consts.LOGERROR, err.Error())
-			os.Exit(int(errorCode2))
+			os.Exit(int(5))
 		}
 
 		c3 <- resultCreateSend
@@ -130,7 +130,7 @@ func main() {
 		log.Fluentf(consts.LOGINFO, "Successfully created transaction: %s\n", result3)
 	case <-time.After(time.Second * 30):
 		log.Fluentf(consts.LOGERROR, "Timeout when creating counterparty send")
-		os.Exit(-4)
+		os.Exit(4)
 	}
 
 	return
