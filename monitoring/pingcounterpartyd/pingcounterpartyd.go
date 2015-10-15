@@ -48,7 +48,7 @@ func main() {
 
 		if err != nil || errorCode != 0 {
 			log.Fluentf(consts.LOGERROR, "Error retrieving our block height: %s, errorCode: %d", err.Error(), errorCode)
-			if errorCode == 1000 {
+			if errorCode == 1002 {
 				os.Exit(int(6))
 			} else {
 				os.Exit(int(5))
@@ -123,8 +123,7 @@ func main() {
 		resultCreateSend, errorCode2, err2 := counterpartyapi.CreateSend(c, sendAddress, destinationAddress, "SHIMA", 1000, pubKey)
 
 		if err2 != nil || errorCode2 != 0 {
-			log.Fluentf(consts.LOGERROR, "Error creating counterparty send")
-			log.Fluentf(consts.LOGERROR, err.Error())
+			log.Fluentf(consts.LOGERROR, "Error creating counterparty send: %s, errorCode: %d", err2.Error(), errorCode2)
 			os.Exit(int(5))
 		}
 

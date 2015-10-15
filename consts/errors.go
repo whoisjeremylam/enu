@@ -7,6 +7,7 @@ const CounterpartylibMalformedAddress = "Odd-length string"
 const CounterpartylibInsufficientBTC = "Insufficient BTC at address"
 const CounterpartylibOnlyIssuerCanPayDividends = "only issuer can pay dividends"
 const CountpartylibNoSuchAsset = "no such asset"
+const CountpartylibMempoolIsNotReady = "Mempool is not yet ready"
 
 type ErrCodes struct {
 	Code        int64

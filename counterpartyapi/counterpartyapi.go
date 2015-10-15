@@ -343,13 +343,13 @@ func postAPI(c context.Context, postData []byte) (map[string]interface{}, int64,
 	}
 
 	if apiResp.err != nil {
-		log.FluentfContext(consts.LOGERROR, c, apiResp.err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Error in Do(req): %s", apiResp.err.Error())
 		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	// Unsuccessful
+	// Unsuccessful - ie didn't return HTTP status 200
 	if apiResp.resp.StatusCode != 200 {
-		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", apiResp.resp.StatusCode)
+		log.FluentfContext(consts.LOGDEBUG, c, "Request didn't return a 200. Status code: %d\n", apiResp.resp.StatusCode)
 
 		// Even though we got an error, counterparty often sends back errors inside the body
 		body, err := ioutil.ReadAll(apiResp.resp.Body)
@@ -388,7 +388,7 @@ func postAPI(c context.Context, postData []byte) (map[string]interface{}, int64,
 	// Unmarshall body
 	if unmarshallErr := json.Unmarshal(body, &result); unmarshallErr != nil {
 		// If we couldn't parse the error properly, log error to fluent and return unhandled error
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Error in Unmarshal(): %s", err.Error())
 
 		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
@@ -431,7 +431,14 @@ func postAPI(c context.Context, postData []byte) (map[string]interface{}, int64,
 			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CounterpartylibInsufficientBTC) {
 				return result, consts.CounterpartyErrors.InsufficientFees.Code, errors.New(consts.CounterpartyErrors.InsufficientFees.Description)
 			}
+
+			//Counterparty is just restarting now
+			if dataMap["message"] != nil && strings.Contains(dataMap["message"].(string), consts.CountpartylibMempoolIsNotReady) {
+				return result, consts.CounterpartyErrors.ReparsingOrUnavailable.Code, errors.New(consts.CounterpartyErrors.ReparsingOrUnavailable.Description)
+			}
 		}
+
+		log.FluentfContext(consts.LOGDEBUG, c, "Counterparty returned an error in the body but returned a HTTP status of 200. Got: %s", fmt.Sprintf("%#v", result))
 
 		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
@@ -1070,7 +1077,7 @@ func CreateNumericIssuance(c context.Context, sourceAddress string, asset string
 	for balance, errorCode, err := GetBalancesByAsset(c, randomAssetName); len(balance) != 0; {
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in GetBalancesByAsset(): %s, errorCode: %d", err.Error(), errorCode)
-			return "", "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+			return "", "", errorCode, err
 		}
 		randomAssetName, err = generateRandomAssetName(c)
 		if err != nil {
@@ -1346,7 +1353,7 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in CreateDividend(): %s errorCode: %d", err.Error(), errorCode)
 		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.ComposeError.Code, consts.CounterpartyErrors.ComposeError.Description)
-		return "", consts.CounterpartyErrors.ComposeError.Code, errors.New(consts.CounterpartyErrors.ComposeError.Description)
+		return "", errorCode, err
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
@@ -1400,10 +1407,10 @@ func GetRunningInfo(c context.Context) (RunningInfo, int64, error) {
 		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 	}
 
-	responseData, _, err := postAPI(c, payloadJsonBytes)
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in postAPI(): %s", err.Error())
-		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		return result, errorCode, err
 	}
 
 	// Get result from api and create the reply
