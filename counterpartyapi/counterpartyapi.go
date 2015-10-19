@@ -370,6 +370,10 @@ func postAPI(c context.Context, postData []byte) (map[string]interface{}, int64,
 			return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 		}
 
+		if apiResp.resp.StatusCode == 503 {
+			log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
+		}
+
 		// Counterparty DB is behind backend / reparsing or timed out, read directly from DB
 		if errResult["code"].(float64) == -32000 || errResult["code"].(float64) == -10000 {
 			return result, consts.CounterpartyErrors.ReparsingOrUnavailable.Code, errors.New(consts.CounterpartyErrors.ReparsingOrUnavailable.Description)
