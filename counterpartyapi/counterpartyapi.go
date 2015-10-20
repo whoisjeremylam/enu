@@ -365,7 +365,7 @@ func postAPI(c context.Context, postData []byte) (map[string]interface{}, int64,
 		var errResult map[string]interface{}
 		if unmarshallErr := json.Unmarshal(body, &errResult); unmarshallErr != nil {
 			// If we couldn't parse the error properly, log error to fluent and return unhandled error
-			log.FluentfContext(consts.LOGERROR, c, err.Error())
+			log.FluentfContext(consts.LOGERROR, c, unmarshallErr.Error())
 
 			return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 		}
