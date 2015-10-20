@@ -100,13 +100,14 @@ func main() {
 	}
 
 	var difference uint64
-	if (result1 - result2) < 0 {
+	if result1 < result2 {
 		difference = result2 - result1
 	} else {
 		difference = result1 - result2
 	}
 	// Check the difference < 5
 	if difference > 5 {
+		log.Fluentf(consts.LOGERROR, "result1: %d, result2: %d, difference %d", result1, result2, difference)
 		os.Exit(3)
 	}
 
