@@ -330,7 +330,7 @@ func TestActivateAddress(t *testing.T) {
 		CaseDescription   string
 	}{
 		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10, "TestActivateAddress1", "success", 0, "Successful case"},
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "", consts.CounterpartyErrors.InsufficientFees.Code, "Insufficient BTC case"},
+		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "success", 0, "Successful. Defaults kick in"},
 	}
 
 	Init()
