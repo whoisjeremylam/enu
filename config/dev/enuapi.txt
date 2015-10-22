@@ -14,5 +14,8 @@
 "counterpartypassword" : "1234",
 "counterpartytransactionencoding" : "auto",
 
-"fluentHost" : "http://localhost:8888"
+"fluentHost" : "http://localhost:8888" ,
+
+"rippleHost" : "http://localhost:5990" 
+
 }
