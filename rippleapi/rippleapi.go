@@ -90,7 +90,7 @@ type Payment struct {
 	Source_account      string `json:"source_account"`
 	Source_tag          string `json:"source_tag"`
 	Source_amount       Amount `json:"source_amount"`
-	Source_slippage     string `json:"source_slippage:"`
+	Source_slippage     string `json:"source_slippage"`
 	Destination_account string `json:"destination_account"`
 	Destination_tag     string `json:"destination_tag"`
 	Destination_amount  Amount `json:"destination_amount"`
@@ -156,20 +156,20 @@ func Init() {
 		return
 	}
 
-	if _, err := os.Stat("rippleapi.json"); err == nil {
-		//		log.Println("Found and using configuration file rippleapi.json")
-		configFilePath = "rippleapi.json"
+	if _, err := os.Stat("./enuapi.json"); err == nil {
+		//		log.Println("Found and using configuration file ./rippleapi.json")
+		configFilePath = "./enuapi.json"
 	} else {
-		if _, err := os.Stat(os.Getenv("GOPATH") + "/bin/rippleapi/rippleapi.json"); err == nil {
-			configFilePath = os.Getenv("GOPATH") + "/bin/rippleapi/rippleapi.json"
+		if _, err := os.Stat(os.Getenv("GOPATH") + "/bin/enuapi.json"); err == nil {
+			configFilePath = os.Getenv("GOPATH") + "/bin/enuapi.json"
 			//			log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 
 		} else {
-			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/rippleapi/rippleapi.json"); err == nil {
-				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/rippleapi/rippleapi.json"
+			if _, err := os.Stat(os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"); err == nil {
+				configFilePath = os.Getenv("GOPATH") + "/src/github.com/vennd/enu/enuapi.json"
 				//				log.Printf("Found and using configuration file from GOPATH: %s\n", configFilePath)
 			} else {
-				log.Println("Cannot find rippleapi.json")
+				log.Println("Cannot find enuapi.json")
 				os.Exit(-100)
 			}
 		}
@@ -189,7 +189,7 @@ func InitWithConfigPath(configFilePath string) {
 	//	log.Printf("Reading %s\n", configFilePath)
 	file, err := ioutil.ReadFile(configFilePath)
 	if err != nil {
-		log.Println("Unable to read configuration file rippleapi.json")
+		log.Println("Unable to read configuration file enuapi.json")
 		log.Println(err.Error())
 		os.Exit(-101)
 	}
@@ -197,7 +197,7 @@ func InitWithConfigPath(configFilePath string) {
 	err = json.Unmarshal(file, &configuration)
 
 	if err != nil {
-		log.Println("Unable to parse rippleapi.json")
+		log.Println("Unable to parse enuapi.json")
 		log.Println(err.Error())
 		os.Exit(-101)
 	}
