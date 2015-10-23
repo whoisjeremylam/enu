@@ -202,7 +202,7 @@ func TestPostTrustline(t *testing.T) {
 
 }
 */
-
+/*
 func TestGetTrustLines(t *testing.T) {
 	c := context.TODO()
 	c = context.WithValue(c, consts.RequestIdKey, "testing_"+enulib.GenerateRequestId())
@@ -216,3 +216,38 @@ func TestGetTrustLines(t *testing.T) {
 	log.Printf("Result: %s", result)
 
 }
+*/
+
+func TestPostAccountlines(t *testing.T) {
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "testing_"+enulib.GenerateRequestId())
+
+	// positive test
+	result, _, err := PostAccountlines(c, account)
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	log.Printf("Result: %s", result)
+
+}
+
+/*
+func TestPostServerInfo(t *testing.T) {
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "testing_"+enulib.GenerateRequestId())
+
+	// positive test
+	result, _, err := PostServerInfo(c)
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	log.Printf("Result: %s", result)
+
+}
+*/
