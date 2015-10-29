@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	//	"math/big"
+	//"net"
 	"net/http"
+	//"net/rpc"
 	"os"
 	"strconv"
 	//	"sync"
+	"time"
 
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/log"
@@ -145,9 +148,56 @@ type GetTrustline struct {
 	Counterparty_trustline_frozen bool   `json:"counterparty_trustline_frozen"`
 }
 
+type PayloadGetAccountlines struct {
+	Method string     `json:"method"`
+	Params Parameters `json:"params"`
+}
+
+type Parameters []PayloadGetAccountlinesParms
+
+type PayloadGetAccountlinesParms struct {
+	Account string `json:"account"`
+	Ledger  string `json:"ledger"`
+}
+
+type Accountlines struct {
+	Result AccountlinesResult `json:"result"`
+}
+
+type AccountlinesResult struct {
+	Account              string        `json:"account"`
+	Ledger_current_index int64         `json:"ledger_current_index"`
+	GetAccountLines      []Accountline `json:"lines"`
+	Status               string        `json:"status"`
+	Validated            bool          `json:"validated"`
+}
+
+type Accountline struct {
+	Account     string `json:"account"`
+	Balance     string `json:"balance"`
+	Currency    string `json:"currency"`
+	Limit       string `json:"limit"`
+	Limit_peer  string `json:"limit_peer"`
+	Quality_in  int64  `json:"quality_in"`
+	Quality_out int64  `json:"quality_out"`
+}
+
+type ApiResult struct {
+	resp *http.Response
+	err  error
+}
+
+type payloadGetServerInfo struct {
+	Method string                     `json:"method"`
+	Params payloadGetServerInfoParams `json:"params"`
+}
+
+type payloadGetServerInfoParams struct{}
+
 // Initialises global variables and database connection for all handlers
 var isInit bool = false // set to true only after the init sequence is complete
 var rippleHost string
+var rippleRestHost string
 
 func Init() {
 	var configFilePath string
@@ -205,7 +255,8 @@ func InitWithConfigPath(configFilePath string) {
 	m := configuration.(map[string]interface{})
 
 	// Ripple API parameters
-	rippleHost = m["rippleHost"].(string) // End point for JSON RPC server
+	rippleRestHost = m["rippleRestHost"].(string) // End point for JSON RESTAPI server
+	rippleHost = m["rippleHost"].(string)         // End point for JSON RPC server
 
 	isInit = true
 }
@@ -213,7 +264,7 @@ func InitWithConfigPath(configFilePath string) {
 func httpGet(c context.Context, url string) ([]byte, int64, error) {
 	// Set headers
 
-	req, err := http.NewRequest("GET", rippleHost+url, nil)
+	req, err := http.NewRequest("GET", rippleRestHost+url, nil)
 
 	clientPointer := &http.Client{}
 	resp, err := clientPointer.Do(req)
@@ -255,7 +306,7 @@ func postAPI(c context.Context, request string, postData []byte) ([]byte, int64,
 	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postAPI() posting: %s", postDataJson)
 
 	// Set headers
-	req, err := http.NewRequest("POST", rippleHost+request, bytes.NewBufferString(postDataJson))
+	req, err := http.NewRequest("POST", rippleRestHost+request, bytes.NewBufferString(postDataJson))
 	req.Header.Set("Content-Type", "application/json")
 
 	clientPointer := &http.Client{}
@@ -288,6 +339,68 @@ func postAPI(c context.Context, request string, postData []byte) ([]byte, int64,
 	}
 
 	return body, 0, nil
+}
+
+func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int64, error) {
+
+	var result map[string]interface{}
+	var apiResp ApiResult
+
+	postDataJson := string(postData)
+	//postDataJson := `{"method":"account_lines","params":[{"account":"rE1Lec75PEmeDFwAuumto2Nbo8ZwG3aT9V","ledger":"current"}]}`
+	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postRPCAPI() posting: %s", postDataJson)
+
+	// Set headers
+	req, err := http.NewRequest("POST", rippleHost, bytes.NewBufferString(postDataJson))
+	req.Header.Set("Content-Type", "application/json")
+
+	clientPointer := &http.Client{}
+
+	// Call ripple JSON RPC service with 10 second timeout
+	c1 := make(chan ApiResult, 1)
+	go func() {
+		var result ApiResult // Wrap the response into a struct so we can return both the error and response
+
+		resp, err := clientPointer.Do(req)
+		result.resp = resp
+		result.err = err
+
+		c1 <- result
+	}()
+
+	select {
+	case apiResp = <-c1:
+	case <-time.After(time.Second * 10):
+		return result, consts.CounterpartyErrors.Timeout.Code, errors.New(consts.CounterpartyErrors.Timeout.Description)
+	}
+
+	if apiResp.err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Do(req): %s", apiResp.err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	// Success, read body and return
+	body, err := ioutil.ReadAll(apiResp.resp.Body)
+
+	println("body:")
+	println(string(body))
+
+	defer apiResp.resp.Body.Close()
+
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in ReadAll(): %s", err.Error())
+		return nil, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	// Unmarshall body
+	if unmarshallErr := json.Unmarshal(body, &result); unmarshallErr != nil {
+		// If we couldn't parse the error properly, log error to fluent and return unhandled error
+		log.FluentfContext(consts.LOGERROR, c, "Error in Unmarshal(): %s", err.Error())
+
+		return result, 0, nil
+	}
+
+	return nil, 0, nil
 }
 
 func generateId(c context.Context) uint32 {
@@ -626,4 +739,88 @@ func GetTrustLines(c context.Context, account string) (GetTrustlinesResult, erro
 	}
 
 	return r, nil
+}
+
+func PostAccountlines(c context.Context, address string) (Accountlines, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	var payload PayloadGetAccountlines
+	var result Accountlines
+
+	payload.Method = "account_lines"
+	parms := PayloadGetAccountlinesParms{Account: address, Ledger: "current"}
+	payload.Params = append(payload.Params, parms)
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return result, errorCode, err
+	}
+
+	if responseData["result"] != nil {
+		log.Println(responseData["result"].(string))
+	}
+
+	/*
+		// Range over the result from api and create the reply
+		if responseData["result"] != nil {
+			for _, b := range responseData["result"].([]interface{}) {
+				c := b.(map[string]interface{})
+				result = append(result,
+					Balance{Address: c["address"].(string),
+						Asset:    c["asset"].(string),
+						Quantity: uint64(c["quantity"].(float64))})
+			}
+		}
+	*/
+
+	return result, errorCode, nil
+}
+
+func PostServerInfo(c context.Context) ([]byte, int64, error) {
+	var payload payloadGetServerInfo
+	//	var result []Balance
+	var result []byte
+
+	if isInit == false {
+		Init()
+	}
+
+	payload.Method = "server_info"
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return result, errorCode, err
+	}
+
+	if responseData["result"] != nil {
+		log.Println(responseData["result"].(string))
+	}
+
+	/*
+		// Range over the result from api and create the reply
+		if responseData["result"] != nil {
+			for _, b := range responseData["result"].([]interface{}) {
+				c := b.(map[string]interface{})
+				result = append(result,
+					Balance{Address: c["address"].(string),
+						Asset:    c["asset"].(string),
+						Quantity: uint64(c["quantity"].(float64))})
+			}
+		}
+	*/
+	return result, errorCode, nil
 }
