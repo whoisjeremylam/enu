@@ -1141,18 +1141,16 @@ func CreateNumericIssuance(c context.Context, sourceAddress string, asset string
 }
 
 func CreateIssuance(c context.Context, sourceAddress string, asset string, assetDescription string, quantity uint64, divisible bool, pubKeyHexString string) (string, int64, error) {
-	var description string
-
 	if isInit == false {
 		Init()
 	}
 
 	if len(assetDescription) > 52 {
-		description = assetDescription[0:51]
+		assetDescription = assetDescription[0:51]
 	}
 
 	// Call counterparty to create the issuance
-	result, errorCode, err := createIssuance(c, sourceAddress, asset, description, quantity, divisible, pubKeyHexString)
+	result, errorCode, err := createIssuance(c, sourceAddress, asset, assetDescription, quantity, divisible, pubKeyHexString)
 	if err != nil {
 		return "", errorCode, err
 	}
@@ -1298,7 +1296,7 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	env := c.Value(consts.EnvKey).(string)
 
 	// Write the asset with the generated asset id to the database
-	go database.InsertAsset(accessKey, assetId, sourceAddress, "TBA", asset, quantity, divisible, "valid")
+	go database.InsertAsset(accessKey, assetId, sourceAddress, asset, assetDescription, quantity, divisible, "valid")
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -1334,7 +1332,7 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, assetDescription, sourceAddress, createResult)
-	database.UpdateAssetNameByAssetId(c, accessKey, assetId, asset)
+	//	database.UpdateAssetNameByAssetId(c, accessKey, assetId, asset)
 
 	// Sign the transactions
 	signed, err := signRawTransaction(c, passphrase, createResult)
