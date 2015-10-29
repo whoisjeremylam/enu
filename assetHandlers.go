@@ -46,22 +46,27 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
-		w.WriteHeader(http.StatusBadRequest)
 
-		returnCode := enulib.ReturnCode{RequestId: requestId, Code: -3, Description: err.Error()}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
+		ReturnServerError(c, w, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description))
 		return nil
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "retrieved publickey: %s", sourceAddressPubKey)
+
+	// Generate random asset name
+	randomAssetName, errorCode, err := counterpartyapi.GenerateRandomAssetName(c)
+	if err != nil {
+		ReturnServerError(c, w, errorCode, err)
+
+		return nil
+	}
+
 	// Generate an assetId
 	assetId := enulib.GenerateAssetId()
 	log.Printf("Generated assetId: %s", assetId)
 	assetStruct.AssetId = assetId
-	assetStruct.Asset = asset
-	//	assetStruct.Description = description
+	assetStruct.Asset = randomAssetName
+	assetStruct.Description = asset
 	assetStruct.Quantity = quantity
 	assetStruct.Divisible = divisible
 	assetStruct.SourceAddress = sourceAddress
@@ -73,7 +78,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *app
 	}
 
 	// Start asset creation in async mode
-	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, asset, quantity, divisible)
+	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, randomAssetName, asset, quantity, divisible)
 
 	return nil
 }

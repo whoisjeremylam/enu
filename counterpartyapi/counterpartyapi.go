@@ -1054,6 +1054,39 @@ func createIssuance(c context.Context, sourceAddress string, asset string, descr
 	return result, 0, nil
 }
 
+func GenerateRandomAssetName(c context.Context) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Generate random asset name
+	var err error
+	var randomAssetName string
+	randomAssetName, err = generateRandomAssetName(c)
+
+	// If random asset name already exists, keep trying until we find a spare one
+	for balance, errorCode, err := GetBalancesByAsset(c, randomAssetName); len(balance) != 0; {
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in GetBalancesByAsset(): %s, errorCode: %d", err.Error(), errorCode)
+			return "", errorCode, err
+		}
+		randomAssetName, err = generateRandomAssetName(c)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in generateRandomAssetName(): %s", err.Error())
+			return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		}
+
+		balance, errorCode, err = GetBalancesByAsset(c, randomAssetName)
+	}
+
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in after trying to check if asset exists: %s", err.Error())
+		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	return randomAssetName, 0, nil
+}
+
 // Automatically generates a numeric asset name and generates unsigned hex encoded transaction to issue an asset on Counterparty
 // Returns:
 // randomAssetName that was generated
@@ -1105,6 +1138,26 @@ func CreateNumericIssuance(c context.Context, sourceAddress string, asset string
 	}
 
 	return randomAssetName, result, 0, nil
+}
+
+func CreateIssuance(c context.Context, sourceAddress string, asset string, assetDescription string, quantity uint64, divisible bool, pubKeyHexString string) (string, int64, error) {
+	var description string
+
+	if isInit == false {
+		Init()
+	}
+
+	if len(assetDescription) > 52 {
+		description = assetDescription[0:51]
+	}
+
+	// Call counterparty to create the issuance
+	result, errorCode, err := createIssuance(c, sourceAddress, asset, description, quantity, divisible, pubKeyHexString)
+	if err != nil {
+		return "", errorCode, err
+	}
+
+	return result, 0, nil
 }
 
 // Generates unsigned hex encoded transaction to pay a dividend on an asset on Counterparty
@@ -1236,7 +1289,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 }
 
 // Concurrency safe to create and send transactions from a single address.
-func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, quantity uint64, divisible bool) (string, int64, error) {
+func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, assetDescription string, quantity uint64, divisible bool) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -1275,13 +1328,13 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 
 	log.FluentfContext(consts.LOGINFO, c, "Composing the CreateNumericIssuance transaction")
 	// Create the issuance
-	randomAssetName, createResult, errCode, err := CreateNumericIssuance(c, sourceAddress, asset, quantity, divisible, sourceAddressPubKey)
+	createResult, errCode, err := CreateIssuance(c, sourceAddress, asset, assetDescription, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
 		return "", errCode, err
 	}
 
-	log.FluentfContext(consts.LOGINFO, c, "Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, randomAssetName, sourceAddress, createResult)
-	database.UpdateAssetNameByAssetId(c, accessKey, assetId, randomAssetName)
+	log.FluentfContext(consts.LOGINFO, c, "Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, assetDescription, sourceAddress, createResult)
+	database.UpdateAssetNameByAssetId(c, accessKey, assetId, asset)
 
 	// Sign the transactions
 	signed, err := signRawTransaction(c, passphrase, createResult)
