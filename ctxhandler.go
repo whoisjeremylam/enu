@@ -17,13 +17,15 @@ import (
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
+/*
 type appError struct {
 	Error   error
 	Message string
 	Code    int
 }
+*/
 
-type ctxHandler func(context.Context, http.ResponseWriter, *http.Request) *appError
+type ctxHandler func(context.Context, http.ResponseWriter, *http.Request) *enulib.AppError
 
 func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()

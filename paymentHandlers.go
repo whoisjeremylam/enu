@@ -16,7 +16,7 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 
 	var simplePayment enulib.SimplePayment
 	requestId := c.Value(consts.RequestIdKey).(string)
@@ -76,7 +76,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request) *a
 	return nil
 }
 
-func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 
 	var payment enulib.SimplePayment
 	requestId := c.Value(consts.RequestIdKey).(string)
@@ -131,7 +131,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request) *ap
 	return nil
 }
 
-func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 
 	var payment enulib.SimplePayment
 	requestId := c.Value(consts.RequestIdKey).(string)
@@ -189,7 +189,7 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 	return nil
 }
 
-func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 
 	var payment enulib.SimplePayment
 	requestId := c.Value(consts.RequestIdKey).(string)

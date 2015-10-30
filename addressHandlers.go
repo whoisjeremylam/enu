@@ -13,7 +13,7 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 	var address enulib.Address
 	requestId := c.Value(consts.RequestIdKey).(string)
 	address.RequestId = requestId

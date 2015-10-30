@@ -17,7 +17,7 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var wallet counterpartycrypto.CounterpartyWallet
 	requestId := c.Value(consts.RequestIdKey).(string)
@@ -62,7 +62,7 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *en
 	return nil
 }
 
-func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var walletPayment enulib.WalletPayment
 	var paymentTag string
@@ -117,7 +117,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request) *enul
 	return nil
 }
 
-func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var walletbalance enulib.AddressBalances
 
@@ -192,7 +192,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request) *e
 	return nil
 }
 
-func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 	requestId := c.Value(consts.RequestIdKey).(string)
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
