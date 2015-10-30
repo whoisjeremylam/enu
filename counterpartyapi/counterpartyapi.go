@@ -1498,6 +1498,8 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	if isInit == false {
 		Init()
 	}
+	//	var complete bool = false
+	//	var retries int = 0
 
 	// Copy same context values to local variables which are often accessed
 	accessKey := c.Value(consts.AccessKeyKey).(string)
@@ -1513,6 +1515,10 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	}{
 		{"1E5YgFkC4HNHwWTF5iUdDbKpzry1SRLv8e", "bound social cookie wrong yet story cigarette descend metal drug waste candle", "counterparty"},
 	}
+
+	//	for complete == false && retries <=3 {
+
+	//	}
 
 	// Pick an internal address to send from
 	var randomNumber int = 0
@@ -1551,8 +1557,8 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
 
 	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+30000)
-	time.Sleep(time.Duration(counterparty_BackEndPollRate+30000) * time.Millisecond)
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+60000)
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+60000) * time.Millisecond)
 
 	defer counterparty_Mutexes.Unlock()
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
