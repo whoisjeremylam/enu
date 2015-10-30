@@ -182,7 +182,8 @@ func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId 
 		return errors.New(errorString)
 	}
 
-	stmt, err := Db.Prepare("update assets set status='error', errorCode=? errorDescription=? where accessKey=? and assetId = ?")
+	//	log.FluentfContext(consts.LOGINFO, c, "update assets set status='error', errorCode=%d, errorDescription=%s where accessKey=%s and assetId = %s", errorCode, errorDescription, accessKey, assetId)
+	stmt, err := Db.Prepare("update assets set status='error', errorCode=?, errorDescription=? where accessKey=? and assetId = ?")
 	if err != nil {
 		return err
 	}

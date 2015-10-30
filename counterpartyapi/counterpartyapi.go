@@ -1328,6 +1328,8 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	// Create the issuance
 	createResult, errCode, err := CreateIssuance(c, sourceAddress, asset, assetDescription, quantity, divisible, sourceAddressPubKey)
 	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in CreateIssuance(): %s", err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, errCode, err.Error())
 		return "", errCode, err
 	}
 
