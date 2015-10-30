@@ -1236,8 +1236,8 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
 	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
-	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+10000)
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+10000) * time.Millisecond)
 
 	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
