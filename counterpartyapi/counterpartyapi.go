@@ -1551,8 +1551,8 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
 
 	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+10000)
-	time.Sleep(time.Duration(counterparty_BackEndPollRate+10000) * time.Millisecond)
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+30000)
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+30000) * time.Millisecond)
 
 	defer counterparty_Mutexes.Unlock()
 	defer counterparty_Mutexes.m[sourceAddress].Unlock()
