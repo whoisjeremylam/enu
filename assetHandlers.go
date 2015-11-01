@@ -9,7 +9,6 @@ import (
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/counterpartycrypto"
-	"github.com/vennd/enu/counterpartyhandlers"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 
@@ -18,7 +17,12 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
+
+	var assetStruct enulib.Asset
+	requestId := c.Value(consts.RequestIdKey).(string)
+	assetStruct.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	// Add to the context the RequestType
 	c = context.WithValue(c, consts.RequestTypeKey, "asset")
@@ -30,28 +34,56 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enu
 		return nil
 	}
 
-	blockchainId := m["blockchainId"].(string)
-	if m["blockchainId"] != nil {
-		// check if blockchainId is valid
-		c = context.WithValue(c, consts.BlockchainIdKey, blockchainId)
-	} else {
-		// set error no blockchain specified
+	passphrase := m["passphrase"].(string)
+	sourceAddress := m["sourceAddress"].(string)
+	asset := m["asset"].(string)
+	//	description := m["description"].(string)
+	quantity := uint64(m["quantity"].(float64))
+	divisible := m["divisible"].(bool)
+
+	log.FluentfContext(consts.LOGINFO, c, "AssetCreate: received request sourceAddress: %s, asset: %s, quantity: %s, divisible: %b from accessKey: %s\n", sourceAddress, asset, quantity, divisible, c.Value(consts.AccessKeyKey).(string))
+
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
+
+		ReturnServerError(c, w, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description))
+		return nil
 	}
 
-	if blockchainId == consts.CounterpartyBlockchainId {
-		err := counterpartyhandlers.AssetCreate(c, w, r, m)
+	log.FluentfContext(consts.LOGINFO, c, "retrieved publickey: %s", sourceAddressPubKey)
 
-		return err
-	} else if blockchainId == consts.RippleBlockchainId {
-		//		err := ripple.AssetCreate(c, w, r, m)
-		err := counterpartyhandlers.AssetCreate(c, w, r, m)
-		return err
+	// Generate random asset name
+	randomAssetName, errorCode, err := counterpartyapi.GenerateRandomAssetName(c)
+	if err != nil {
+		ReturnServerError(c, w, errorCode, err)
+
+		return nil
 	}
+
+	// Generate an assetId
+	assetId := enulib.GenerateAssetId()
+	log.Printf("Generated assetId: %s", assetId)
+	assetStruct.AssetId = assetId
+	assetStruct.Asset = randomAssetName
+	assetStruct.Description = asset
+	assetStruct.Quantity = quantity
+	assetStruct.Divisible = divisible
+	assetStruct.SourceAddress = sourceAddress
+
+	// Return to the client the assetId and unblock the client
+	w.WriteHeader(http.StatusCreated)
+	if err = json.NewEncoder(w).Encode(assetStruct); err != nil {
+		panic(err)
+	}
+
+	// Start asset creation in async mode
+	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, randomAssetName, asset, quantity, divisible)
 
 	return nil
 }
 
-func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var dividendStruct enulib.Dividend
 	requestId := c.Value(consts.RequestIdKey).(string)
@@ -117,7 +149,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request) *
 	return nil
 }
 
-func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var issuanceForAsset enulib.AssetIssuances
 
@@ -202,7 +234,7 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request) *
 }
 
 // Recommended call which summarises the ledger for a particular asset
-func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var assetBalances enulib.AssetBalances
 
@@ -300,7 +332,7 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request) *enu
 	return nil
 }
 
-func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 	var dividend enulib.Dividend
 	requestId := c.Value(consts.RequestIdKey).(string)
 	dividend.RequestId = requestId
@@ -358,7 +390,7 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request) *enu
 	return nil
 }
 
-func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 	var asset enulib.Asset
 	requestId := c.Value(consts.RequestIdKey).(string)
 	asset.RequestId = requestId

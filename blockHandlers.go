@@ -12,7 +12,7 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-func GetBlocks(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+func GetBlocks(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
 
 	var blocks enulib.Blocks
 	requestId := c.Value(consts.RequestIdKey).(string)

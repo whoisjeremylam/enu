@@ -1,7 +1,5 @@
 package main
 
-// note this code has been moved to the handlers package
-
 import (
 	"bytes"
 	"encoding/json"
