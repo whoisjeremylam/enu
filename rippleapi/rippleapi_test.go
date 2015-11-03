@@ -217,7 +217,7 @@ func TestGetTrustLines(t *testing.T) {
 
 }
 */
-
+/*
 func TestPostAccountlines(t *testing.T) {
 
 	c := context.TODO()
@@ -233,7 +233,7 @@ func TestPostAccountlines(t *testing.T) {
 	log.Printf("Result: %s", result)
 
 }
-
+*/
 /*
 func TestPostServerInfo(t *testing.T) {
 
@@ -251,3 +251,19 @@ func TestPostServerInfo(t *testing.T) {
 
 }
 */
+
+func TestGetCurrenciesByAccount(t *testing.T) {
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "testing_"+enulib.GenerateRequestId())
+
+	// positive test
+	result, _, err := GetCurrenciesByAccount(c, account)
+
+	if err != nil {
+		t.Errorf(err.Error())
+	}
+
+	log.Printf("Result: %s", result)
+
+}

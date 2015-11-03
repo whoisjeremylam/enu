@@ -3,18 +3,16 @@ package rippleapi
 import (
 	"bytes"
 
+	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	//	"math/big"
-	//"net"
+	"math/big"
 	"net/http"
-	//"net/rpc"
 	"os"
 	"strconv"
-	//	"sync"
 	"time"
 
 	"github.com/vennd/enu/consts"
@@ -149,11 +147,11 @@ type GetTrustline struct {
 }
 
 type PayloadGetAccountlines struct {
-	Method string     `json:"method"`
-	Params Parameters `json:"params"`
+	Method string            `json:"method"`
+	Params ParmsGetAcctlines `json:"params"`
 }
 
-type Parameters []PayloadGetAccountlinesParms
+type ParmsGetAcctlines []PayloadGetAccountlinesParms
 
 type PayloadGetAccountlinesParms struct {
 	Account string `json:"account"`
@@ -194,10 +192,44 @@ type payloadGetServerInfo struct {
 
 type payloadGetServerInfoParams struct{}
 
+type payloadGetCurrenciesByAccount struct {
+	Method string                   `json:"method"`
+	Params payloadGetCcyByAcctParms `json:"params"`
+}
+
+type payloadGetCcyByAcctParms []PayloadGetCcyByAcct
+
+type PayloadGetCcyByAcct struct {
+	Account       string `json:"account"`
+	Account_index int64  `json:"account_index"`
+	Ledger_index  string `json:"ledger_index"`
+	Strict        bool   `json:"strict"`
+}
+
+type CurrenciesByAccount struct {
+	Result CcyByAccountResult `json:"result"`
+}
+
+type CcyByAccountResult struct {
+	Ledger_hash       string   `json:"ledger_hash"`
+	Ledger_index      int64    `json:"ledger_index"`
+	ReceiveCurrencies []string `json:"receive_currencies"`
+	SendCurrencies    []string `json:"send_currencies"`
+	Status            string   `json:"status"`
+	Validated         bool     `json:"validated"`
+}
+
+type Currency struct {
+	Currency string `json:"currency"`
+}
+
 // Initialises global variables and database connection for all handlers
 var isInit bool = false // set to true only after the init sequence is complete
 var rippleHost string
 var rippleRestHost string
+
+var numericAssetIdMinString = "95428956661682176"
+var numericAssetIdMaxString = "18446744073709551616"
 
 func Init() {
 	var configFilePath string
@@ -400,7 +432,7 @@ func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int
 		return result, 0, nil
 	}
 
-	return nil, 0, nil
+	return result, 0, nil
 }
 
 func generateId(c context.Context) uint32 {
@@ -823,4 +855,134 @@ func PostServerInfo(c context.Context) ([]byte, int64, error) {
 		}
 	*/
 	return result, errorCode, nil
+}
+
+func GenerateRandomAssetName(c context.Context) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	// Generate random asset name
+	var err error
+	var randomAssetName string
+	var assetExists string = "false"
+
+	// set masteraccount for vennd somewhere
+	var masterAccount = ""
+	randomAssetName, err = generateRandomAssetName(c)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in generateRandomAssetName(): %s", err.Error())
+		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	// If random asset name already exists, keep trying until we find a spare one
+
+	currenciesByAccount, errorCode, err := GetCurrenciesByAccount(c, masterAccount)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in GetCurrenciesByAccount(): %s, errorCode: %d", err.Error(), errorCode)
+		return "", errorCode, err
+	}
+
+	for assetExists == "true" {
+		for _, a := range currenciesByAccount.Result.SendCurrencies {
+			if a == randomAssetName {
+				assetExists = "true"
+				break
+			}
+		}
+		if assetExists == "true" {
+			randomAssetName, err = generateRandomAssetName(c)
+			if err != nil {
+				log.FluentfContext(consts.LOGERROR, c, "Error in generateRandomAssetName(): %s", err.Error())
+				return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+			}
+
+		} else {
+			break
+		}
+
+	}
+
+	return randomAssetName, 0, nil
+}
+
+func generateRandomAssetName(c context.Context) (string, error) {
+	numericAssetIdMin := new(big.Int)
+	numericAssetIdMax := new(big.Int)
+	//	var err error
+
+	numericAssetIdMin.SetString(numericAssetIdMinString, 10)
+	numericAssetIdMax.SetString(numericAssetIdMaxString, 10)
+
+	//	log.Printf("numericAssetIdMax: %s", numericAssetIdMin.String())
+	//	log.Printf("numericAssetIdMin: %s", numericAssetIdMax.String())
+
+	numericAssetIdMax = numericAssetIdMax.Add(numericAssetIdMax, numericAssetIdMin)
+
+	x, err := rand.Int(rand.Reader, numericAssetIdMax)
+	xFinal := x.Sub(x, numericAssetIdMin)
+
+	if err != nil {
+		return "", err
+	}
+
+	return "A" + string(xFinal.String()), nil
+}
+
+func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAccount, int64, error) {
+	var payload payloadGetCurrenciesByAccount
+	var result CurrenciesByAccount
+	var result2 []string
+	var result3 []string
+
+	if isInit == false {
+		Init()
+	}
+
+	payload.Method = "account_currencies"
+	parms := PayloadGetCcyByAcct{Account: account, Account_index: 0, Ledger_index: "validated", Strict: true}
+	payload.Params = append(payload.Params, parms)
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return result, errorCode, err
+	}
+
+	// Get result from api and create the reply
+	if responseData["result"] != nil {
+		resultMap := responseData["result"].(map[string]interface{})
+		recCcys := resultMap["receive_currencies"].([]interface{})
+		sendCcys := resultMap["send_currencies"].([]interface{})
+
+		log.Println("Mapped:")
+		log.Printf("%#v\n", resultMap)
+		log.Printf("%#v\n", recCcys)
+		log.Printf("%#v\n", sendCcys)
+
+		for _, b := range sendCcys {
+			c := b.(string)
+			result2 = append(result2, c)
+		}
+		for _, b := range recCcys {
+			d := b.(string)
+			result3 = append(result3, d)
+		}
+
+		result = CurrenciesByAccount{CcyByAccountResult{
+			Ledger_hash:       resultMap["ledger_hash"].(string),
+			Ledger_index:      int64(resultMap["ledger_index"].(float64)),
+			ReceiveCurrencies: result2,
+			SendCurrencies:    result3,
+			Status:            resultMap["status"].(string),
+			Validated:         resultMap["validated"].(bool),
+		}}
+	}
+
+	return result, 0, nil
 }
