@@ -878,6 +878,7 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 	//	log.Printf("Deserialised ok!: %+v", tx)
 
 	msgTx := tx.MsgTx()
+	redeemTx := wire.NewMsgTx() // Create a new transaction and copy the details from the tx that was serialised. For some reason BTCD can't sign in place transactions
 	//	log.Printf("MsgTx: %+v", msgTx)
 	//	log.Printf("Number of txes in: %d\n", len(msgTx.TxIn))
 	for i := 0; i <= len(msgTx.TxIn)-1; i++ {
@@ -885,9 +886,9 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		//		log.Printf("TxIn[%d].PreviousOutPoint.Hash: %s\n", i, msgTx.TxIn[i].PreviousOutPoint.Hash)
 		//		log.Printf("TxIn[%d].PreviousOutPoint.Index: %d\n", i, msgTx.TxIn[i].PreviousOutPoint.Index)
 		//		log.Printf("TxIn[%d].SignatureScript: %s\n", i, hex.EncodeToString(msgTx.TxIn[i].SignatureScript))
-		//		scriptHex := "76a914128004ff2fcaf13b2b91eb654b1dc2b674f7ec6188ac"
 		script := msgTx.TxIn[i].SignatureScript
 
+		// Following block is for debugging only
 		//		disasm, err := txscript.DisasmString(script)
 		//		if err != nil {
 		//			return "", err
@@ -895,6 +896,7 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		//		log.Printf("TxIn[%d] Script Disassembly: %s", i, disasm)
 
 		// Extract and print details from the script.
+		// next line is for debugging only
 		//		scriptClass, addresses, reqSigs, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
 		scriptClass, _, _, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
 		if err != nil {
@@ -903,29 +905,36 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		}
 
 		// This function only supports pubkeyhash signing at this time (ie not multisig or P2SH)
-		//				log.Printf("TxIn[%d] Script Class: %s\n", i, scriptClass)
+		//		log.Printf("TxIn[%d] Script Class: %s\n", i, scriptClass)
 		if scriptClass.String() != "pubkeyhash" {
 			return "", errors.New("Counterparty_SignRawTransaction() currently only supports pubkeyhash script signing. However, the script type in the TX to sign was: " + scriptClass.String())
 		}
 
 		//		log.Printf("TxIn[%d] Addresses: %s\n", i, addresses)
 		//		log.Printf("TxIn[%d] Required Signatures: %d\n", i, reqSigs)
+
+		// Build txIn for new redeeming transaction
+		prevOut := wire.NewOutPoint(&msgTx.TxIn[i].PreviousOutPoint.Hash, msgTx.TxIn[i].PreviousOutPoint.Index)
+		txIn := wire.NewTxIn(prevOut, nil)
+		redeemTx.AddTxIn(txIn)
 	}
 
-	msgScript := msgTx.TxIn[0].SignatureScript
+	// Copy TxOuts from serialised tx
+	for _, txOut := range msgTx.TxOut {
+		out := txOut
+		redeemTx.AddTxOut(out)
+	}
 
 	// Callback to look up the signing key
 	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
 		address := a.String()
 
 		//		log.Printf("Looking up the private key for: %s\n", address)
-
 		privateKeyString, err := counterpartycrypto.GetPrivateKey(passphrase, address)
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in counterpartycrypto.GetPrivateKey(): %s", err.Error())
 			return nil, false, nil
 		}
-
 		//		log.Printf("Private key retrieved!\n")
 
 		privateKeyBytes, err := hex.DecodeString(privateKeyString)
@@ -940,42 +949,55 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 	}
 
 	// Range over TxIns and sign
-	for i, txIn := range msgTx.TxIn {
+	for i, _ := range redeemTx.TxIn {
 		// Get the sigscript
 		// Notice that the script database parameter is nil here since it isn't
 		// used.  It must be specified when pay-to-script-hash transactions are
 		// being signed.
-		sigScript, err := txscript.SignTxOutput(&chaincfg.MainNetParams, msgTx, 0, txIn.SignatureScript, txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+		sigScript, err := txscript.SignTxOutput(&chaincfg.MainNetParams, redeemTx, i, msgTx.TxIn[i].SignatureScript, txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+
 		if err != nil {
 			return "", err
 		}
 
-		// Copy the signed sigscript into the tx
-		msgTx.TxIn[i].SignatureScript = sigScript
+		// Copy the signed sigscript into the redeeming tx
+		redeemTx.TxIn[i].SignatureScript = sigScript
+		//		log.Println(hex.EncodeToString(sigScript))
 	}
 
 	// Prove that the transaction has been validly signed by executing the
 	// script pair.
-	flags := txscript.ScriptBip16 | txscript.ScriptVerifyDERSignatures | txscript.ScriptStrictMultiSig | txscript.ScriptDiscourageUpgradableNops
-	vm, err := txscript.NewEngine(msgScript, msgTx, 0, flags)
-	if err != nil {
-		return "", err
+	//	log.Println("Checking signature(s)")
+	flags := txscript.ScriptBip16 | txscript.ScriptVerifyDERSignatures | txscript.ScriptStrictMultiSig | txscript.ScriptDiscourageUpgradableNops | txscript.ScriptVerifyLowS | txscript.ScriptVerifyCleanStack | txscript.ScriptVerifyMinimalData | txscript.ScriptVerifySigPushOnly | txscript.ScriptVerifyStrictEncoding
+	var buildError string
+	for i, _ := range redeemTx.TxIn {
+		vm, err := txscript.NewEngine(msgTx.TxIn[i].SignatureScript, redeemTx, i, flags)
+		if err != nil {
+			buildError += "NewEngine() error: " + err.Error() + ","
+		}
+
+		if err := vm.Execute(); err != nil {
+			buildError += "TxIn[" + strconv.Itoa(i) + "]: " + err.Error() + ", "
+		} else {
+			// Signature verified
+			//			log.Printf("TxIn[%d] ok!\n", i)
+		}
 	}
-	if err := vm.Execute(); err != nil {
-		return "", err
+	if len(buildError) > 0 {
+		return "", errors.New(buildError)
 	}
 	//	log.Println("Transaction successfully signed")
 
+	// Encode the struct into BTC bytes wire format
 	var byteBuffer bytes.Buffer
-	encodeError := msgTx.BtcEncode(&byteBuffer, wire.ProtocolVersion)
-
+	encodeError := redeemTx.BtcEncode(&byteBuffer, wire.ProtocolVersion)
 	if encodeError != nil {
 		return "", err
 	}
 
+	// Encode bytes to hex string
 	payloadBytes := byteBuffer.Bytes()
 	payloadHexString := hex.EncodeToString(payloadBytes)
-
 	//	log.Printf("Signed and encoded transaction: %s\n", payloadHexString)
 
 	return payloadHexString, nil
