@@ -44,7 +44,6 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request) *enu
 
 		return err
 	} else if blockchainId == consts.RippleBlockchainId {
-		//		err := ripple.AssetCreate(c, w, r, m)
 		err := ripplehandlers.AssetCreate(c, w, r, m)
 		return err
 	}
