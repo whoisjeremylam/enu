@@ -8,10 +8,10 @@ import (
 	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
-	"github.com/vennd/enu/counterpartycrypto"
+	//	"github.com/vennd/enu/counterpartycrypto"
 
+	"github.com/vennd/enu/counterpartyhandlers"
 	"github.com/vennd/enu/enulib"
-
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 	"github.com/vennd/enu/log"
