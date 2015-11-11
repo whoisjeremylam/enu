@@ -1,0 +1,5 @@
+{
+  "Comment": "Key used for unit testing",
+  "Key": "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16",
+  "Secret": "a06d8cfa8692973c755b3b7321a8af7de448ec56dcfe3739716f5fa11187e4ac"
+}
