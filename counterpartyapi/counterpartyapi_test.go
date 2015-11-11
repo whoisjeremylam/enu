@@ -1,6 +1,7 @@
 package counterpartyapi
 
 import (
+	"log"
 	"reflect"
 	"testing"
 
@@ -142,6 +143,62 @@ func TestGetBalancesByAddress(t *testing.T) {
 
 }
 
+func TestGetSendsByAddress(t *testing.T) {
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+
+	// Retrieve address which is empty
+	resultGetSendsByAddress, errorCode, err := GetSendsByAddress(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
+	log.Printf("%+#v", resultGetSendsByAddress)
+	if err != nil || errorCode != 0 {
+		t.Errorf(err.Error())
+	}
+	if len(resultGetSendsByAddress) == 0 {
+		t.Errorf("Expected: resultGetSendsByAddress != [], Got: %s\n", resultGetSendsByAddress)
+	}
+
+	//	// Retrieve 1enuEmptyAdd8ALj6mfBsbifRoD4miY36v which is abandoned
+	//	resultGetBalances, errorCode, err = GetBalancesByAddress(c, "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy")
+	//	if err != nil || errorCode != 0 {
+	//		t.Errorf(err.Error())
+	//	}
+
+	//	if reflect.DeepEqual(resultGetBalances, getBalancesByAddressExpectedTestData) != true {
+	//		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAddressExpectedTestData, resultGetBalances)
+	//	}
+
+}
+
+func TestGetSendsByAddressDB(t *testing.T) {
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+
+	// Retrieve address which is empty
+	resultGetSendsByAddress, errorCode, err := GetSendsByAddressDB(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
+	log.Printf("%+#v", resultGetSendsByAddress)
+	if err != nil || errorCode != 0 {
+		t.Errorf(err.Error())
+	}
+	if len(resultGetSendsByAddress) == 0 {
+		t.Errorf("Expected: resultGetSendsByAddress != [], Got: %s\n", resultGetSendsByAddress)
+	}
+
+	//	// Retrieve 1enuEmptyAdd8ALj6mfBsbifRoD4miY36v which is abandoned
+	//	resultGetBalances, errorCode, err = GetBalancesByAddress(c, "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy")
+	//	if err != nil || errorCode != 0 {
+	//		t.Errorf(err.Error())
+	//	}
+
+	//	if reflect.DeepEqual(resultGetBalances, getBalancesByAddressExpectedTestData) != true {
+	//		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAddressExpectedTestData, resultGetBalances)
+	//	}
+
+}
+
 func TestCreateSend(t *testing.T) {
 	var testData = []struct {
 		From              string
@@ -184,7 +241,7 @@ func TestSignRawTransaction(t *testing.T) {
 		ExpectedResult  string
 		CaseDescription string
 	}{
-		{passphrase, "010000000241b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1c7b4ca6c1f0494d0c3130c48853dfdde4d7c5bc46552b723f7a9500a4107a0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "010000000241b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000006a47304402203208c8ce67d3a7ec0c06e725f6f336da292e120b79ba45eeda7aacacc02a3f51022044a975f4bcdd7ffcc9ccebdedc5dc23cd01b63df0dcddeb3b30e0121fcb589760121026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb6ffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000006a47304402203208c8ce67d3a7ec0c06e725f6f336da292e120b79ba45eeda7aacacc02a3f51022044a975f4bcdd7ffcc9ccebdedc5dc23cd01b63df0dcddeb3b30e0121fcb589760121026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb6ffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1c7b4ca6c1f0494d0c3130c48853dfdde4d7c5bc46552b723f7a9500a4107a0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "Successful test tx with 2 txins"},
+		{passphrase, "010000000241b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1c7b4ca6c1f0494d0c3130c48853dfdde4d7c5bc46552b723f7a9500a4107a0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "010000000241b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000006a47304402203208c8ce67d3a7ec0c06e725f6f336da292e120b79ba45eeda7aacacc02a3f51022044a975f4bcdd7ffcc9ccebdedc5dc23cd01b63df0dcddeb3b30e0121fcb589760121026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb6ffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000006a473044022000886f6c52ff6740f0fdb570d2db55f71be0ebdf52b997bb06899e6985e898d30220453fd04c82a6df614743bcb7cf87ed3b72bc92931347fbab043d8fda043c12f30121026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb6ffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1c7b4ca6c1f0494d0c3130c48853dfdde4d7c5bc46552b723f7a9500a4107a0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", "Successful test tx with 2 txins"},
 		{passphrase, "010000000109be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741010000001976a914b676d3212ba3532d234b1b09f21c83d437b9507088acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1ce940a04c56a5340496081336e4b77e9a9ee153672a7a49a86681a953ba1f4400000000001976a914b676d3212ba3532d234b1b09f21c83d437b9507088ac00000000", "010000000109be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741010000006a473044022021cb8ed89a682fcc49482ef3e60fe560fc402e6270019afcbab662079d7e5e3c0220179547b95af8d87b81dde8f3bfeee0c70ac6c7d004bf385839fa16a8a964ad4a01210375f15dbf58283272224893c533fd046b11be427885a48b120b4be9395e3cf21cffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1ce940a04c56a5340496081336e4b77e9a9ee153672a7a49a86681a953ba1f4400000000001976a914b676d3212ba3532d234b1b09f21c83d437b9507088ac00000000", "Successful test tx with 1 txin"},
 	}
 

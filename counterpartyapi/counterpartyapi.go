@@ -234,6 +234,26 @@ type RunningInfo struct {
 	LastBlock            LastBlock `json:"last_block"`
 }
 
+//tx_index (integer): The transaction index
+//tx_hash (string): The transaction hash
+//block_index (integer): The block index (block number in the block chain)
+//source (string): The source address of the send
+//destination (string): The destination address of the send
+//asset (string): The assets being sent
+//quantity (integer): The quantities of the specified asset sent
+//validity (string): Set to “valid” if a valid send. Any other setting signifies an invalid/improper send
+type ResultGetSends struct {
+	TxIndex     uint64 `json:"tx_index"`
+	TxHash      string `json:"tx_hash"`
+	BlockIndex  uint64 `json:"block_index"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+	Asset       string `json:"asset"`
+	Quantity    uint64 `json:"quantity"`
+	Validity    uint64 `json:"validity"`
+	Status      string `json:"status"`
+}
+
 // Globals
 var isInit bool = false // set to true only after the init sequence is complete
 var counterpartyHost string
@@ -662,6 +682,121 @@ func GetBalancesByAssetDB(c context.Context, asset string) ([]Balance, int64, er
 	return result, 0, nil
 }
 
+func GetSendsByAddress(c context.Context, address string) ([]ResultGetSends, int64, error) {
+	var payload = make(map[string]interface{})
+	var params = make(map[string]interface{})
+	var result []ResultGetSends
+
+	if isInit == false {
+		Init()
+	}
+
+	var filterArray filters
+	filterCondition := filter{Field: "destination", Op: "==", Value: address}
+	filterArray = append(filterArray, filterCondition)
+
+	params["filters"] = filterArray
+	params["filterop"] = "OR"
+	params["status"] = "valid"
+
+	payload["method"] = "get_sends"
+	payload["params"] = params
+	payload["jsonrpc"] = "2.0"
+	payload["id"] = generateId(c)
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postAPI(c, payloadJsonBytes)
+	if err != nil {
+		//		 Counterparty DB is behind backend / reparsing or timed out, read directly from DB
+		if errorCode == consts.CounterpartyErrors.ReparsingOrUnavailable.Code || errorCode == consts.CounterpartyErrors.Timeout.Code {
+			return GetSendsByAddressDB(c, address)
+		}
+
+		return result, errorCode, err
+	}
+
+	// Range over the result from api and create the reply
+	if responseData["result"] != nil {
+		for _, b := range responseData["result"].([]interface{}) {
+			c := b.(map[string]interface{})
+			result = append(result,
+				ResultGetSends{Source: c["source"].(string),
+					Destination: c["destination"].(string),
+					Asset:       c["asset"].(string),
+					Quantity:    uint64(c["quantity"].(float64)),
+					BlockIndex:  uint64(c["block_index"].(float64)),
+					TxHash:      string(c["tx_hash"].(string)),
+					TxIndex:     uint64(c["tx_index"].(float64))})
+		}
+	}
+
+	return result, 0, nil
+}
+
+func GetSendsByAddressDB(c context.Context, address string) ([]ResultGetSends, int64, error) {
+	var result []ResultGetSends
+
+	// sqlite drivers are not concurrency safe, so must create a connection each time
+	db, err := sql.Open("sqlite3", counterpartyDBLocation)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to open DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	err = db.Ping()
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to ping DB. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	//	 Query DB
+	//	log.Fluentf(consts.LOGDEBUG, "select tx_index, tx_hash, block_index, source, destination, asset, quantity, status from sends where destination = %s", address)
+	stmt, err := db.Prepare("select tx_index, tx_hash, block_index, source, destination, asset, quantity, status from sends where destination = ?")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+	defer stmt.Close()
+
+	//	 Get row
+	rows, err := stmt.Query(address)
+	defer rows.Close()
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Failed to query. Reason: %s", err.Error())
+		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+	}
+
+	for rows.Next() {
+		var send = ResultGetSends{}
+		var txindex uint64
+		var txhash []byte
+		var blockindex uint64
+		var source []byte
+		var destination []byte
+		var asset []byte
+		var quantity uint64
+		var status []byte
+
+		if err := rows.Scan(&txindex, &txhash, &blockindex, &source, &destination, &asset, &quantity, &status); err == sql.ErrNoRows {
+			if err.Error() == "sql: no rows in result set" {
+			}
+		} else if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		} else {
+			send = ResultGetSends{TxIndex: txindex, TxHash: string(txhash), BlockIndex: blockindex, Source: string(source), Destination: string(destination), Asset: string(asset), Quantity: quantity, Status: string(status)}
+		}
+
+		result = append(result, send)
+	}
+
+	return result, 0, nil
+}
+
 func GetIssuances(c context.Context, asset string) ([]Issuance, int64, error) {
 	var payload payloadGetIssuances
 	var result []Issuance
@@ -878,6 +1013,7 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 	//	log.Printf("Deserialised ok!: %+v", tx)
 
 	msgTx := tx.MsgTx()
+	redeemTx := wire.NewMsgTx() // Create a new transaction and copy the details from the tx that was serialised. For some reason BTCD can't sign in place transactions
 	//	log.Printf("MsgTx: %+v", msgTx)
 	//	log.Printf("Number of txes in: %d\n", len(msgTx.TxIn))
 	for i := 0; i <= len(msgTx.TxIn)-1; i++ {
@@ -885,9 +1021,9 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		//		log.Printf("TxIn[%d].PreviousOutPoint.Hash: %s\n", i, msgTx.TxIn[i].PreviousOutPoint.Hash)
 		//		log.Printf("TxIn[%d].PreviousOutPoint.Index: %d\n", i, msgTx.TxIn[i].PreviousOutPoint.Index)
 		//		log.Printf("TxIn[%d].SignatureScript: %s\n", i, hex.EncodeToString(msgTx.TxIn[i].SignatureScript))
-		//		scriptHex := "76a914128004ff2fcaf13b2b91eb654b1dc2b674f7ec6188ac"
 		script := msgTx.TxIn[i].SignatureScript
 
+		// Following block is for debugging only
 		//		disasm, err := txscript.DisasmString(script)
 		//		if err != nil {
 		//			return "", err
@@ -895,6 +1031,7 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		//		log.Printf("TxIn[%d] Script Disassembly: %s", i, disasm)
 
 		// Extract and print details from the script.
+		// next line is for debugging only
 		//		scriptClass, addresses, reqSigs, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
 		scriptClass, _, _, err := txscript.ExtractPkScriptAddrs(script, &chaincfg.MainNetParams)
 		if err != nil {
@@ -903,29 +1040,36 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 		}
 
 		// This function only supports pubkeyhash signing at this time (ie not multisig or P2SH)
-		//				log.Printf("TxIn[%d] Script Class: %s\n", i, scriptClass)
+		//		log.Printf("TxIn[%d] Script Class: %s\n", i, scriptClass)
 		if scriptClass.String() != "pubkeyhash" {
 			return "", errors.New("Counterparty_SignRawTransaction() currently only supports pubkeyhash script signing. However, the script type in the TX to sign was: " + scriptClass.String())
 		}
 
 		//		log.Printf("TxIn[%d] Addresses: %s\n", i, addresses)
 		//		log.Printf("TxIn[%d] Required Signatures: %d\n", i, reqSigs)
+
+		// Build txIn for new redeeming transaction
+		prevOut := wire.NewOutPoint(&msgTx.TxIn[i].PreviousOutPoint.Hash, msgTx.TxIn[i].PreviousOutPoint.Index)
+		txIn := wire.NewTxIn(prevOut, nil)
+		redeemTx.AddTxIn(txIn)
 	}
 
-	msgScript := msgTx.TxIn[0].SignatureScript
+	// Copy TxOuts from serialised tx
+	for _, txOut := range msgTx.TxOut {
+		out := txOut
+		redeemTx.AddTxOut(out)
+	}
 
 	// Callback to look up the signing key
 	lookupKey := func(a btcutil.Address) (*btcec.PrivateKey, bool, error) {
 		address := a.String()
 
 		//		log.Printf("Looking up the private key for: %s\n", address)
-
 		privateKeyString, err := counterpartycrypto.GetPrivateKey(passphrase, address)
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in counterpartycrypto.GetPrivateKey(): %s", err.Error())
 			return nil, false, nil
 		}
-
 		//		log.Printf("Private key retrieved!\n")
 
 		privateKeyBytes, err := hex.DecodeString(privateKeyString)
@@ -940,42 +1084,55 @@ func signRawTransaction(c context.Context, passphrase string, rawTxHexString str
 	}
 
 	// Range over TxIns and sign
-	for i, txIn := range msgTx.TxIn {
+	for i, _ := range redeemTx.TxIn {
 		// Get the sigscript
 		// Notice that the script database parameter is nil here since it isn't
 		// used.  It must be specified when pay-to-script-hash transactions are
 		// being signed.
-		sigScript, err := txscript.SignTxOutput(&chaincfg.MainNetParams, msgTx, 0, txIn.SignatureScript, txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+		sigScript, err := txscript.SignTxOutput(&chaincfg.MainNetParams, redeemTx, i, msgTx.TxIn[i].SignatureScript, txscript.SigHashAll, txscript.KeyClosure(lookupKey), nil, nil)
+
 		if err != nil {
 			return "", err
 		}
 
-		// Copy the signed sigscript into the tx
-		msgTx.TxIn[i].SignatureScript = sigScript
+		// Copy the signed sigscript into the redeeming tx
+		redeemTx.TxIn[i].SignatureScript = sigScript
+		//		log.Println(hex.EncodeToString(sigScript))
 	}
 
 	// Prove that the transaction has been validly signed by executing the
 	// script pair.
-	flags := txscript.ScriptBip16 | txscript.ScriptVerifyDERSignatures | txscript.ScriptStrictMultiSig | txscript.ScriptDiscourageUpgradableNops
-	vm, err := txscript.NewEngine(msgScript, msgTx, 0, flags)
-	if err != nil {
-		return "", err
+	//	log.Println("Checking signature(s)")
+	flags := txscript.ScriptBip16 | txscript.ScriptVerifyDERSignatures | txscript.ScriptStrictMultiSig | txscript.ScriptDiscourageUpgradableNops | txscript.ScriptVerifyLowS | txscript.ScriptVerifyCleanStack | txscript.ScriptVerifyMinimalData | txscript.ScriptVerifySigPushOnly | txscript.ScriptVerifyStrictEncoding
+	var buildError string
+	for i, _ := range redeemTx.TxIn {
+		vm, err := txscript.NewEngine(msgTx.TxIn[i].SignatureScript, redeemTx, i, flags)
+		if err != nil {
+			buildError += "NewEngine() error: " + err.Error() + ","
+		}
+
+		if err := vm.Execute(); err != nil {
+			buildError += "TxIn[" + strconv.Itoa(i) + "]: " + err.Error() + ", "
+		} else {
+			// Signature verified
+			//			log.Printf("TxIn[%d] ok!\n", i)
+		}
 	}
-	if err := vm.Execute(); err != nil {
-		return "", err
+	if len(buildError) > 0 {
+		return "", errors.New(buildError)
 	}
 	//	log.Println("Transaction successfully signed")
 
+	// Encode the struct into BTC bytes wire format
 	var byteBuffer bytes.Buffer
-	encodeError := msgTx.BtcEncode(&byteBuffer, wire.ProtocolVersion)
-
+	encodeError := redeemTx.BtcEncode(&byteBuffer, wire.ProtocolVersion)
 	if encodeError != nil {
 		return "", err
 	}
 
+	// Encode bytes to hex string
 	payloadBytes := byteBuffer.Bytes()
 	payloadHexString := hex.EncodeToString(payloadBytes)
-
 	//	log.Printf("Signed and encoded transaction: %s\n", payloadHexString)
 
 	return payloadHexString, nil
@@ -1498,7 +1655,8 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 	if isInit == false {
 		Init()
 	}
-	//	var complete bool = false
+	var complete bool = false
+	var txId string
 	//	var retries int = 0
 
 	// Copy same context values to local variables which are often accessed
@@ -1516,89 +1674,88 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 		{"1E5YgFkC4HNHwWTF5iUdDbKpzry1SRLv8e", "bound social cookie wrong yet story cigarette descend metal drug waste candle", "counterparty"},
 	}
 
-	//	for complete == false && retries <=3 {
+	for complete == false {
+		// Pick an internal address to send from
+		var randomNumber int = 0
+		var sourceAddress = wallets[randomNumber].Address
 
-	//	}
+		// Write the dividend with the generated dividend id to the database
+		database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amount)
 
-	// Pick an internal address to send from
-	var randomNumber int = 0
-	var sourceAddress = wallets[randomNumber].Address
-
-	// Write the dividend with the generated dividend id to the database
-	database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amount)
-
-	// Calculate the quantity of BTC to send by the amount specified
-	// For Counterparty: each transaction = dust_size + miners_fee
-	quantity, asset, err := CalculateFeeAmount(c, amount)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Could not calculate fee: %s", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.MiscError.Code, consts.CounterpartyErrors.MiscError.Description)
-		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
-	}
-
-	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(wallets[randomNumber].Passphrase, sourceAddress)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Err in GetPublicKey(): %s\n", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.InvalidPassphrase.Code, consts.CounterpartyErrors.InvalidPassphrase.Description)
-		return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
-	}
-
-	// Mutex lock this address
-	counterparty_Mutexes.Lock()
-	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
-
-	// If an entry doesn't currently exist in the map for that address
-	if counterparty_Mutexes.m[sourceAddress] == nil {
-		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
-		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
-	}
-
-	counterparty_Mutexes.m[sourceAddress].Lock()
-	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
-
-	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
-	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+60000)
-	time.Sleep(time.Duration(counterparty_BackEndPollRate+60000) * time.Millisecond)
-
-	defer counterparty_Mutexes.Unlock()
-	defer counterparty_Mutexes.m[sourceAddress].Unlock()
-
-	// Write the payment using the activationId as the paymentId to the db
-	go database.InsertPayment(c, accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "")
-
-	// Create the send from the internal wallet to the destination address
-	createResult, errorCode, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in createSend(): %s", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, errorCode, err.Error())
-		return "", errorCode, err
-	}
-
-	log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, addressToActivate, createResult)
-
-	// Sign the transactions
-	signed, err := signRawTransaction(c, wallets[randomNumber].Passphrase, createResult)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in signRawTransaction(): %s", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
-		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
-	}
-
-	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
-
-	//	 Transmit the transaction if not in dev, otherwise stub out the return
-	var txId string
-	if env != "dev" {
-		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+		// Calculate the quantity of BTC to send by the amount specified
+		// For Counterparty: each transaction = dust_size + miners_fee
+		quantity, asset, err := CalculateFeeAmount(c, amount)
 		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
-			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
-			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
+			log.FluentfContext(consts.LOGERROR, c, "Could not calculate fee: %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.MiscError.Code, consts.CounterpartyErrors.MiscError.Description)
+			return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
 		}
 
-		txId = txIdSignedTx
-	} else {
-		txId = "success"
+		sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(wallets[randomNumber].Passphrase, sourceAddress)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Err in GetPublicKey(): %s\n", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.InvalidPassphrase.Code, consts.CounterpartyErrors.InvalidPassphrase.Description)
+			return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
+		}
+
+		// Mutex lock this address
+		counterparty_Mutexes.Lock()
+		log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+
+		// If an entry doesn't currently exist in the map for that address
+		if counterparty_Mutexes.m[sourceAddress] == nil {
+			log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
+			counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
+		}
+
+		counterparty_Mutexes.m[sourceAddress].Lock()
+		log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
+
+		// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
+		log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", counterparty_BackEndPollRate+60000)
+		time.Sleep(time.Duration(counterparty_BackEndPollRate+60000) * time.Millisecond)
+
+		defer counterparty_Mutexes.Unlock()
+		defer counterparty_Mutexes.m[sourceAddress].Unlock()
+
+		// Write the payment using the activationId as the paymentId to the db
+		go database.InsertPayment(c, accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "")
+
+		// Create the send from the internal wallet to the destination address
+		createResult, errorCode, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in createSend(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, errorCode, err.Error())
+			return "", errorCode, err
+		}
+
+		log.FluentfContext(consts.LOGINFO, c, "Created send of %d %s to %s: %s", quantity, asset, addressToActivate, createResult)
+
+		// Sign the transactions
+		signed, err := signRawTransaction(c, wallets[randomNumber].Passphrase, createResult)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in signRawTransaction(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+			return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
+		}
+
+		log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
+
+		//	 Transmit the transaction if not in dev, otherwise stub out the return
+		if env != "dev" {
+			txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
+			if err != nil {
+				log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+				//				database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+				//				return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
+			}
+
+			txId = txIdSignedTx
+			complete = true
+		} else {
+			txId = "success"
+			complete = true
+		}
 	}
 
 	database.UpdatePaymentCompleteByPaymentId(c, accessKey, activationId, txId)
