@@ -11,6 +11,7 @@ import (
 
 	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
+	"github.com/vennd/enu/counterpartyapi"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/log"
@@ -190,7 +191,6 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request) *appE
 }
 
 func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Request) *appError {
-
 	var payment enulib.SimplePayment
 	requestId := c.Value(consts.RequestIdKey).(string)
 	payment.RequestId = requestId
@@ -223,8 +223,22 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 	payments := database.GetPaymentsByAddress(c, c.Value(consts.AccessKeyKey).(string), address)
 	// errorhandling here!!
 
-	// Add the blockchain status
+	// Add payments which weren't initiated by our API
+	sends, errorCode, err := counterpartyapi.GetSendsByAddress(c, address)
+	if err != nil {
+		// Raise error in log but continue
+		log.FluentfContext(consts.LOGERROR, c, "Error in GetSendsByAddress(): %s, errCode: %d", err.Error(), errorCode)
+	}
 
+	log.FluentfContext(consts.LOGINFO, c, "sends: %+v", sends)
+
+	payments, err = mergePaymentsAndSends(payments, sends)
+	if err != nil {
+		// Raise error in log but continue
+		log.FluentfContext(consts.LOGERROR, c, "Error in mergePaymentsAndSends(): %s", err.Error())
+	}
+
+	// Add the blockchain status
 	for i, p := range payments {
 		if p.BroadcastTxId != "" {
 			confirmations, err := bitcoinapi.GetConfirmations(p.BroadcastTxId)
@@ -247,4 +261,67 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 	}
 
 	return nil
+}
+
+// Takes all the payments made via the Enu API and merges it with the sends performed outside of Enu
+func mergePaymentsAndSends(payments []enulib.SimplePayment, sends []counterpartyapi.ResultGetSends) ([]enulib.SimplePayment, error) {
+	var result = make([]enulib.SimplePayment, len(payments))
+
+	// Copy all payments to output
+	copy(result, payments)
+
+	// For each send, check if it exists in the payments
+	for _, send := range sends {
+		var found bool = false
+		for _, payment := range payments {
+			if matches, _ := paymentMatchesSend(payment, send); matches {
+				found = true
+			}
+		}
+
+		// If the payment wasn't found in the payments, then add it to the output
+		if found == false {
+			//			type SimplePayment struct {
+			//	SourceAddress           string `json:"sourceAddress"`
+			//	DestinationAddress      string `json:"destinationAddress"`
+			//	Asset                   string `json:"asset"`
+			//	Amount                  uint64 `json:"amount"`
+			//	PaymentId               string `json:"paymentId"`
+			//	TxFee                   int64  `json:"txFee"`
+			//	BroadcastTxId           string `json:"broadcastTxId"`
+			//	BlockchainStatus        string `json:"blockchainStatus"`
+			//	BlockchainConfirmations uint64 `json:"blockchainConfirmations"`
+			//	PaymentTag              string `json:"paymentTag"`
+			//	Status                  string `json:"status"`
+			//	ErrorCode               int64  `json:"errorCode"`
+			//	ErrorMessage            string `json:"errorMessage"`
+			//	RequestId               string `json:"requestId"`
+			//	Nonce                   int64  `json:"nonce"`
+			//}
+			var payment = enulib.SimplePayment{SourceAddress: send.Source,
+				DestinationAddress: send.Destination,
+				Asset:              send.Asset,
+				Amount:             send.Quantity,
+				Status:             send.Status,
+				BroadcastTxId:      send.TxHash,
+			}
+
+			result = append(result, payment)
+		}
+
+	}
+
+	return result, nil
+}
+
+func paymentMatchesSend(payment enulib.SimplePayment, send counterpartyapi.ResultGetSends) (bool, error) {
+	var result bool = false
+
+	if payment.BroadcastTxId == send.TxHash {
+		result = true
+	} else {
+		result = false
+	}
+
+	return result, nil
 }

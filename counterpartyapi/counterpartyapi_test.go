@@ -1,6 +1,7 @@
 package counterpartyapi
 
 import (
+	"log"
 	"reflect"
 	"testing"
 
@@ -139,6 +140,62 @@ func TestGetBalancesByAddress(t *testing.T) {
 	if reflect.DeepEqual(resultGetBalances, getBalancesByAddressExpectedTestData) != true {
 		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAddressExpectedTestData, resultGetBalances)
 	}
+
+}
+
+func TestGetSendsByAddress(t *testing.T) {
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+
+	// Retrieve address which is empty
+	resultGetSendsByAddress, errorCode, err := GetSendsByAddress(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
+	log.Printf("%+#v", resultGetSendsByAddress)
+	if err != nil || errorCode != 0 {
+		t.Errorf(err.Error())
+	}
+	if len(resultGetSendsByAddress) == 0 {
+		t.Errorf("Expected: resultGetSendsByAddress != [], Got: %s\n", resultGetSendsByAddress)
+	}
+
+	//	// Retrieve 1enuEmptyAdd8ALj6mfBsbifRoD4miY36v which is abandoned
+	//	resultGetBalances, errorCode, err = GetBalancesByAddress(c, "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy")
+	//	if err != nil || errorCode != 0 {
+	//		t.Errorf(err.Error())
+	//	}
+
+	//	if reflect.DeepEqual(resultGetBalances, getBalancesByAddressExpectedTestData) != true {
+	//		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAddressExpectedTestData, resultGetBalances)
+	//	}
+
+}
+
+func TestGetSendsByAddressDB(t *testing.T) {
+	Init()
+
+	c := context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+
+	// Retrieve address which is empty
+	resultGetSendsByAddress, errorCode, err := GetSendsByAddressDB(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
+	log.Printf("%+#v", resultGetSendsByAddress)
+	if err != nil || errorCode != 0 {
+		t.Errorf(err.Error())
+	}
+	if len(resultGetSendsByAddress) == 0 {
+		t.Errorf("Expected: resultGetSendsByAddress != [], Got: %s\n", resultGetSendsByAddress)
+	}
+
+	//	// Retrieve 1enuEmptyAdd8ALj6mfBsbifRoD4miY36v which is abandoned
+	//	resultGetBalances, errorCode, err = GetBalancesByAddress(c, "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy")
+	//	if err != nil || errorCode != 0 {
+	//		t.Errorf(err.Error())
+	//	}
+
+	//	if reflect.DeepEqual(resultGetBalances, getBalancesByAddressExpectedTestData) != true {
+	//		t.Errorf("Expected: %#v, Got: %#v\n", getBalancesByAddressExpectedTestData, resultGetBalances)
+	//	}
 
 }
 
