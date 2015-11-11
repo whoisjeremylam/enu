@@ -8,10 +8,10 @@ import (
 	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartyapi"
-	//	"github.com/vennd/enu/counterpartycrypto"
-
 	"github.com/vennd/enu/counterpartyhandlers"
+
 	"github.com/vennd/enu/enulib"
+
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 	"github.com/vennd/enu/log"
@@ -29,19 +29,18 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request) *en
 		return nil
 	}
 
-	blockchainId := m["blockchainId"].(string)
 	if m["blockchainId"] != nil {
 		// check if blockchainId is valid
-		c = context.WithValue(c, consts.BlockchainIdKey, blockchainId)
+		c = context.WithValue(c, consts.BlockchainIdKey, m["blockchainId"].(string))
 	} else {
 		// set error no blockchain specified
 	}
 
-	if blockchainId == consts.CounterpartyBlockchainId {
+	if c.Value(consts.BlockchainIdKey) == consts.CounterpartyBlockchainId {
 		err := counterpartyhandlers.WalletCreate(c, w, r, m)
 
 		return err
-	} else if blockchainId == consts.RippleBlockchainId {
+	} else if c.Value(consts.BlockchainIdKey) == consts.RippleBlockchainId {
 		//		err := ripple.AssetCreate(c, w, r, m)
 		err := counterpartyhandlers.WalletCreate(c, w, r, m)
 		return err
