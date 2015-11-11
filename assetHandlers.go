@@ -365,46 +365,29 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *enulib
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	// check generic args and parse
-	_, err := CheckAndParseJsonCTX(c, w, r)
+	m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
-	vars := mux.Vars(r)
-	assetId := vars["assetId"]
-
-	if assetId == "" || len(assetId) < 16 {
-		ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDividendId.Code, errors.New(consts.GenericErrors.InvalidDividendId.Description))
-
-		return nil
-
+	blockchainId := m["blockchainId"].(string)
+	if m["blockchainId"] != nil {
+		// check if blockchainId is valid
+		c = context.WithValue(c, consts.BlockchainIdKey, blockchainId)
+	} else {
+		// set error no blockchain specified
 	}
 
-	log.FluentfContext(consts.LOGINFO, c, "GetAsset called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
+	if blockchainId == consts.CounterpartyBlockchainId {
+		err := counterpartyhandlers.GetAsset(c, w, r)
 
-	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
-	asset.RequestId = requestId
-
-	// Add the blockchain status
-	if asset.BroadcastTxId != "" {
-		confirmations, err := bitcoinapi.GetConfirmations(asset.BroadcastTxId)
-		if err == nil || confirmations == 0 {
-			asset.BlockchainStatus = "unconfimed"
-			asset.BlockchainConfirmations = 0
-		}
-
-		asset.BlockchainStatus = "confirmed"
-		asset.BlockchainConfirmations = confirmations
+		return err
+	} else if blockchainId == consts.RippleBlockchainId {
+		err := ripplehandlers.GetAsset(c, w, r)
+		return err
 	}
 
-	if err = json.NewEncoder(w).Encode(asset); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
-
-		return nil
-	}
-
-	w.WriteHeader(http.StatusOK)
 	return nil
+
 }

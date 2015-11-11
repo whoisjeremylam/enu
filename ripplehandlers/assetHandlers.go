@@ -4,9 +4,12 @@ import (
 	"encoding/json"
 	"net/http"
 
+	"errors"
 	"github.com/vennd/enu/consts"
+	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/handlers"
+	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 	"github.com/vennd/enu/log"
 	"github.com/vennd/enu/rippleapi"
@@ -81,5 +84,50 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	// Start asset creation in async mode
 	//	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, randomAssetName, asset, quantity, divisible)
 
+	return nil
+}
+
+func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+	var asset enulib.Asset
+	requestId := c.Value(consts.RequestIdKey).(string)
+	asset.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	vars := mux.Vars(r)
+	assetId := vars["assetId"]
+
+	if assetId == "" || len(assetId) < 16 {
+		handlers.ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDividendId.Code, errors.New(consts.GenericErrors.InvalidDividendId.Description))
+
+		return nil
+
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "GetAsset called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
+
+	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
+	asset.RequestId = requestId
+
+	// Add the blockchain status
+	/*
+		if asset.BroadcastTxId != "" {
+			confirmations, err := rippleapi.GetConfirmPayment(????)
+			if err == nil || confirmations == 0 {
+				asset.BlockchainStatus = "unconfimed"
+				asset.BlockchainConfirmations = 0
+			}
+
+			asset.BlockchainStatus = "confirmed"
+			asset.BlockchainConfirmations = confirmations
+		}
+	*/
+	if err := json.NewEncoder(w).Encode(asset); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
+	}
+
+	w.WriteHeader(http.StatusOK)
 	return nil
 }
