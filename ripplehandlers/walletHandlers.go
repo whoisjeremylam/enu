@@ -9,7 +9,6 @@ import (
 	"github.com/vennd/enu/counterpartycrypto"
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/handlers"
-	//	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 	"github.com/vennd/enu/log"
 	"github.com/vennd/enu/rippleapi"
