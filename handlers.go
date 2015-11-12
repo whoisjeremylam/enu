@@ -262,6 +262,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		check["walletCreate"] =
 			`
 		{"properties":{"numberOfAddresses":{"type":"integer"}}}
+		
 	`
 		check["walletPayment"] =
 			`
@@ -274,7 +275,13 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		check["activateaddress"] =
 			`
 		{"properties":{"address":{"type":"string","maxLength":34,"minLength":34},"amount":{"type":"integer"}},"required":["address","amount"]}
+		
 	`
+		check["walletBalance"] =
+			`
+		{}
+		`
+
 		schemaLoader := gojsonschema.NewStringLoader(check[u])
 		documentLoader := gojsonschema.NewGoLoader(payload)
 
@@ -298,5 +305,12 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			return m, err
 		}
 	}
+
+	// Overwrite blockchain context if the blockchainId has been set as a parameter in the body
+	if m["blockchainId"] != nil {
+		// check if blockchainId is valid
+		c = context.WithValue(c, consts.BlockchainIdKey, m["blockchainId"].(string))
+	}
+
 	return m, nil
 }
