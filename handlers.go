@@ -262,7 +262,6 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		check["walletCreate"] =
 			`
 		{"properties":{"numberOfAddresses":{"type":"integer"}}}
-		
 	`
 		check["walletPayment"] =
 			`
@@ -275,12 +274,16 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		check["activateaddress"] =
 			`
 		{"properties":{"address":{"type":"string","maxLength":34,"minLength":34},"amount":{"type":"integer"}},"required":["address","amount"]}
-		
 	`
-		check["walletBalance"] =
-			`
-		{}
-		`
+		check["walletBalance"] = `{}`
+
+		check["issuances"] = `{}`
+
+		check["getdividend"] = `{}`
+
+		check["ledger"] = `{}`
+
+		check["getasset"] = `{}	`
 
 		schemaLoader := gojsonschema.NewStringLoader(check[u])
 		documentLoader := gojsonschema.NewGoLoader(payload)
