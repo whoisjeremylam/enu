@@ -55,6 +55,7 @@ type GenericStruct struct {
 	InvalidSignature      ErrCodes
 	InvalidNonce          ErrCodes
 	NotFound              ErrCodes
+	FunctionNotAvailable  ErrCodes
 
 	GeneralError ErrCodes
 }
@@ -68,6 +69,7 @@ var GenericErrors = GenericStruct{
 	InvalidSignature:      ErrCodes{6, "Could not verify HMAC signature"},
 	InvalidNonce:          ErrCodes{7, "Invalid nonce"},
 	NotFound:              ErrCodes{8, "Not found"},
+	FunctionNotAvailable:  ErrCodes{9, "The function is not available on the selected blockchain."},
 
 	GeneralError: ErrCodes{13, "Misc error. Please contact Vennd.io support."},
 }
