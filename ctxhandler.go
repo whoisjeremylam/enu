@@ -33,6 +33,7 @@ type blockchainFunction map[string]blockchainHandler
 // Contains the function to call for each respective blockchain and requestType
 var blockchainFunctions = map[string]blockchainFunction{
 	"counterparty": {
+		"address":         counterpartyhandlers.AddressCreate,
 		"walletCreate":    counterpartyhandlers.WalletCreate,
 		"walletPayment":   counterpartyhandlers.WalletSend,
 		"walletBalance":   counterpartyhandlers.WalletBalance,

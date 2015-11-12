@@ -285,6 +285,8 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 
 		check["getasset"] = `{}	`
 
+		check["address"] = `{}	`
+
 		schemaLoader := gojsonschema.NewStringLoader(check[u])
 		documentLoader := gojsonschema.NewGoLoader(payload)
 
