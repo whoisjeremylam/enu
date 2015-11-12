@@ -45,6 +45,11 @@ var blockchainFunctions = map[string]blockchainFunction{
 		"ledger":      counterpartyhandlers.AssetLedger,
 		"getdividend": counterpartyhandlers.GetDividend,
 		"getasset":    counterpartyhandlers.GetAsset,
+
+		"simplepayment":    counterpartyhandlers.PaymentCreate,
+		"paymentretry":     counterpartyhandlers.PaymentRetry,
+		"getpayment":       counterpartyhandlers.GetPayment,
+		"paymentbyaddress": counterpartyhandlers.GetPaymentsByAddress,
 	},
 	"ripple": {
 		"walletCreate": ripplehandlers.WalletCreate,
