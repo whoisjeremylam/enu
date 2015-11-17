@@ -32,7 +32,7 @@ type CounterpartyStruct struct {
 
 var CounterpartyErrors = CounterpartyStruct{
 	MiscError:                 ErrCodes{1000, "Misc error when contacting Counterparty. Please contact Vennd.io support."},
-	Timeout:                   ErrCodes{1000, "Timeout when contacting Counterparty. Please try again later."},
+	Timeout:                   ErrCodes{1001, "Timeout when contacting Counterparty. Please try again later."},
 	ReparsingOrUnavailable:    ErrCodes{1002, "Counterparty Blockchain temporarily unavailable. Please try again later."},
 	SigningError:              ErrCodes{1003, "Unable to sign transaction. Is your passphrase correct?"},
 	BroadcastError:            ErrCodes{1004, "Unable to broadcast transaction to the blockchain. Please try the transaction again."},
@@ -72,4 +72,14 @@ var GenericErrors = GenericStruct{
 	FunctionNotAvailable:  ErrCodes{9, "The function is not available on the selected blockchain."},
 
 	GeneralError: ErrCodes{13, "Misc error. Please contact Vennd.io support."},
+}
+
+type RippleStruct struct {
+	MiscError ErrCodes
+	Timeout   ErrCodes
+}
+
+var RippleErrors = RippleStruct{
+	MiscError: ErrCodes{2000, "Misc error when contacting Ripple. Please contact Vennd.io support."},
+	Timeout:   ErrCodes{2001, "Timeout when contacting Ripple. Please try again later."},
 }
