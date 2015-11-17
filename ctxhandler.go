@@ -53,6 +53,7 @@ var blockchainFunctions = map[string]blockchainFunction{
 	},
 	"ripple": {
 		"walletCreate": ripplehandlers.WalletCreate,
+		"asset":        ripplehandlers.AssetCreate,
 		"dividend":     ripplehandlers.Unhandled,
 	},
 }
