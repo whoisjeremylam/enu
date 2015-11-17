@@ -23,13 +23,14 @@ import (
 )
 
 type Wallet struct {
-	Address string `json:"address"`
-	Secret  string `json:"secret"`
-}
-
-type NewWallet struct {
-	NwWallet Wallet `json:"wallet"`
-	Success  bool   `json:"success"`
+	AccountId     string `json:"account_id"`
+	KeyType       string `json:"key_type"`
+	MasterKey     string `json:"master_key"`
+	MasterSeed    string `json:"master_seed"`
+	MasterSeedHex string `json:"master_seed_hex"`
+	PublicKey     string `json:"public_key"`
+	PublicKeyHex  string `json:"public_key_hex"`
+	Status        string `json:"status"`
 }
 
 type AccountSettings struct {
@@ -403,25 +404,23 @@ func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int
 	select {
 	case apiResp = <-c1:
 	case <-time.After(time.Second * 10):
-		return result, consts.CounterpartyErrors.Timeout.Code, errors.New(consts.CounterpartyErrors.Timeout.Description)
+		return result, consts.RippleErrors.Timeout.Code, errors.New(consts.RippleErrors.Timeout.Description)
 	}
 
 	if apiResp.err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Do(req): %s", apiResp.err.Error())
-		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
 	// Success, read body and return
 	body, err := ioutil.ReadAll(apiResp.resp.Body)
-
-	println("body:")
-	println(string(body))
+	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postRPCAPI() body returned: %s", string(body))
 
 	defer apiResp.resp.Body.Close()
 
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in ReadAll(): %s", err.Error())
-		return nil, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
+		return nil, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
 	// Unmarshall body
@@ -470,36 +469,41 @@ func GetServerStatus(c context.Context) ([]byte, error) {
 	return result, nil
 }
 
-func CreateWallet(c context.Context) (NewWallet, error) {
+func CreateWallet(c context.Context) (Wallet, int64, error) {
 	if isInit == false {
 		Init()
 	}
 
-	var r NewWallet
+	var payload = make(map[string]interface{})
+	var result Wallet
 
-	result, status, err := httpGet(c, "/v1/wallet/new")
-
-	println(string(result))
-
-	if result == nil {
-		return r, errors.New("Ripple unavailable")
+	payload["method"] = "wallet_propose"
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return r, err
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return result, errorCode, err
 	}
 
-	if err := json.Unmarshal(result, &r); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		return r, err
+	if responseData["result"] != nil {
+		log.Printf("%#v", responseData["result"])
 	}
 
-	if !r.Success {
-		return r, err
-	}
+	responseResult := responseData["result"].(map[string]interface{})
+	result.AccountId = responseResult["account_id"].(string)
+	result.KeyType = responseResult["key_type"].(string)
+	result.MasterKey = responseResult["master_key"].(string)
+	result.MasterSeed = responseResult["master_seed"].(string)
+	result.MasterSeedHex = responseResult["master_seed_hex"].(string)
+	result.PublicKey = responseResult["public_key"].(string)
+	result.PublicKeyHex = responseResult["public_key_hex"].(string)
+	result.Status = responseResult["status"].(string)
 
-	return r, nil
+	return result, 0, nil
 }
 
 func GetAccountSettings(c context.Context, account string) (AccountSettings, error) {
@@ -797,21 +801,8 @@ func PostAccountlines(c context.Context, address string) (Accountlines, int64, e
 	}
 
 	if responseData["result"] != nil {
-		log.Println(responseData["result"].(string))
+		log.Printf("%#v", responseData["result"])
 	}
-
-	/*
-		// Range over the result from api and create the reply
-		if responseData["result"] != nil {
-			for _, b := range responseData["result"].([]interface{}) {
-				c := b.(map[string]interface{})
-				result = append(result,
-					Balance{Address: c["address"].(string),
-						Asset:    c["asset"].(string),
-						Quantity: uint64(c["quantity"].(float64))})
-			}
-		}
-	*/
 
 	return result, errorCode, nil
 }
@@ -839,7 +830,7 @@ func PostServerInfo(c context.Context) ([]byte, int64, error) {
 	}
 
 	if responseData["result"] != nil {
-		log.Println(responseData["result"].(string))
+		log.Printf("%#v", responseData["result"])
 	}
 
 	/*
