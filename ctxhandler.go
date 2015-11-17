@@ -33,12 +33,14 @@ type blockchainFunction map[string]blockchainHandler
 // Contains the function to call for each respective blockchain and requestType
 var blockchainFunctions = map[string]blockchainFunction{
 	"counterparty": {
+		// Address handlers
 		"address":         counterpartyhandlers.AddressCreate,
 		"walletCreate":    counterpartyhandlers.WalletCreate,
 		"walletPayment":   counterpartyhandlers.WalletSend,
 		"walletBalance":   counterpartyhandlers.WalletBalance,
 		"activateaddress": counterpartyhandlers.ActivateAddress,
 
+		// Asset handlers
 		"asset":       counterpartyhandlers.AssetCreate,
 		"dividend":    counterpartyhandlers.DividendCreate,
 		"issuances":   counterpartyhandlers.AssetIssuances,
@@ -46,6 +48,7 @@ var blockchainFunctions = map[string]blockchainFunction{
 		"getdividend": counterpartyhandlers.GetDividend,
 		"getasset":    counterpartyhandlers.GetAsset,
 
+		// Payment handlers
 		"simplepayment":    counterpartyhandlers.PaymentCreate,
 		"paymentretry":     counterpartyhandlers.PaymentRetry,
 		"getpayment":       counterpartyhandlers.GetPayment,
@@ -60,16 +63,18 @@ var blockchainFunctions = map[string]blockchainFunction{
 
 func handle(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 	// check generic args and parse
-	m, err := CheckAndParseJsonCTX(c, w, r)
+	c2, m, err := CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
 	}
 
 	// Look up the required function in the map and execute
-	blockchainId := c.Value(consts.BlockchainIdKey).(string)
-	requestType := c.Value(consts.RequestTypeKey).(string)
-	blockchainFunctions[blockchainId][requestType](c, w, r, m)
+	blockchainId := c2.Value(consts.BlockchainIdKey).(string)
+	requestType := c2.Value(consts.RequestTypeKey).(string)
+
+	log.FluentfContext(consts.LOGINFO, c, "Handling blockchainId: %s, requestType: %s", blockchainId, requestType)
+	blockchainFunctions[blockchainId][requestType](c2, w, r, m)
 
 	return nil
 }
@@ -131,8 +136,10 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If the blockchain was explicitly given in the resource path, use it. Otherwise use the blockchain from the user's profile
 	var blockchainId string
 	if blockchainValid == true {
+		log.FluentfContext(consts.LOGINFO, ctx, "Using blockchain specifed in URL: %s", requestBlockchainId)
 		blockchainId = requestBlockchainId
 	} else {
+		log.FluentfContext(consts.LOGINFO, ctx, "Using user's default blockchain: %s", usersDefaultBlockchain)
 		blockchainId = usersDefaultBlockchain
 	}
 

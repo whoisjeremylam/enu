@@ -159,7 +159,7 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 	return accessKey, nil
 }
 
-func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (map[string]interface{}, error) {
+func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (context.Context, map[string]interface{}, error) {
 	//	var blockchainId string
 	var payload interface{}
 	var nonceDB int64
@@ -172,13 +172,13 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
 
-		return nil, err
+		return c, nil, err
 	}
 	if err := r.Body.Close(); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Body.Close(): %s", err.Error())
 		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
 
-		return nil, err
+		return c, nil, err
 	}
 
 	// If the body is an empty byte array then don't attempt to unmarshall the JSON and set a default
@@ -189,7 +189,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			log.FluentfContext(consts.LOGERROR, c, err.Error())                                   // Log the real error
 			ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, returnErr) // Send back sanitised error
 
-			return nil, returnErr
+			return c, nil, returnErr
 		}
 		log.FluentfContext(consts.LOGINFO, c, "Request received: %s", body)
 	} else if bytes.Compare(body, make([]byte, 0)) == 0 {
@@ -198,7 +198,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		log.FluentfContext(consts.LOGERROR, c, returnErr.Error())
 		ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, returnErr)
 
-		return nil, returnErr
+		return c, nil, returnErr
 	}
 
 	// Then look up secret and calculate digest
@@ -211,7 +211,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		err := errors.New(errorString)
 		ReturnUnauthorised(c, w, consts.GenericErrors.InvalidSignature.Code, err)
 
-		return nil, err
+		return c, nil, err
 	}
 
 	m := payload.(map[string]interface{})
@@ -232,7 +232,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %d <= %d\n", accessKey, nonceInt, nonceDB)
 			ReturnUnauthorised(c, w, consts.GenericErrors.InvalidNonce.Code, errors.New(consts.GenericErrors.InvalidNonce.Description))
 
-			return nil, err
+			return c, nil, err
 		} else {
 			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, nonceInt, nonceDB)
 			database.UpdateNonce(accessKey, nonceInt)
@@ -240,7 +240,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
 				ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New("Nonce handling failed"))
 
-				return nil, err
+				return c, nil, err
 			}
 		}
 	}
@@ -313,15 +313,19 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			log.FluentfContext(consts.LOGERROR, c, err.Error())
 			ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, err)
 
-			return m, err
+			return c, m, err
 		}
 	}
 
 	// Overwrite blockchain context if the blockchainId has been set as a parameter in the body
+	var c2 context.Context
 	if m["blockchainId"] != nil {
 		// check if blockchainId is valid
-		c = context.WithValue(c, consts.BlockchainIdKey, m["blockchainId"].(string))
+		log.FluentfContext(consts.LOGINFO, c, "blockchainId specified as a body parameter. Overwriting blockchainId with: %s", m["blockchainId"].(string))
+		c2 = context.WithValue(c, consts.BlockchainIdKey, m["blockchainId"].(string))
+	} else {
+		c2 = c
 	}
 
-	return m, nil
+	return c2, m, nil
 }
