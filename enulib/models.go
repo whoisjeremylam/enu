@@ -83,8 +83,8 @@ type Address struct {
 	Value      string `json:"value"`
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
-	RequestId  string `json:"requestId"`
-	Nonce      int64  `json:"nonce"`
+	RequestId  string `json:"requestId,omitempty"`
+	Nonce      int64  `json:"nonce,omitempty"`
 }
 
 type AddressBalances struct {
@@ -163,4 +163,18 @@ type WalletPayment struct {
 	PaymentTag         string `json:"paymentTag"`
 	RequestId          string `json:"requestId"`
 	Nonce              int64  `json:"nonce"`
+}
+
+type Wallet struct {
+	Passphrase    string   `json:"passphrase"`
+	HexSeed       string   `json:"hexSeed"`
+	Addresses     []string `json:"addresses"`
+	RequestId     string   `json:"requestId"`
+	BlockchainId  string   `json:"blockchainId,omitempty"`
+	KeyType       string   `json:"key_type,omitempty"`
+	MasterKey     string   `json:"master_key,omitempty"`
+	MasterSeed    string   `json:"master_seed,omitempty"`
+	MasterSeedHex string   `json:"master_seed_hex,omitempty"`
+	PublicKey     string   `json:"public_key,omitempty"`
+	PublicKeyHex  string   `json:"public_key_hex,omitempty"`
 }
