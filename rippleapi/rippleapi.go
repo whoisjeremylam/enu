@@ -2,6 +2,7 @@ package rippleapi
 
 import (
 	"bytes"
+	"strings"
 
 	"crypto/rand"
 	"encoding/hex"
@@ -21,6 +22,64 @@ import (
 	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
+
+var defaultFee = "10000"
+
+// Structure for payment transactions for custom currencies
+type PaymentAssetTx struct {
+	// Common fields
+	Account            string `json:",omitempty"`
+	AccountTxnID       string `json:",omitempty"`
+	Fee                string `json:",omitempty"`
+	Flags              uint32 `json:",omitempty"`
+	LastLedgerSequence uint32 `json:",omitempty"`
+	Memos              []Memo
+	Sequence           uint32 `json:",omitempty"`
+	SigningPubKey      string `json:",omitempty"`
+	SourceTag          uint32 `json:",omitempty"`
+	TransactionType    string `json:",omitempty"`
+	TxnSignature       string `json:",omitempty"`
+
+	// Payment specific fields
+	Amount         Amount
+	Destination    string
+	DestinationTag uint32
+	InvoiceID      string
+	//	Paths
+	//	SendMax Currency
+	//	DeliverMin Currency
+}
+
+// Structure for payment transactions for xrp
+type PaymentXrpTx struct {
+	// Common fields
+	Account            string `json:",omitempty"`
+	AccountTxnID       string `json:",omitempty"`
+	Fee                string `json:",omitempty"`
+	Flags              uint32 `json:",omitempty"`
+	LastLedgerSequence uint32 `json:",omitempty"`
+	Memos              []Memo
+	Sequence           uint32 `json:",omitempty"`
+	SigningPubKey      string `json:",omitempty"`
+	SourceTag          uint32 `json:",omitempty"`
+	TransactionType    string `json:",omitempty"`
+	TxnSignature       string `json:",omitempty"`
+
+	// Payment specific fields
+	Amount         string `json:",omitempty"`
+	Destination    string `json:",omitempty"`
+	DestinationTag uint32 `json:",omitempty"`
+	InvoiceID      string `json:",omitempty"`
+	//	Paths
+	//	SendMax Currency
+	//	DeliverMin Currency
+}
+
+type Memo struct {
+	MemoData   string `json:",omitempty"`
+	MemoFormat string `json:",omitempty"`
+	MemoType   string `json:",omitempty"`
+}
 
 type Wallet struct {
 	AccountId     string `json:"account_id"`
@@ -426,7 +485,7 @@ func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int
 	// Unmarshall body
 	if unmarshallErr := json.Unmarshal(body, &result); unmarshallErr != nil {
 		// If we couldn't parse the error properly, log error to fluent and return unhandled error
-		log.FluentfContext(consts.LOGERROR, c, "Error in Unmarshal(): %s", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Error in Unmarshal(): %s", unmarshallErr.Error())
 
 		return result, 0, nil
 	}
@@ -467,6 +526,95 @@ func GetServerStatus(c context.Context) ([]byte, error) {
 	println(string(result))
 
 	return result, nil
+}
+
+// Submits a transaction to the Ripple network
+func Submit(c context.Context, txHexString string) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	var payload = make(map[string]interface{})
+	var params = make(map[string]interface{})
+	var paramsArray []map[string]interface{}
+	var result string
+
+	// Build parameters
+	params["tx_blob"] = txHexString
+	paramsArray = append(paramsArray, params)
+
+	// Build payload
+	payload["method"] = "submit"
+	payload["params"] = paramsArray
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return "", consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return "", errorCode, err
+	}
+
+	log.Printf("%#v", responseData)
+
+	if responseData["result"] != nil {
+		if responseData["result"].(map[string]interface{})["status"] != nil && responseData["result"].(map[string]interface{})["status"] == "success" {
+			result = responseData["result"].(map[string]interface{})["tx_json"].(map[string]interface{})["hash"].(string)
+		} else {
+			// do some errorhandling here
+			log.Printf("sign returned some kind of error")
+		}
+	}
+
+	return result, 0, nil
+}
+
+// Submits a transaction to the Ripple network
+func Sign(c context.Context, tx interface{}, secret string) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	var payload = make(map[string]interface{})
+	var params = make(map[string]interface{})
+	var paramsArray []map[string]interface{}
+	var result string
+
+	// Build parameters
+	params["offline"] = false
+	params["secret"] = secret
+	params["tx_json"] = tx
+	paramsArray = append(paramsArray, params)
+
+	// Build payload
+	payload["method"] = "sign"
+	payload["params"] = paramsArray
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return "", consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return "", errorCode, err
+	}
+
+	log.Printf("%#v", responseData)
+
+	if responseData["result"] != nil {
+		if responseData["result"].(map[string]interface{})["status"] != nil && responseData["result"].(map[string]interface{})["status"] == "success" {
+			result = responseData["result"].(map[string]interface{})["tx_blob"].(string)
+		} else {
+			// do some errorhandling here
+			log.Printf("sign returned some kind of error")
+		}
+	}
+
+	return result, 0, nil
 }
 
 func CreateWallet(c context.Context) (Wallet, int64, error) {
@@ -976,4 +1124,59 @@ func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAcco
 	}
 
 	return result, 0, nil
+}
+
+// Creates and sends the payment for the custom currency that is specified.
+// Returns the tx hash if successful
+func SendPayment(c context.Context, sourceAddress string, destinationAddress string, asset string, issuer string, quantity uint64, secret string) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	var signedTx string
+	var errCode int64
+	var err error
+	var txHash string
+
+	if strings.ToUpper(asset) == "XRP" {
+		tx := PaymentXrpTx{
+			TransactionType: "Payment",
+			Account:         sourceAddress,
+			Destination:     destinationAddress,
+			Amount:          fmt.Sprintf("%d", quantity),
+			Flags:           2147483648, // require canonical signature
+			Fee:             defaultFee,
+		}
+
+		signedTx, errCode, err = Sign(c, tx, secret)
+	} else {
+		tx := PaymentAssetTx{
+			TransactionType: "Payment",
+			Account:         sourceAddress,
+			Destination:     destinationAddress,
+			Amount: Amount{
+				Value:    string(quantity),
+				Currency: asset,
+				Issuer:   issuer,
+			},
+			Flags: 2147483648, // require canonical signature
+			Fee:   defaultFee,
+		}
+
+		signedTx, errCode, err = Sign(c, tx, secret)
+	}
+
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Sign(): %s", err.Error())
+		return "", errCode, err
+	}
+
+	log.Printf("signed! tx_blob: %s", signedTx)
+
+	txHash, errCode, err = Submit(c, signedTx)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Submit(): %s", err.Error())
+	}
+
+	return txHash, errCode, err
 }

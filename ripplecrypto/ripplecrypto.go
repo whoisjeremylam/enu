@@ -53,7 +53,7 @@ func CreateWallet(numberOfAddressesToGenerate int) (RippleWallet, error) {
 	var numAddresses int
 
 	if numberOfAddressesToGenerate <= 0 {
-		numAddresses = 20
+		numAddresses = 1
 	} else if numberOfAddressesToGenerate > 100 {
 		numAddresses = 100
 	} else {
