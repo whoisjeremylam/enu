@@ -858,6 +858,7 @@ func PostTrustline(c context.Context, secret string, source_address string, dest
 	var request string = "/v1/accounts/" + destination_address + "/trustlines?validated=true"
 
 	payload.Secret = secret
+	payload.Trustlines.Account = destination_address
 	payload.Trustlines.Limit = fmt.Sprintf("%d", limit)
 	payload.Trustlines.Currency = currency
 	payload.Trustlines.Counterparty = source_address
