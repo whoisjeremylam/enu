@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"strings"
 
-	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"math/big"
 	"net/http"
 	"os"
 	"strconv"
@@ -24,6 +22,23 @@ import (
 )
 
 var defaultFee = "10000"
+
+// Account set flags
+const AsfRequireDest = 1
+const AsfRequireAuth = 2
+const AsfDisallowXRP = 3
+const AsfDisableMaster = 4
+const AsfAccountTxnID = 5
+const AsfNoFreeze = 6
+const AsfGlobalFreeze = 7
+const AsfDefaultRipple = 8
+
+// Trust set flags (on the transaction)
+const TfSetfAuth = 65536
+const TfSetNoRipple = 131072
+const TfClearNoRipple = 262144
+const TfSetFreeze = 1048576
+const TfClearFreeze = 2097152
 
 // Structure for payment transactions for custom currencies
 type PaymentAssetTx struct {
@@ -281,6 +296,53 @@ type CcyByAccountResult struct {
 
 type Currency struct {
 	Currency string `json:"currency"`
+}
+
+type AccountSet struct {
+	// Common fields
+	Account            string `json:",omitempty"`
+	AccountTxnID       string `json:",omitempty"`
+	Fee                string `json:",omitempty"`
+	Flags              uint32 `json:",omitempty"`
+	LastLedgerSequence uint32 `json:",omitempty"`
+	Memos              []Memo
+	Sequence           uint32 `json:",omitempty"`
+	SigningPubKey      string `json:",omitempty"`
+	SourceTag          uint32 `json:",omitempty"`
+	TransactionType    string `json:",omitempty"`
+	TxnSignature       string `json:",omitempty"`
+
+	ClearFlag    uint32 `json:",omitempty"`
+	Domain       string `json:",omitempty"`
+	EmailHash    string `json:",omitempty"`
+	MessageKey   string `json:",omitempty"`
+	SetFlag      uint32 `json:",omitempty"`
+	TransferRate uint32 `json:",omitempty"`
+}
+
+type LimitAmount struct {
+	Value    string `json:"value,omitempty"`
+	Currency string `json:"currency,omitempty"`
+	Issuer   string `json:"issuer,omitempty"`
+}
+
+type TrustSetStruct struct {
+	// Common fields
+	Account            string `json:",omitempty"`
+	AccountTxnID       string `json:",omitempty"`
+	Fee                string `json:",omitempty"`
+	Flags              uint32 `json:",omitempty"`
+	LastLedgerSequence uint32 `json:",omitempty"`
+	Memos              []Memo `json:",omitempty"`
+	Sequence           uint32 `json:",omitempty"`
+	SigningPubKey      string `json:",omitempty"`
+	SourceTag          uint32 `json:",omitempty"`
+	TransactionType    string `json:",omitempty"`
+	TxnSignature       string `json:",omitempty"`
+
+	LimitAmount LimitAmount `json:",omitempty"`
+	QualityIn   uint32      `json:",omitempty"`
+	QualityOut  uint32      `json:",omitempty"`
 }
 
 // Initialises global variables and database connection for all handlers
@@ -571,7 +633,7 @@ func Submit(c context.Context, txHexString string) (string, int64, error) {
 	return result, 0, nil
 }
 
-// Submits a transaction to the Ripple network
+// Signs a tx with the given secret. The tx should be a struct containing the tx to be marshalled into JSON and then signed
 func Sign(c context.Context, tx interface{}, secret string) (string, int64, error) {
 	if isInit == false {
 		Init()
@@ -617,6 +679,7 @@ func Sign(c context.Context, tx interface{}, secret string) (string, int64, erro
 	return result, 0, nil
 }
 
+// Creates a Ripple account offline. ie doesn't use the REST or RPC
 func CreateWallet(c context.Context) (Wallet, int64, error) {
 	if isInit == false {
 		Init()
@@ -725,170 +788,170 @@ func GetAccountBalances(c context.Context, account string) (AccountBalance, erro
 	return r, nil
 }
 
-func PreparePayment(c context.Context, source_address string, destination_address string, amount int64, currency string, issuer string) (PreparePaymentList, error) {
-	if isInit == false {
-		Init()
-	}
+//func PreparePayment(c context.Context, source_address string, destination_address string, amount int64, currency string, issuer string) (PreparePaymentList, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var r PreparePaymentList
+//	var r PreparePaymentList
 
-	var requestString string = "/v1/accounts/" + source_address + "/payments/paths/" + destination_address + "/" + strconv.FormatInt(amount, 20) + "+" + currency + "+" + issuer
+//	var requestString string = "/v1/accounts/" + source_address + "/payments/paths/" + destination_address + "/" + strconv.FormatInt(amount, 20) + "+" + currency + "+" + issuer
 
-	result, status, err := httpGet(c, requestString)
-	if result == nil {
-		return r, errors.New("Ripple unavailable")
-	}
+//	result, status, err := httpGet(c, requestString)
+//	if result == nil {
+//		return r, errors.New("Ripple unavailable")
+//	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return r, err
-	}
+//	if status != 0 {
+//		log.FluentfContext(consts.LOGERROR, c, string(result))
+//		return r, err
+//	}
 
-	//	var r interface{}
-	//	println (string(result))
+//	//	var r interface{}
+//	//	println (string(result))
 
-	if err := json.Unmarshal(result, &r); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		println("Marshall error")
-		return r, err
-	}
+//	if err := json.Unmarshal(result, &r); err != nil {
+//		log.FluentfContext(consts.LOGERROR, c, err.Error())
+//		println("Marshall error")
+//		return r, err
+//	}
 
-	//	m := r.(map[string]interface{})
+//	//	m := r.(map[string]interface{})
 
-	if !r.Success {
-		return r, err
-	}
+//	if !r.Success {
+//		return r, err
+//	}
 
-	return r, nil
-}
+//	return r, nil
+//}
 
-func PostPayment(c context.Context, secret string, client_resource_id string, source_address string, destination_address string, amount int64, currency string, issuer string) (PaymentList, error) {
-	if isInit == false {
-		Init()
-	}
+//func PostPayment(c context.Context, secret string, client_resource_id string, source_address string, destination_address string, amount int64, currency string, issuer string) (PaymentList, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var payload PaymentList
-	var result PaymentList
+//	var payload PaymentList
+//	var result PaymentList
 
-	var request string = "/v1/accounts/" + source_address + "/payments?validated=true"
+//	var request string = "/v1/accounts/" + source_address + "/payments?validated=true"
 
-	payload.Secret = secret
-	payload.Client_resource_id = client_resource_id
-	payload.Payments.Source_account = source_address
-	payload.Payments.Source_amount.Value = fmt.Sprintf("%d", amount)
-	payload.Payments.Source_amount.Currency = currency
-	payload.Payments.Source_amount.Issuer = issuer
-	payload.Payments.Destination_account = destination_address
-	payload.Payments.Destination_amount.Value = fmt.Sprintf("%d", amount)
-	payload.Payments.Destination_amount.Currency = currency
-	payload.Payments.Destination_amount.Issuer = issuer
-	payload.Payments.Paths = "[]"
+//	payload.Secret = secret
+//	payload.Client_resource_id = client_resource_id
+//	payload.Payments.Source_account = source_address
+//	payload.Payments.Source_amount.Value = fmt.Sprintf("%d", amount)
+//	payload.Payments.Source_amount.Currency = currency
+//	payload.Payments.Source_amount.Issuer = issuer
+//	payload.Payments.Destination_account = destination_address
+//	payload.Payments.Destination_amount.Value = fmt.Sprintf("%d", amount)
+//	payload.Payments.Destination_amount.Currency = currency
+//	payload.Payments.Destination_amount.Issuer = issuer
+//	payload.Payments.Paths = "[]"
 
-	payloadJsonBytes, err := json.Marshal(payload)
+//	payloadJsonBytes, err := json.Marshal(payload)
 
-	//		log.Println(string(payloadJsonBytes))
+//	//		log.Println(string(payloadJsonBytes))
 
-	if err != nil {
-		return result, err
-	}
+//	if err != nil {
+//		return result, err
+//	}
 
-	responseData, _, err := postAPI(c, request, payloadJsonBytes)
-	if err != nil {
-		return result, err
-	}
+//	responseData, _, err := postAPI(c, request, payloadJsonBytes)
+//	if err != nil {
+//		return result, err
+//	}
 
-	log.Println(string(responseData))
+//	log.Println(string(responseData))
 
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		return result, errors.New("Unable to unmarshal responseData")
-	}
+//	if err := json.Unmarshal(responseData, &result); err != nil {
+//		return result, errors.New("Unable to unmarshal responseData")
+//	}
 
-	//	if !result.Success {
-	// 	return result, err
-	//	}
+//	//	if !result.Success {
+//	// 	return result, err
+//	//	}
 
-	return result, nil
-}
+//	return result, nil
+//}
 
-func GetConfirmPayment(c context.Context, source_address string, client_resource_id string) (ConfirmPayment, error) {
-	if isInit == false {
-		Init()
-	}
+//func GetConfirmPayment(c context.Context, source_address string, client_resource_id string) (ConfirmPayment, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var r ConfirmPayment
+//	var r ConfirmPayment
 
-	var requestString string = "/v1/accounts/" + source_address + "/payments/" + client_resource_id
+//	var requestString string = "/v1/accounts/" + source_address + "/payments/" + client_resource_id
 
-	result, status, err := httpGet(c, requestString)
-	if result == nil {
-		return r, errors.New("Ripple unavailable")
-	}
+//	result, status, err := httpGet(c, requestString)
+//	if result == nil {
+//		return r, errors.New("Ripple unavailable")
+//	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return r, err
-	}
+//	if status != 0 {
+//		log.FluentfContext(consts.LOGERROR, c, string(result))
+//		return r, err
+//	}
 
-	//	var r interface{}
-	println(string(result))
+//	//	var r interface{}
+//	println(string(result))
 
-	if err := json.Unmarshal(result, &r); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		println("Marshall error")
-		return r, err
-	}
+//	if err := json.Unmarshal(result, &r); err != nil {
+//		log.FluentfContext(consts.LOGERROR, c, err.Error())
+//		println("Marshall error")
+//		return r, err
+//	}
 
-	//	m := r.(map[string]interface{})
+//	//	m := r.(map[string]interface{})
 
-	//	if !r.Success {
-	// 	return r, err
-	//	}
+//	//	if !r.Success {
+//	// 	return r, err
+//	//	}
 
-	return r, nil
-}
+//	return r, nil
+//}
 
-func PostTrustline(c context.Context, secret string, source_address string, destination_address string, limit int64, currency string) (TrustlineResult, error) {
-	if isInit == false {
-		Init()
-	}
+//func PostTrustline(c context.Context, secret string, source_address string, destination_address string, limit int64, currency string) (TrustlineResult, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var payload TrustlineList
-	var result TrustlineResult
+//	var payload TrustlineList
+//	var result TrustlineResult
 
-	var request string = "/v1/accounts/" + destination_address + "/trustlines?validated=true"
+//	var request string = "/v1/accounts/" + destination_address + "/trustlines?validated=true"
 
-	payload.Secret = secret
-	payload.Trustlines.Account = destination_address
-	payload.Trustlines.Limit = fmt.Sprintf("%d", limit)
-	payload.Trustlines.Currency = currency
-	payload.Trustlines.Counterparty = source_address
-	payload.Trustlines.Account_allows_rippling = false
+//	payload.Secret = secret
+//	payload.Trustlines.Account = destination_address
+//	payload.Trustlines.Limit = fmt.Sprintf("%d", limit)
+//	payload.Trustlines.Currency = currency
+//	payload.Trustlines.Counterparty = source_address
+//	payload.Trustlines.Account_allows_rippling = false
 
-	payloadJsonBytes, err := json.Marshal(payload)
+//	payloadJsonBytes, err := json.Marshal(payload)
 
-	//		log.Println(string(payloadJsonBytes))
+//	//		log.Println(string(payloadJsonBytes))
 
-	if err != nil {
-		return result, err
-	}
+//	if err != nil {
+//		return result, err
+//	}
 
-	responseData, _, err := postAPI(c, request, payloadJsonBytes)
-	if err != nil {
-		return result, err
-	}
+//	responseData, _, err := postAPI(c, request, payloadJsonBytes)
+//	if err != nil {
+//		return result, err
+//	}
 
-	log.Println(string(responseData))
+//	log.Println(string(responseData))
 
-	if err := json.Unmarshal(responseData, &result); err != nil {
-		return result, errors.New("Unable to unmarshal responseData")
-	}
+//	if err := json.Unmarshal(responseData, &result); err != nil {
+//		return result, errors.New("Unable to unmarshal responseData")
+//	}
 
-	//	if !result.Success {
-	// 	return result, err
-	//	}
+//	//	if !result.Success {
+//	// 	return result, err
+//	//	}
 
-	return result, nil
-}
+//	return result, nil
+//}
 
 func GetTrustLines(c context.Context, account string) (GetTrustlinesResult, error) {
 	if isInit == false {
@@ -982,91 +1045,7 @@ func PostServerInfo(c context.Context) ([]byte, int64, error) {
 		log.Printf("%#v", responseData["result"])
 	}
 
-	/*
-		// Range over the result from api and create the reply
-		if responseData["result"] != nil {
-			for _, b := range responseData["result"].([]interface{}) {
-				c := b.(map[string]interface{})
-				result = append(result,
-					Balance{Address: c["address"].(string),
-						Asset:    c["asset"].(string),
-						Quantity: uint64(c["quantity"].(float64))})
-			}
-		}
-	*/
 	return result, errorCode, nil
-}
-
-func GenerateRandomAssetName(c context.Context) (string, int64, error) {
-	if isInit == false {
-		Init()
-	}
-
-	// Generate random asset name
-	var err error
-	var randomAssetName string
-	var assetExists string = "false"
-
-	// set masteraccount for vennd somewhere
-	var masterAccount = ""
-	randomAssetName, err = generateRandomAssetName(c)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in generateRandomAssetName(): %s", err.Error())
-		return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
-	}
-
-	// If random asset name already exists, keep trying until we find a spare one
-
-	currenciesByAccount, errorCode, err := GetCurrenciesByAccount(c, masterAccount)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in GetCurrenciesByAccount(): %s, errorCode: %d", err.Error(), errorCode)
-		return "", errorCode, err
-	}
-
-	for assetExists == "true" {
-		for _, a := range currenciesByAccount.Result.SendCurrencies {
-			if a == randomAssetName {
-				assetExists = "true"
-				break
-			}
-		}
-		if assetExists == "true" {
-			randomAssetName, err = generateRandomAssetName(c)
-			if err != nil {
-				log.FluentfContext(consts.LOGERROR, c, "Error in generateRandomAssetName(): %s", err.Error())
-				return "", consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
-			}
-
-		} else {
-			break
-		}
-
-	}
-
-	return randomAssetName, 0, nil
-}
-
-func generateRandomAssetName(c context.Context) (string, error) {
-	numericAssetIdMin := new(big.Int)
-	numericAssetIdMax := new(big.Int)
-	//	var err error
-
-	numericAssetIdMin.SetString(numericAssetIdMinString, 10)
-	numericAssetIdMax.SetString(numericAssetIdMaxString, 10)
-
-	//	log.Printf("numericAssetIdMax: %s", numericAssetIdMin.String())
-	//	log.Printf("numericAssetIdMin: %s", numericAssetIdMax.String())
-
-	numericAssetIdMax = numericAssetIdMax.Add(numericAssetIdMax, numericAssetIdMin)
-
-	x, err := rand.Int(rand.Reader, numericAssetIdMax)
-	xFinal := x.Sub(x, numericAssetIdMin)
-
-	if err != nil {
-		return "", err
-	}
-
-	return "A" + string(xFinal.String()), nil
 }
 
 func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAccount, int64, error) {
@@ -1129,7 +1108,7 @@ func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAcco
 
 // Creates and sends the payment for the custom currency that is specified.
 // Returns the tx hash if successful
-func SendPayment(c context.Context, sourceAddress string, destinationAddress string, asset string, issuer string, quantity uint64, secret string) (string, int64, error) {
+func SendPayment(c context.Context, sourceAddress string, destinationAddress string, quantity uint64, asset string, issuer string, secret string) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -1167,6 +1146,87 @@ func SendPayment(c context.Context, sourceAddress string, destinationAddress str
 		signedTx, errCode, err = Sign(c, tx, secret)
 	}
 
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Sign(): %s", err.Error())
+		return "", errCode, err
+	}
+
+	log.Printf("signed! tx_blob: %s", signedTx)
+
+	txHash, errCode, err = Submit(c, signedTx)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Submit(): %s", err.Error())
+	}
+
+	return txHash, errCode, err
+}
+
+// Sets a specific flag on an account
+func AccountSetFlag(c context.Context, account string, flag uint32, secret string) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	var signedTx string
+	var errCode int64
+	var err error
+	var txHash string
+
+	tx := AccountSet{
+		// Common fields
+		TransactionType: "AccountSet",
+		Account:         account,
+		Flags:           2147483648, // require canonical signature
+		Fee:             defaultFee,
+
+		SetFlag: flag,
+	}
+
+	signedTx, errCode, err = Sign(c, tx, secret)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Sign(): %s", err.Error())
+		return "", errCode, err
+	}
+
+	log.Printf("signed! tx_blob: %s", signedTx)
+
+	txHash, errCode, err = Submit(c, signedTx)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Submit(): %s", err.Error())
+	}
+
+	return txHash, errCode, err
+}
+
+// Modifies a trust line between two accounts
+// The trust line is directional - the given account trusts the issuer account for value amount of currency
+// A trust line occupies space in the Ripple ledger and therefore requires a fee to be paid and consequently the secret of the source account
+func TrustSet(c context.Context, account string, currency string, value string, issuerAccount string, flag uint32, secret string) (string, int64, error) {
+	if isInit == false {
+		Init()
+	}
+
+	var signedTx string
+	var errCode int64
+	var err error
+	var txHash string
+
+	tx := TrustSetStruct{
+		// Common fields
+		TransactionType: "TrustSet",
+		Account:         account,
+		Flags:           2147483648 & flag, // require canonical signature
+		Fee:             defaultFee,
+
+		// Set the limit
+		LimitAmount: LimitAmount{
+			Value:    value,
+			Currency: currency,
+			Issuer:   issuerAccount,
+		},
+	}
+
+	signedTx, errCode, err = Sign(c, tx, secret)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Sign(): %s", err.Error())
 		return "", errCode, err
