@@ -2,6 +2,7 @@ package rippleapi
 
 import (
 	"bytes"
+	"math/big"
 	"strings"
 
 	"encoding/hex"
@@ -132,12 +133,12 @@ type Settings struct {
 	Signers                 string `json:"signers"`
 }
 
-type AccountBalance struct {
-	Ledger    int64     `json:"ledger"`
-	Validated bool      `json:"validated"`
-	Balances  []Balance `json:"balances"`
-	Success   bool      `json:"success"`
-}
+//type AccountBalance struct {
+//	Ledger    int64     `json:"ledger"`
+//	Validated bool      `json:"validated"`
+//	Balances  []Balance `json:"balances"`
+//	Success   bool      `json:"success"`
+//}
 
 type Balance struct {
 	Value        string `json:"value"`
@@ -343,6 +344,18 @@ type TrustSetStruct struct {
 	LimitAmount LimitAmount `json:",omitempty"`
 	QualityIn   uint32      `json:",omitempty"`
 	QualityOut  uint32      `json:",omitempty"`
+}
+
+type Lines struct {
+	Account      string `json:"account,omitempty"`
+	Balance      string `json:"balance,omitempty"`
+	Currency     string `json:"currency,omitempty"`
+	Limit        string `json:"limit,omitempty"`
+	LimitPeer    string `json:"limit_peer,omitempty"`
+	NoRipple     bool   `json:"no_ripple,omitempty"`
+	NoRipplePeer bool   `json:"no_ripple_peer,omitempty"`
+	QualityIn    uint   `json:"quality_in,omitempty"`
+	QualityOut   uint   `json:"quality_out,omitempty"`
 }
 
 // Initialises global variables and database connection for all handlers
@@ -568,7 +581,7 @@ func generateId(c context.Context) uint32 {
 	return randomUint32
 }
 
-func GetServerStatus(c context.Context) ([]byte, error) {
+func GetServerStatusRest(c context.Context) ([]byte, error) {
 	if isInit == false {
 		Init()
 	}
@@ -717,7 +730,7 @@ func CreateWallet(c context.Context) (Wallet, int64, error) {
 	return result, 0, nil
 }
 
-func GetAccountSettings(c context.Context, account string) (AccountSettings, error) {
+func GetAccountSettingsRest(c context.Context, account string) (AccountSettings, error) {
 	if isInit == false {
 		Init()
 	}
@@ -752,40 +765,32 @@ func GetAccountSettings(c context.Context, account string) (AccountSettings, err
 	return r, nil
 }
 
-func GetAccountBalances(c context.Context, account string) (AccountBalance, error) {
+func GetAccountBalances(c context.Context, account string) ([]Balance, error) {
 	if isInit == false {
 		Init()
 	}
 
-	var r AccountBalance
+	var result []Balance
 
-	result, status, err := httpGet(c, "/v1/accounts/"+account+"/balances")
-
-	if result == nil {
-		return r, errors.New("Ripple unavailable")
+	lines, errCode, err := GetAccountLines(c, account)
+	if err != nil {
+		return result, err
 	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return r, err
+	for _, line := range lines {
+		var balance Balance
+
+		var value big.Float
+		if line.Balance > 0 {
+			balance.Value = line.Balance
+			balance.Currency = line.Currency
+			balance.Counterparty = line.Account
+		}
+
+		result = append(result, balance)
 	}
 
-	//	var r interface{}
-	//	println (string(result))
-
-	if err := json.Unmarshal(result, &r); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		println("Marshall error")
-		return r, err
-	}
-
-	//	m := r.(map[string]interface{})
-
-	if !r.Success {
-		return r, err
-	}
-
-	return r, nil
+	return result, nil
 }
 
 //func PreparePayment(c context.Context, source_address string, destination_address string, amount int64, currency string, issuer string) (PreparePaymentList, error) {
@@ -953,73 +958,43 @@ func GetAccountBalances(c context.Context, account string) (AccountBalance, erro
 //	return result, nil
 //}
 
-func GetTrustLines(c context.Context, account string) (GetTrustlinesResult, error) {
-	if isInit == false {
-		Init()
-	}
+//func GetTrustLinesRest(c context.Context, account string) (GetTrustlinesResult, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var r GetTrustlinesResult
+//	var r GetTrustlinesResult
 
-	result, status, err := httpGet(c, "/v1/accounts/"+account+"/trustlines")
+//	result, status, err := httpGet(c, "/v1/accounts/"+account+"/trustlines")
 
-	if result == nil {
-		return r, errors.New("Ripple unavailable")
-	}
+//	if result == nil {
+//		return r, errors.New("Ripple unavailable")
+//	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return r, err
-	}
+//	if status != 0 {
+//		log.FluentfContext(consts.LOGERROR, c, string(result))
+//		return r, err
+//	}
 
-	//	var r interface{}
-	println(string(result))
+//	//	var r interface{}
+//	println(string(result))
 
-	if err := json.Unmarshal(result, &r); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		println("Marshall error")
-		return r, err
-	}
+//	if err := json.Unmarshal(result, &r); err != nil {
+//		log.FluentfContext(consts.LOGERROR, c, err.Error())
+//		println("Marshall error")
+//		return r, err
+//	}
 
-	//	m := r.(map[string]interface{})
+//	//	m := r.(map[string]interface{})
 
-	if !r.Success {
-		return r, err
-	}
+//	if !r.Success {
+//		return r, err
+//	}
 
-	return r, nil
-}
+//	return r, nil
+//}
 
-func PostAccountlines(c context.Context, address string) (Accountlines, int64, error) {
-	if isInit == false {
-		Init()
-	}
-
-	var payload PayloadGetAccountlines
-	var result Accountlines
-
-	payload.Method = "account_lines"
-	parms := PayloadGetAccountlinesParms{Account: address, Ledger: "current"}
-	payload.Params = append(payload.Params, parms)
-
-	payloadJsonBytes, err := json.Marshal(payload)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
-		return result, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description)
-	}
-
-	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
-	if err != nil {
-		return result, errorCode, err
-	}
-
-	if responseData["result"] != nil {
-		log.Printf("%#v", responseData["result"])
-	}
-
-	return result, errorCode, nil
-}
-
-func PostServerInfo(c context.Context) ([]byte, int64, error) {
+func ServerInfo(c context.Context) ([]byte, int64, error) {
 	var payload payloadGetServerInfo
 	//	var result []Balance
 	var result []byte
@@ -1240,4 +1215,44 @@ func TrustSet(c context.Context, account string, currency string, value string, 
 	}
 
 	return txHash, errCode, err
+}
+
+func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) {
+	var payload = make(map[string]interface{})
+	var params = make(map[string]interface{})
+	var paramsArray []map[string]interface{}
+	var result []Lines
+	var responseData map[string]interface{}
+
+	if isInit == false {
+		Init()
+	}
+
+	// Build parameters
+	params["account"] = account
+	params["ledger"] = "validated"
+	paramsArray = append(paramsArray, params)
+
+	// Build payload
+	payload["method"] = "account_lines"
+	payload["params"] = paramsArray
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+
+	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		return result, errorCode, err
+	}
+
+	if responseData["result"] == nil {
+		log.FluentfContext(consts.LOGERROR, c, "Didn't receive a result from RPC server")
+		log.FluentfContext(consts.LOGERROR, c, "Got: %#v", responseData["result"])
+		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+
+	return result, errorCode, nil
 }
