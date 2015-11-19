@@ -1156,7 +1156,7 @@ func SendPayment(c context.Context, sourceAddress string, destinationAddress str
 			Account:         sourceAddress,
 			Destination:     destinationAddress,
 			Amount: Amount{
-				Value:    string(quantity),
+				Value:    fmt.Sprintf("%d", quantity),
 				Currency: asset,
 				Issuer:   issuer,
 			},
