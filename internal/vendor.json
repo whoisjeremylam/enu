@@ -157,6 +157,27 @@
 			"revisionTime": "2014-08-01T17:21:46-04:00"
 		},
 		{
+			"canonical": "bitbucket.org/dchapes/ripple/crypto/doublehash",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/doublehash",
+			"revision": "75445ae345ba",
+			"revisionTime": "2014-11-05T17:23:09-05:00"
+		},
+		{
+			"canonical": "bitbucket.org/dchapes/ripple/crypto/rkey",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey",
+			"revision": "75445ae345ba",
+			"revisionTime": "2014-11-05T17:23:09-05:00"
+		},
+		{
+			"canonical": "bitbucket.org/dchapes/ripple/crypto/sha512half",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/sha512half",
+			"revision": "75445ae345ba",
+			"revisionTime": "2014-11-05T17:23:09-05:00"
+		},
+		{
 			"canonical": "github.com/xeipuuv/gojsonpointer",
 			"comment": "",
 			"local": "github.com/vennd/enu/internal/github.com/xeipuuv/gojsonpointer",

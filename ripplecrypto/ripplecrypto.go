@@ -1,7 +1,7 @@
 package ripplecrypto
 
 import (
-	"bitbucket.org/dchapes/ripple/crypto/rkey"
+	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
 	"fmt"
 	"math/big"
 	"strings"

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"bitbucket.org/dchapes/ripple/crypto/rkey"
+	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
 	"fmt"
 	"log"
 	"math/big"
