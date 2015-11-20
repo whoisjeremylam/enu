@@ -765,23 +765,29 @@ func GetAccountSettingsRest(c context.Context, account string) (AccountSettings,
 	return r, nil
 }
 
-func GetAccountBalances(c context.Context, account string) ([]Balance, error) {
+func GetAccountBalances(c context.Context, account string) ([]Balance, int64, error) {
+	var result []Balance
+
 	if isInit == false {
 		Init()
 	}
 
-	var result []Balance
-
+	// Retrieve trust lines for the account
 	lines, errCode, err := GetAccountLines(c, account)
 	if err != nil {
-		return result, err
+		return result, errCode, err
 	}
 
+	// Range through trust lines for the account
 	for _, line := range lines {
 		var balance Balance
 
+		// Convert the balance which is stored in a string to a big.Float
 		var value big.Float
-		if line.Balance > 0 {
+		value.SetString(line.Balance)
+
+		// If the balance on the trustline is > 0, then save it into the result array
+		if value.Cmp(big.NewFloat(0)) == 1 {
 			balance.Value = line.Balance
 			balance.Currency = line.Currency
 			balance.Counterparty = line.Account
@@ -790,7 +796,7 @@ func GetAccountBalances(c context.Context, account string) ([]Balance, error) {
 		result = append(result, balance)
 	}
 
-	return result, nil
+	return result, 0, nil
 }
 
 //func PreparePayment(c context.Context, source_address string, destination_address string, amount int64, currency string, issuer string) (PreparePaymentList, error) {
@@ -1243,9 +1249,10 @@ func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) 
 		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
-	responseData, errorCode, err := postRPCAPI(c, payloadJsonBytes)
+	responseData, errCode, err := postRPCAPI(c, payloadJsonBytes)
 	if err != nil {
-		return result, errorCode, err
+		log.FluentfContext(consts.LOGERROR, c, "Error in postRPCAPI(): %s", err.Error())
+		return result, errCode, err
 	}
 
 	if responseData["result"] == nil {
@@ -1254,5 +1261,36 @@ func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) 
 		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
-	return result, errorCode, nil
+	for _, line := range responseData["result"].(map[string]interface{})["lines"].([]interface{}) {
+		//			Account      string `json:"account,omitempty"`
+		//	Balance      string `json:"balance,omitempty"`
+		//	Currency     string `json:"currency,omitempty"`
+		//	Limit        string `json:"limit,omitempty"`
+		//	LimitPeer    string `json:"limit_peer,omitempty"`
+		//	NoRipple     bool   `json:"no_ripple,omitempty"`
+		//	NoRipplePeer bool   `json:"no_ripple_peer,omitempty"`
+		//	QualityIn    uint   `json:"quality_in,omitempty"`
+		//	QualityOut   uint   `json:"quality_out,omitempty"`
+		outputLine := Lines{
+			Account:    line.(map[string]interface{})["account"].(string),
+			Balance:    line.(map[string]interface{})["balance"].(string),
+			Currency:   line.(map[string]interface{})["currency"].(string),
+			Limit:      line.(map[string]interface{})["limit"].(string),
+			LimitPeer:  line.(map[string]interface{})["limit_peer"].(string),
+			QualityIn:  uint(line.(map[string]interface{})["quality_in"].(float64)),
+			QualityOut: uint(line.(map[string]interface{})["quality_out"].(float64)),
+		}
+
+		if line.(map[string]interface{})["no_ripple"] != nil {
+			outputLine.NoRipple = line.(map[string]interface{})["no_ripple"].(bool)
+		}
+
+		if line.(map[string]interface{})["no_ripple_peer"] != nil {
+			outputLine.NoRipplePeer = line.(map[string]interface{})["no_ripple_peer"].(bool)
+		}
+
+		result = append(result, outputLine)
+	}
+
+	return result, 0, nil
 }
