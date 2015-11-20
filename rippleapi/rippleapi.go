@@ -108,30 +108,30 @@ type Wallet struct {
 	Status        string `json:"status"`
 }
 
-type AccountSettings struct {
-	AccSettings Settings `json:"settings"`
-	Success     bool     `json:"success"`
-}
+//type AccountSettings struct {
+//	AccSettings Settings `json:"settings"`
+//	Success     bool     `json:"success"`
+//}
 
-type Settings struct {
-	Account                 string `json:"account"`
-	Transfer_rate           string `json:"transfer_rate"`
-	Password_spent          bool   `json:"password_spent"`
-	Require_destination_tag bool   `json:"require_destination_tag"`
-	Require_authorization   bool   `json:"require_authorization"`
-	Disallow_xrp            bool   `json:"disallow_xrp"`
-	Disable_master          bool   `json:"disable_master"`
-	No_freeze               bool   `json:"no_freeze"`
-	Global_freeze           bool   `json:"global_freeze"`
-	Default_ripple          bool   `json:"default_ripple"`
-	Transaction_sequence    string `json:"transaction_sequence"`
-	Email_hash              string `json:"email_hash"`
-	Wallet_locator          string `json:"wallet_locator"`
-	Wallet_size             string `json:"wallet_size"`
-	Message_key             string `json:"message_key"`
-	Domain                  string `json:"domain"`
-	Signers                 string `json:"signers"`
-}
+//type Settings struct {
+//	Account                 string `json:"account"`
+//	Transfer_rate           string `json:"transfer_rate"`
+//	Password_spent          bool   `json:"password_spent"`
+//	Require_destination_tag bool   `json:"require_destination_tag"`
+//	Require_authorization   bool   `json:"require_authorization"`
+//	Disallow_xrp            bool   `json:"disallow_xrp"`
+//	Disable_master          bool   `json:"disable_master"`
+//	No_freeze               bool   `json:"no_freeze"`
+//	Global_freeze           bool   `json:"global_freeze"`
+//	Default_ripple          bool   `json:"default_ripple"`
+//	Transaction_sequence    string `json:"transaction_sequence"`
+//	Email_hash              string `json:"email_hash"`
+//	Wallet_locator          string `json:"wallet_locator"`
+//	Wallet_size             string `json:"wallet_size"`
+//	Message_key             string `json:"message_key"`
+//	Domain                  string `json:"domain"`
+//	Signers                 string `json:"signers"`
+//}
 
 //type AccountBalance struct {
 //	Ledger    int64     `json:"ledger"`
@@ -152,16 +152,16 @@ type Amount struct {
 	Issuer   string `json:"issuer"`
 }
 
-type PreparePaymentList struct {
-	Payments []Payment `json:"payments"`
-	Success  bool      `json:"success"`
-}
+//type PreparePaymentList struct {
+//	Payments []Payment `json:"payments"`
+//	Success  bool      `json:"success"`
+//}
 
-type PaymentList struct {
-	Secret             string  `json:"secret"`
-	Client_resource_id string  `json:"client_resource_id"`
-	Payments           Payment `json:"payment"`
-}
+//type PaymentList struct {
+//	Secret             string  `json:"secret"`
+//	Client_resource_id string  `json:"client_resource_id"`
+//	Payments           Payment `json:"payment"`
+//}
 
 type Payment struct {
 	Source_account      string `json:"source_account"`
@@ -177,14 +177,14 @@ type Payment struct {
 	No_direct_ripple    bool   `json:"no_direct_ripple"`
 }
 
-type ConfirmPayment struct {
-	Destination_balance_changes Amount `json:"destination_balance_changes"`
-}
+//type ConfirmPayment struct {
+//	Destination_balance_changes Amount `json:"destination_balance_changes"`
+//}
 
-type TrustlineList struct {
-	Secret     string    `json:"secret"`
-	Trustlines Trustline `json:"trustline"`
-}
+//type TrustlineList struct {
+//	Secret     string    `json:"secret"`
+//	Trustlines Trustline `json:"trustline"`
+//}
 
 type Trustline struct {
 	Account                  string `json:"account"`
@@ -222,21 +222,21 @@ type GetTrustline struct {
 	Counterparty_trustline_frozen bool   `json:"counterparty_trustline_frozen"`
 }
 
-type PayloadGetAccountlines struct {
-	Method string            `json:"method"`
-	Params ParmsGetAcctlines `json:"params"`
-}
+//type PayloadGetAccountlines struct {
+//	Method string            `json:"method"`
+//	Params ParmsGetAcctlines `json:"params"`
+//}
 
-type ParmsGetAcctlines []PayloadGetAccountlinesParms
+//type ParmsGetAcctlines []PayloadGetAccountlinesParms
 
-type PayloadGetAccountlinesParms struct {
-	Account string `json:"account"`
-	Ledger  string `json:"ledger"`
-}
+//type PayloadGetAccountlinesParms struct {
+//	Account string `json:"account"`
+//	Ledger  string `json:"ledger"`
+//}
 
-type Accountlines struct {
-	Result AccountlinesResult `json:"result"`
-}
+//type Accountlines struct {
+//	Result AccountlinesResult `json:"result"`
+//}
 
 type AccountlinesResult struct {
 	Account              string        `json:"account"`
@@ -358,13 +358,31 @@ type Lines struct {
 	QualityOut   uint   `json:"quality_out,omitempty"`
 }
 
+//account_data	Object	Information about the requested account
+//account_data.Account	String	Address of the requested account
+//account_data.Balance	String	XRP balance in “drops” represented as a string
+//account_data.Flags	32-bit unsigned integer	Integer with different bits representing the status of several account flags
+//account_data.LedgerEntryType	String	“AccountRoot” is the type of ledger entry that holds an account’s data
+//account_data.OwnerCount	Integer	Number of other ledger entries (specifically, trust lines and offers) attributed to this account. This is used to calculate the total reserve required to use the account.
+//account_data.PreviousTxnID	String	Hash value representing the most recent transaction that affected this account node directly. Note: This does not include all changes to the account’s trust lines and offers. Use account_tx to get a more inclusive list.
+//account_data.Sequence	Integer	The sequence number of the next valid transaction for this account. (Each account starts with Sequence = 1 and increases each time a transaction is made.)
+//account_data.index	String	A unique index for the AccountRoot node that represents this account in the ledger.
+
+type AccountInfo struct {
+	Account         string `json:",omitempty"`
+	Balance         string `json:",omitempty"`
+	Flags           uint32 `json:",omitempty"`
+	LedgerEntryType string `json:",omitempty"`
+	OwnerCount      int    `json:",omitempty"`
+	PreviousTxnID   string `json:",omitempty"`
+	Sequence        int    `json:",omitempty"`
+	Index           string `json:"index,omitempty"`
+}
+
 // Initialises global variables and database connection for all handlers
 var isInit bool = false // set to true only after the init sequence is complete
 var rippleHost string
 var rippleRestHost string
-
-var numericAssetIdMinString = "95428956661682176"
-var numericAssetIdMaxString = "18446744073709551616"
 
 func Init() {
 	var configFilePath string
@@ -581,27 +599,27 @@ func generateId(c context.Context) uint32 {
 	return randomUint32
 }
 
-func GetServerStatusRest(c context.Context) ([]byte, error) {
-	if isInit == false {
-		Init()
-	}
+//func GetServerStatusRest(c context.Context) ([]byte, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var requestString string = "/v1/server"
+//	var requestString string = "/v1/server"
 
-	result, status, err := httpGet(c, requestString)
-	if result == nil {
-		return result, errors.New("Ripple unavailable")
-	}
+//	result, status, err := httpGet(c, requestString)
+//	if result == nil {
+//		return result, errors.New("Ripple unavailable")
+//	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return result, err
-	}
+//	if status != 0 {
+//		log.FluentfContext(consts.LOGERROR, c, string(result))
+//		return result, err
+//	}
 
-	println(string(result))
+//	println(string(result))
 
-	return result, nil
-}
+//	return result, nil
+//}
 
 // Submits a transaction to the Ripple network
 func Submit(c context.Context, txHexString string) (string, int64, error) {
@@ -730,41 +748,42 @@ func CreateWallet(c context.Context) (Wallet, int64, error) {
 	return result, 0, nil
 }
 
-func GetAccountSettingsRest(c context.Context, account string) (AccountSettings, error) {
-	if isInit == false {
-		Init()
-	}
+//func GetAccountSettingsRest(c context.Context, account string) (AccountSettings, error) {
+//	if isInit == false {
+//		Init()
+//	}
 
-	var r AccountSettings
+//	var r AccountSettings
 
-	result, status, err := httpGet(c, "/v1/accounts/"+account+"/settings")
+//	result, status, err := httpGet(c, "/v1/accounts/"+account+"/settings")
 
-	if result == nil {
-		return r, errors.New("Ripple unavailable")
-	}
+//	if result == nil {
+//		return r, errors.New("Ripple unavailable")
+//	}
 
-	if status != 0 {
-		log.FluentfContext(consts.LOGERROR, c, string(result))
-		return r, err
-	}
+//	if status != 0 {
+//		log.FluentfContext(consts.LOGERROR, c, string(result))
+//		return r, err
+//	}
 
-	//	var r interface{}
-	println(string(result))
+//	//	var r interface{}
+//	println(string(result))
 
-	if err := json.Unmarshal(result, &r); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, err.Error())
-		return r, err
-	}
+//	if err := json.Unmarshal(result, &r); err != nil {
+//		log.FluentfContext(consts.LOGERROR, c, err.Error())
+//		return r, err
+//	}
 
-	//	m := r.(map[string]interface{})
+//	//	m := r.(map[string]interface{})
 
-	if !r.Success {
-		return r, err
-	}
+//	if !r.Success {
+//		return r, err
+//	}
 
-	return r, nil
-}
+//	return r, nil
+//}
 
+// Returns the balances, including xrp held by the account
 func GetAccountBalances(c context.Context, account string) ([]Balance, int64, error) {
 	var result []Balance
 
@@ -1262,15 +1281,6 @@ func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) 
 	}
 
 	for _, line := range responseData["result"].(map[string]interface{})["lines"].([]interface{}) {
-		//			Account      string `json:"account,omitempty"`
-		//	Balance      string `json:"balance,omitempty"`
-		//	Currency     string `json:"currency,omitempty"`
-		//	Limit        string `json:"limit,omitempty"`
-		//	LimitPeer    string `json:"limit_peer,omitempty"`
-		//	NoRipple     bool   `json:"no_ripple,omitempty"`
-		//	NoRipplePeer bool   `json:"no_ripple_peer,omitempty"`
-		//	QualityIn    uint   `json:"quality_in,omitempty"`
-		//	QualityOut   uint   `json:"quality_out,omitempty"`
 		outputLine := Lines{
 			Account:    line.(map[string]interface{})["account"].(string),
 			Balance:    line.(map[string]interface{})["balance"].(string),
@@ -1291,6 +1301,58 @@ func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) 
 
 		result = append(result, outputLine)
 	}
+
+	return result, 0, nil
+}
+
+func GetAccountInfo(c context.Context, account string) (AccountInfo, int64, error) {
+	var payload = make(map[string]interface{})
+	var params = make(map[string]interface{})
+	var paramsArray []map[string]interface{}
+	var result AccountInfo
+	var responseData map[string]interface{}
+
+	if isInit == false {
+		Init()
+	}
+
+	// Build parameters
+	params["account"] = account
+	params["ledger"] = "validated"
+	paramsArray = append(paramsArray, params)
+
+	// Build payload
+	payload["method"] = "account_info"
+	payload["params"] = paramsArray
+
+	payloadJsonBytes, err := json.Marshal(payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Marshal(): %s", err.Error())
+		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+
+	responseData, errCode, err := postRPCAPI(c, payloadJsonBytes)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in postRPCAPI(): %s", err.Error())
+		return result, errCode, err
+	}
+
+	if responseData["result"] == nil {
+		log.FluentfContext(consts.LOGERROR, c, "Didn't receive a result from RPC server")
+		log.FluentfContext(consts.LOGERROR, c, "Got: %#v", responseData["result"])
+		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+
+	// Map results
+	accountData := responseData["result"].(map[string]interface{})["account_data"].(map[string]interface{})
+	result.Account = accountData["Account"].(string)
+	result.Balance = accountData["Balance"].(string)
+	result.Flags = uint32(accountData["Flags"].(float64))
+	result.LedgerEntryType = accountData["LedgerEntryType"].(string)
+	result.OwnerCount = int(accountData["OwnerCount"].(float64))
+	result.PreviousTxnID = accountData["PreviousTxnID"].(string)
+	result.Sequence = int(accountData["Sequence"].(float64))
+	result.Index = accountData["index"].(string)
 
 	return result, 0, nil
 }
