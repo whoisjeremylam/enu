@@ -5,7 +5,7 @@ import (
 	"bytes"
 	"encoding"
 	"errors"
-	"github.com/spearson78/guardian/encoding/base58"
+	"github.com/vennd/enu/internal/github.com/spearson78/guardian/encoding/base58"
 )
 
 const encodeRipple = "rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz"

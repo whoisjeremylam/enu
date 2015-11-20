@@ -4,7 +4,7 @@ import (
 	"math/big"
 
 	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/doublehash"
-	_ "golang.org/x/crypto/ripemd160" // Required to use SumSha256Ripemd160
+	_ "github.com/vennd/enu/internal/golang.org/x/crypto/ripemd160" // Required to use SumSha256Ripemd160
 )
 
 // An AccountId is a hash of a public key.

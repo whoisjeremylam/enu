@@ -178,6 +178,20 @@
 			"revisionTime": "2014-11-05T17:23:09-05:00"
 		},
 		{
+			"canonical": "github.com/sour-is/koblitz/kelliptic",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/github.com/sour-is/koblitz/kelliptic",
+			"revision": "28d92784add22c8d728383886bbe18f0bd37737a",
+			"revisionTime": "2014-05-08T09:56:19-06:00"
+		},
+		{
+			"canonical": "github.com/spearson78/guardian/encoding/base58",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/github.com/spearson78/guardian/encoding/base58",
+			"revision": "2f9b7f8a1a06d92c7d534389eddec7c953cf81c0",
+			"revisionTime": "2013-05-01T11:21:21-07:00"
+		},
+		{
 			"canonical": "github.com/xeipuuv/gojsonpointer",
 			"comment": "",
 			"local": "github.com/vennd/enu/internal/github.com/xeipuuv/gojsonpointer",
@@ -190,6 +204,13 @@
 			"local": "github.com/vennd/enu/internal/github.com/xeipuuv/gojsonreference",
 			"revision": "e02fc20de94c78484cd5ffb007f8af96be030a45",
 			"revisionTime": "2015-08-08T14:50:54+08:00"
+		},
+		{
+			"canonical": "golang.org/x/crypto/ripemd160",
+			"comment": "",
+			"local": "github.com/vennd/enu/internal/golang.org/x/crypto/ripemd160",
+			"revision": "346896d57731cb5670b36c6178fc5519f3225980",
+			"revisionTime": "2015-06-18T15:57:31-07:00"
 		},
 		{
 			"canonical": "github.com/vennd/mneumonic",

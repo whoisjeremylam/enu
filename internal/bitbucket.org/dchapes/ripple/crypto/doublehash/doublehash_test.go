@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"testing"
 
-	"golang.org/x/crypto/ripemd160"
+	"github.com/vennd/enu/internal/golang.org/x/crypto/ripemd160"
 )
 
 func TestSize(t *testing.T) {
