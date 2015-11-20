@@ -17,6 +17,5 @@
 
 "fluentHost" : "http://localhost:8888",
 
-"rippleRestHost" : "http://localhost:5990",
 "rippleHost" : "http://localhost:51235" 
 }

@@ -2,24 +2,22 @@ package rippleapi
 
 import (
 	"bytes"
-	"math/big"
-	"strings"
-
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math/big"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/log"
-
 	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/vennd/enu/log"
 )
 
 var defaultFee = "10000"
@@ -108,38 +106,6 @@ type Wallet struct {
 	Status        string `json:"status"`
 }
 
-//type AccountSettings struct {
-//	AccSettings Settings `json:"settings"`
-//	Success     bool     `json:"success"`
-//}
-
-//type Settings struct {
-//	Account                 string `json:"account"`
-//	Transfer_rate           string `json:"transfer_rate"`
-//	Password_spent          bool   `json:"password_spent"`
-//	Require_destination_tag bool   `json:"require_destination_tag"`
-//	Require_authorization   bool   `json:"require_authorization"`
-//	Disallow_xrp            bool   `json:"disallow_xrp"`
-//	Disable_master          bool   `json:"disable_master"`
-//	No_freeze               bool   `json:"no_freeze"`
-//	Global_freeze           bool   `json:"global_freeze"`
-//	Default_ripple          bool   `json:"default_ripple"`
-//	Transaction_sequence    string `json:"transaction_sequence"`
-//	Email_hash              string `json:"email_hash"`
-//	Wallet_locator          string `json:"wallet_locator"`
-//	Wallet_size             string `json:"wallet_size"`
-//	Message_key             string `json:"message_key"`
-//	Domain                  string `json:"domain"`
-//	Signers                 string `json:"signers"`
-//}
-
-//type AccountBalance struct {
-//	Ledger    int64     `json:"ledger"`
-//	Validated bool      `json:"validated"`
-//	Balances  []Balance `json:"balances"`
-//	Success   bool      `json:"success"`
-//}
-
 type Balance struct {
 	Value        string `json:"value"`
 	Currency     string `json:"currency"`
@@ -151,17 +117,6 @@ type Amount struct {
 	Currency string `json:"currency"`
 	Issuer   string `json:"issuer"`
 }
-
-//type PreparePaymentList struct {
-//	Payments []Payment `json:"payments"`
-//	Success  bool      `json:"success"`
-//}
-
-//type PaymentList struct {
-//	Secret             string  `json:"secret"`
-//	Client_resource_id string  `json:"client_resource_id"`
-//	Payments           Payment `json:"payment"`
-//}
 
 type Payment struct {
 	Source_account      string `json:"source_account"`
@@ -176,15 +131,6 @@ type Payment struct {
 	Partial_payment     bool   `json:"partial_payment"`
 	No_direct_ripple    bool   `json:"no_direct_ripple"`
 }
-
-//type ConfirmPayment struct {
-//	Destination_balance_changes Amount `json:"destination_balance_changes"`
-//}
-
-//type TrustlineList struct {
-//	Secret     string    `json:"secret"`
-//	Trustlines Trustline `json:"trustline"`
-//}
 
 type Trustline struct {
 	Account                  string `json:"account"`
@@ -221,22 +167,6 @@ type GetTrustline struct {
 	Account_trustline_frozen      bool   `json:"account_trustline_frozen"`
 	Counterparty_trustline_frozen bool   `json:"counterparty_trustline_frozen"`
 }
-
-//type PayloadGetAccountlines struct {
-//	Method string            `json:"method"`
-//	Params ParmsGetAcctlines `json:"params"`
-//}
-
-//type ParmsGetAcctlines []PayloadGetAccountlinesParms
-
-//type PayloadGetAccountlinesParms struct {
-//	Account string `json:"account"`
-//	Ledger  string `json:"ledger"`
-//}
-
-//type Accountlines struct {
-//	Result AccountlinesResult `json:"result"`
-//}
 
 type AccountlinesResult struct {
 	Account              string        `json:"account"`
@@ -358,16 +288,6 @@ type Lines struct {
 	QualityOut   uint   `json:"quality_out,omitempty"`
 }
 
-//account_data	Object	Information about the requested account
-//account_data.Account	String	Address of the requested account
-//account_data.Balance	String	XRP balance in “drops” represented as a string
-//account_data.Flags	32-bit unsigned integer	Integer with different bits representing the status of several account flags
-//account_data.LedgerEntryType	String	“AccountRoot” is the type of ledger entry that holds an account’s data
-//account_data.OwnerCount	Integer	Number of other ledger entries (specifically, trust lines and offers) attributed to this account. This is used to calculate the total reserve required to use the account.
-//account_data.PreviousTxnID	String	Hash value representing the most recent transaction that affected this account node directly. Note: This does not include all changes to the account’s trust lines and offers. Use account_tx to get a more inclusive list.
-//account_data.Sequence	Integer	The sequence number of the next valid transaction for this account. (Each account starts with Sequence = 1 and increases each time a transaction is made.)
-//account_data.index	String	A unique index for the AccountRoot node that represents this account in the ledger.
-
 type AccountInfo struct {
 	Account         string `json:",omitempty"`
 	Balance         string `json:",omitempty"`
@@ -382,7 +302,6 @@ type AccountInfo struct {
 // Initialises global variables and database connection for all handlers
 var isInit bool = false // set to true only after the init sequence is complete
 var rippleHost string
-var rippleRestHost string
 
 func Init() {
 	var configFilePath string
@@ -440,90 +359,9 @@ func InitWithConfigPath(configFilePath string) {
 	m := configuration.(map[string]interface{})
 
 	// Ripple API parameters
-	rippleRestHost = m["rippleRestHost"].(string) // End point for JSON RESTAPI server
-	rippleHost = m["rippleHost"].(string)         // End point for JSON RPC server
+	rippleHost = m["rippleHost"].(string) // End point for JSON RPC server
 
 	isInit = true
-}
-
-func httpGet(c context.Context, url string) ([]byte, int64, error) {
-	// Set headers
-
-	req, err := http.NewRequest("GET", rippleRestHost+url, nil)
-
-	clientPointer := &http.Client{}
-	resp, err := clientPointer.Do(req)
-
-	if err != nil {
-		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. %s", err.Error())
-		return nil, 0, err
-	}
-
-	if resp.StatusCode != 200 {
-		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", resp.StatusCode)
-
-		body, err := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
-
-		if err != nil {
-			return nil, 0, err
-		}
-
-		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
-
-		return body, -1000, errors.New(string(body))
-
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return body, 0, nil
-}
-
-func postAPI(c context.Context, request string, postData []byte) ([]byte, int64, error) {
-	postDataJson := string(postData)
-
-	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postAPI() posting: %s", postDataJson)
-
-	// Set headers
-	req, err := http.NewRequest("POST", rippleRestHost+request, bytes.NewBufferString(postDataJson))
-	req.Header.Set("Content-Type", "application/json")
-
-	clientPointer := &http.Client{}
-	resp, err := clientPointer.Do(req)
-
-	if err != nil {
-		return nil, 0, err
-	}
-
-	if resp.StatusCode != 200 && resp.StatusCode != 201 {
-		log.FluentfContext(consts.LOGDEBUG, c, "Request failed. Status code: %d\n", resp.StatusCode)
-
-		body, err := ioutil.ReadAll(resp.Body)
-		defer resp.Body.Close()
-
-		if err != nil {
-			return nil, 0, err
-		}
-
-		log.FluentfContext(consts.LOGDEBUG, c, "Reply: %s", string(body))
-
-		return nil, -1000, errors.New(string(body))
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	defer resp.Body.Close()
-
-	if err != nil {
-		return nil, 0, err
-	}
-
-	return body, 0, nil
 }
 
 func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int64, error) {
@@ -598,28 +436,6 @@ func generateId(c context.Context) uint32 {
 
 	return randomUint32
 }
-
-//func GetServerStatusRest(c context.Context) ([]byte, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var requestString string = "/v1/server"
-
-//	result, status, err := httpGet(c, requestString)
-//	if result == nil {
-//		return result, errors.New("Ripple unavailable")
-//	}
-
-//	if status != 0 {
-//		log.FluentfContext(consts.LOGERROR, c, string(result))
-//		return result, err
-//	}
-
-//	println(string(result))
-
-//	return result, nil
-//}
 
 // Submits a transaction to the Ripple network
 func Submit(c context.Context, txHexString string) (string, int64, error) {
@@ -748,41 +564,6 @@ func CreateWallet(c context.Context) (Wallet, int64, error) {
 	return result, 0, nil
 }
 
-//func GetAccountSettingsRest(c context.Context, account string) (AccountSettings, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var r AccountSettings
-
-//	result, status, err := httpGet(c, "/v1/accounts/"+account+"/settings")
-
-//	if result == nil {
-//		return r, errors.New("Ripple unavailable")
-//	}
-
-//	if status != 0 {
-//		log.FluentfContext(consts.LOGERROR, c, string(result))
-//		return r, err
-//	}
-
-//	//	var r interface{}
-//	println(string(result))
-
-//	if err := json.Unmarshal(result, &r); err != nil {
-//		log.FluentfContext(consts.LOGERROR, c, err.Error())
-//		return r, err
-//	}
-
-//	//	m := r.(map[string]interface{})
-
-//	if !r.Success {
-//		return r, err
-//	}
-
-//	return r, nil
-//}
-
 // Returns the balances, including xrp held by the account
 func GetAccountBalances(c context.Context, account string) ([]Balance, int64, error) {
 	var result []Balance
@@ -815,209 +596,23 @@ func GetAccountBalances(c context.Context, account string) ([]Balance, int64, er
 		result = append(result, balance)
 	}
 
+	// Retrieve account information, which contains the XRP balance
+	accountInfo, errCode, err := GetAccountInfo(c, account)
+	if err != nil {
+		// raise error in log but continue. We just don't add the xrp balance to the results
+		log.FluentfContext(consts.LOGERROR, c, "Error in GetAccountInfo(): %s", err.Error())
+	} else {
+		var xrpBalance Balance
+
+		xrpBalance.Counterparty = ""
+		xrpBalance.Currency = "XRP"
+		xrpBalance.Value = accountInfo.Balance
+
+		result = append(result, xrpBalance)
+	}
+
 	return result, 0, nil
 }
-
-//func PreparePayment(c context.Context, source_address string, destination_address string, amount int64, currency string, issuer string) (PreparePaymentList, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var r PreparePaymentList
-
-//	var requestString string = "/v1/accounts/" + source_address + "/payments/paths/" + destination_address + "/" + strconv.FormatInt(amount, 20) + "+" + currency + "+" + issuer
-
-//	result, status, err := httpGet(c, requestString)
-//	if result == nil {
-//		return r, errors.New("Ripple unavailable")
-//	}
-
-//	if status != 0 {
-//		log.FluentfContext(consts.LOGERROR, c, string(result))
-//		return r, err
-//	}
-
-//	//	var r interface{}
-//	//	println (string(result))
-
-//	if err := json.Unmarshal(result, &r); err != nil {
-//		log.FluentfContext(consts.LOGERROR, c, err.Error())
-//		println("Marshall error")
-//		return r, err
-//	}
-
-//	//	m := r.(map[string]interface{})
-
-//	if !r.Success {
-//		return r, err
-//	}
-
-//	return r, nil
-//}
-
-//func PostPayment(c context.Context, secret string, client_resource_id string, source_address string, destination_address string, amount int64, currency string, issuer string) (PaymentList, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var payload PaymentList
-//	var result PaymentList
-
-//	var request string = "/v1/accounts/" + source_address + "/payments?validated=true"
-
-//	payload.Secret = secret
-//	payload.Client_resource_id = client_resource_id
-//	payload.Payments.Source_account = source_address
-//	payload.Payments.Source_amount.Value = fmt.Sprintf("%d", amount)
-//	payload.Payments.Source_amount.Currency = currency
-//	payload.Payments.Source_amount.Issuer = issuer
-//	payload.Payments.Destination_account = destination_address
-//	payload.Payments.Destination_amount.Value = fmt.Sprintf("%d", amount)
-//	payload.Payments.Destination_amount.Currency = currency
-//	payload.Payments.Destination_amount.Issuer = issuer
-//	payload.Payments.Paths = "[]"
-
-//	payloadJsonBytes, err := json.Marshal(payload)
-
-//	//		log.Println(string(payloadJsonBytes))
-
-//	if err != nil {
-//		return result, err
-//	}
-
-//	responseData, _, err := postAPI(c, request, payloadJsonBytes)
-//	if err != nil {
-//		return result, err
-//	}
-
-//	log.Println(string(responseData))
-
-//	if err := json.Unmarshal(responseData, &result); err != nil {
-//		return result, errors.New("Unable to unmarshal responseData")
-//	}
-
-//	//	if !result.Success {
-//	// 	return result, err
-//	//	}
-
-//	return result, nil
-//}
-
-//func GetConfirmPayment(c context.Context, source_address string, client_resource_id string) (ConfirmPayment, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var r ConfirmPayment
-
-//	var requestString string = "/v1/accounts/" + source_address + "/payments/" + client_resource_id
-
-//	result, status, err := httpGet(c, requestString)
-//	if result == nil {
-//		return r, errors.New("Ripple unavailable")
-//	}
-
-//	if status != 0 {
-//		log.FluentfContext(consts.LOGERROR, c, string(result))
-//		return r, err
-//	}
-
-//	//	var r interface{}
-//	println(string(result))
-
-//	if err := json.Unmarshal(result, &r); err != nil {
-//		log.FluentfContext(consts.LOGERROR, c, err.Error())
-//		println("Marshall error")
-//		return r, err
-//	}
-
-//	//	m := r.(map[string]interface{})
-
-//	//	if !r.Success {
-//	// 	return r, err
-//	//	}
-
-//	return r, nil
-//}
-
-//func PostTrustline(c context.Context, secret string, source_address string, destination_address string, limit int64, currency string) (TrustlineResult, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var payload TrustlineList
-//	var result TrustlineResult
-
-//	var request string = "/v1/accounts/" + destination_address + "/trustlines?validated=true"
-
-//	payload.Secret = secret
-//	payload.Trustlines.Account = destination_address
-//	payload.Trustlines.Limit = fmt.Sprintf("%d", limit)
-//	payload.Trustlines.Currency = currency
-//	payload.Trustlines.Counterparty = source_address
-//	payload.Trustlines.Account_allows_rippling = false
-
-//	payloadJsonBytes, err := json.Marshal(payload)
-
-//	//		log.Println(string(payloadJsonBytes))
-
-//	if err != nil {
-//		return result, err
-//	}
-
-//	responseData, _, err := postAPI(c, request, payloadJsonBytes)
-//	if err != nil {
-//		return result, err
-//	}
-
-//	log.Println(string(responseData))
-
-//	if err := json.Unmarshal(responseData, &result); err != nil {
-//		return result, errors.New("Unable to unmarshal responseData")
-//	}
-
-//	//	if !result.Success {
-//	// 	return result, err
-//	//	}
-
-//	return result, nil
-//}
-
-//func GetTrustLinesRest(c context.Context, account string) (GetTrustlinesResult, error) {
-//	if isInit == false {
-//		Init()
-//	}
-
-//	var r GetTrustlinesResult
-
-//	result, status, err := httpGet(c, "/v1/accounts/"+account+"/trustlines")
-
-//	if result == nil {
-//		return r, errors.New("Ripple unavailable")
-//	}
-
-//	if status != 0 {
-//		log.FluentfContext(consts.LOGERROR, c, string(result))
-//		return r, err
-//	}
-
-//	//	var r interface{}
-//	println(string(result))
-
-//	if err := json.Unmarshal(result, &r); err != nil {
-//		log.FluentfContext(consts.LOGERROR, c, err.Error())
-//		println("Marshall error")
-//		return r, err
-//	}
-
-//	//	m := r.(map[string]interface{})
-
-//	if !r.Success {
-//		return r, err
-//	}
-
-//	return r, nil
-//}
 
 func ServerInfo(c context.Context) ([]byte, int64, error) {
 	var payload payloadGetServerInfo
