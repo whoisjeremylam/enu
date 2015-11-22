@@ -2,7 +2,6 @@ package rippleapi
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,12 +9,10 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 
 	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 	"github.com/vennd/enu/log"
 )
@@ -424,19 +421,6 @@ func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int
 	return result, 0, nil
 }
 
-func generateId(c context.Context) uint32 {
-	buf := securecookie.GenerateRandomKey(4)
-	randomUint64, err := strconv.ParseUint(hex.EncodeToString(buf), 16, 32)
-
-	if err != nil {
-		panic(err)
-	}
-
-	randomUint32 := uint32(randomUint64)
-
-	return randomUint32
-}
-
 // Submits a transaction to the Ripple network
 func Submit(c context.Context, txHexString string) (string, int64, error) {
 	if isInit == false {
@@ -703,7 +687,7 @@ func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAcco
 
 // Creates and sends the payment for the custom currency that is specified.
 // Returns the tx hash if successful
-func SendPayment(c context.Context, sourceAddress string, destinationAddress string, quantity uint64, asset string, issuer string, secret string) (string, int64, error) {
+func SendPayment(c context.Context, account string, destination string, quantity string, currency string, issuer string, secret string) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -713,11 +697,11 @@ func SendPayment(c context.Context, sourceAddress string, destinationAddress str
 	var err error
 	var txHash string
 
-	if strings.ToUpper(asset) == "XRP" {
+	if strings.ToUpper(currency) == "XRP" {
 		tx := PaymentXrpTx{
 			TransactionType: "Payment",
-			Account:         sourceAddress,
-			Destination:     destinationAddress,
+			Account:         account,
+			Destination:     destination,
 			Amount:          fmt.Sprintf("%d", quantity),
 			Flags:           2147483648, // require canonical signature
 			Fee:             defaultFee,
@@ -727,11 +711,11 @@ func SendPayment(c context.Context, sourceAddress string, destinationAddress str
 	} else {
 		tx := PaymentAssetTx{
 			TransactionType: "Payment",
-			Account:         sourceAddress,
-			Destination:     destinationAddress,
+			Account:         account,
+			Destination:     destination,
 			Amount: Amount{
 				Value:    fmt.Sprintf("%d", quantity),
-				Currency: asset,
+				Currency: currency,
 				Issuer:   issuer,
 			},
 			Flags: 2147483648, // require canonical signature
@@ -950,4 +934,40 @@ func GetAccountInfo(c context.Context, account string) (AccountInfo, int64, erro
 	result.Index = accountData["index"].(string)
 
 	return result, 0, nil
+}
+
+// Converts a Ripple amount which is stored in a string into a Uint64 whose factor is in satoshis
+// Uses big.Float and big.Int to stop overflows and maintain precision
+func AmountToUint64(amount string) (uint64, error) {
+	var bigSatoshi big.Float
+	var bigAmount big.Float
+
+	bigAmount.SetString(amount)
+	bigSatoshi.SetString("100000000")
+
+	// multiply by satoshi factor
+	bigAmount.Mul(&bigAmount, &bigSatoshi)
+
+	// Change into int
+	bigResult, _ := bigAmount.Int(nil)
+
+	result := bigResult.Uint64()
+	return result, nil
+}
+
+// Converts a Uint64 into a Ripple amount which is stored in a string
+func Uint64ToAmount(amount uint64) (string, error) {
+	var bigSatoshi big.Float
+	var bigAmount big.Float
+
+	bigAmount.SetUint64(amount)
+	bigSatoshi.SetString("100000000")
+
+	// divide by satoshi factor
+	bigAmount.Quo(&bigAmount, &bigSatoshi)
+
+	// Change into string
+	result := bigAmount.Text('f', 15) // Ripple targets 15 decimal points of precision
+
+	return result, nil
 }
