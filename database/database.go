@@ -1016,7 +1016,7 @@ func GetActivationByActivationId(c context.Context, accessKey string, activation
 
 	//	 Query DB
 	//	log.FluentfContext(consts.LOGDEBUG, c, "select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=%s and a.accessKey=%s", activationId, accessKey)
-	stmt, err := Db.Prepare("select blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=? and a.accessKey=?")
+	stmt, err := Db.Prepare("select a.blockchainId, addressToActivate, amount, a.rowId, sourceAddress, outAsset, outAmount, status, broadcastTxId, errorDescription from activations a, payments p where a.activationId = p.sourceTxid and activationId=? and a.accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
 		return map[string]interface{}{}
