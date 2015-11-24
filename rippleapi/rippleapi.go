@@ -710,12 +710,6 @@ func CreatePayment(c context.Context, account string, destination string, quanti
 	var errCode int64
 	var err error
 
-	customCurrency, err := ToCurrency(currency)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in ToCurrency(): %s", err.Error())
-		return "", consts.RippleErrors.InvalidCurrency.Code, errors.New(consts.RippleErrors.InvalidCurrency.Description)
-	}
-
 	if strings.ToUpper(currency) == "XRP" {
 		tx := PaymentXrpTx{
 			TransactionType: "Payment",
@@ -734,7 +728,7 @@ func CreatePayment(c context.Context, account string, destination string, quanti
 			Destination:     destination,
 			Amount: Amount{
 				Value:    quantity,
-				Currency: customCurrency,
+				Currency: currency,
 				Issuer:   issuer,
 			},
 			Flags: 2147483648, // require canonical signature
@@ -1011,6 +1005,6 @@ func ToCurrency(currency string) (string, error) {
 		length = len(currency)
 	}
 
-	result := customCurrencyPrefix + fmt.Sprintf("%x", currency[:length])
+	result := customCurrencyPrefix + fmt.Sprintf("%x", currency[:length]) + strings.Repeat("00", 19-length) // pad out to 19 hex bytes
 	return result, nil
 }
