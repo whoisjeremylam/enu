@@ -37,7 +37,6 @@ var CounterpartyErrors = CounterpartyStruct{
 	SigningError:              ErrCodes{1003, "Unable to sign transaction. Is your passphrase correct?"},
 	BroadcastError:            ErrCodes{1004, "Unable to broadcast transaction to the blockchain. Please try the transaction again."},
 	InsufficientFees:          ErrCodes{1005, "Insufficient BTC in address to perform transaction. Please use the Activate() call to add more BTC."},
-	InvalidPassphrase:         ErrCodes{1006, "The passphrase provided is not valid."},
 	DividendNotFound:          ErrCodes{1007, "The dividend could not be found."},
 	ComposeError:              ErrCodes{1008, "Unable to create the blockchain transaction."},
 	InsufficientFunds:         ErrCodes{1009, "Insufficient asset in this address."},
@@ -56,6 +55,7 @@ type GenericStruct struct {
 	InvalidNonce          ErrCodes
 	NotFound              ErrCodes
 	FunctionNotAvailable  ErrCodes
+	InvalidPassphrase     ErrCodes
 
 	GeneralError ErrCodes
 }
@@ -70,16 +70,24 @@ var GenericErrors = GenericStruct{
 	InvalidNonce:          ErrCodes{7, "Invalid nonce"},
 	NotFound:              ErrCodes{8, "Not found"},
 	FunctionNotAvailable:  ErrCodes{9, "The function is not available on the selected blockchain."},
-
-	GeneralError: ErrCodes{13, "Misc error. Please contact Vennd.io support."},
+	InvalidPassphrase:     ErrCodes{10, "The passphrase provided is not valid."},
+	GeneralError:          ErrCodes{13, "Misc error. Please contact Vennd.io support."},
 }
 
 type RippleStruct struct {
-	MiscError ErrCodes
-	Timeout   ErrCodes
+	MiscError         ErrCodes
+	Timeout           ErrCodes
+	InvalidAmount     ErrCodes
+	InvalidCurrency   ErrCodes
+	SubmitError       ErrCodes
+	IssuerMustBeGiven ErrCodes
 }
 
 var RippleErrors = RippleStruct{
-	MiscError: ErrCodes{2000, "Misc error when contacting Ripple. Please contact Vennd.io support."},
-	Timeout:   ErrCodes{2001, "Timeout when contacting Ripple. Please try again later."},
+	MiscError:         ErrCodes{2000, "Misc error when contacting Ripple. Please contact Vennd.io support."},
+	Timeout:           ErrCodes{2001, "Timeout when contacting Ripple. Please try again later."},
+	InvalidAmount:     ErrCodes{2002, "The amount specified is not a valid amount."},
+	InvalidCurrency:   ErrCodes{2003, "The currency is invalid. Ripple currencies must be 3 characters or longer."},
+	SubmitError:       ErrCodes{2004, "The Ripple node rejected the transaction submission. Please try again."},
+	IssuerMustBeGiven: ErrCodes{2005, "If the currency is not XRP, the issuer must be provided."},
 }
