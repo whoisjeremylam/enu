@@ -500,11 +500,24 @@ func Sign(c context.Context, tx interface{}, secret string) (string, int64, erro
 	log.Printf("%#v", responseData)
 
 	if responseData["result"] != nil {
-		if responseData["result"].(map[string]interface{})["status"] != nil && responseData["result"].(map[string]interface{})["status"] == "success" {
-			result = responseData["result"].(map[string]interface{})["tx_blob"].(string)
+		r := responseData["result"].(map[string]interface{})
+		if r["status"] != nil && r["status"] == "success" {
+			result = r["tx_blob"].(string)
 		} else {
+			var errorMessage string
+			var errorCode int64
+
+			if r["error_message"] != nil {
+				errorMessage = r["error_message"].(string)
+			}
+
+			if r["error_code"] != nil {
+				errorCode = int64(r["error_code"].(float64))
+			}
+			log.FluentfContext(consts.LOGERROR, c, "Error from signing: %s, errorCode: %d", errorMessage, errorCode)
+
 			// do some errorhandling here
-			log.Printf("sign returned some kind of error")
+			return "", consts.RippleErrors.SigningError.Code, errors.New(consts.RippleErrors.SigningError.Description)
 		}
 	}
 
@@ -732,11 +745,10 @@ func CreatePayment(c context.Context, account string, destination string, quanti
 	}
 
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Sign(): %s", err.Error())
 		return "", errCode, err
 	}
 
-	log.Printf("signed! tx_blob: %s", signedTx)
+	log.FluentfContext(consts.LOGINFO, c, "signed! tx_blob: %s", signedTx)
 
 	return signedTx, errCode, err
 }
