@@ -81,6 +81,7 @@ type RippleStruct struct {
 	InvalidCurrency   ErrCodes
 	SubmitError       ErrCodes
 	IssuerMustBeGiven ErrCodes
+	SigningError      ErrCodes
 }
 
 var RippleErrors = RippleStruct{
@@ -90,4 +91,5 @@ var RippleErrors = RippleStruct{
 	InvalidCurrency:   ErrCodes{2003, "The currency is invalid. Ripple currencies must be 3 characters or longer."},
 	SubmitError:       ErrCodes{2004, "The Ripple node rejected the transaction submission. Please try again."},
 	IssuerMustBeGiven: ErrCodes{2005, "If the currency is not XRP, the issuer must be provided."},
+	SigningError:      ErrCodes{2006, "Unable to sign transaction. Is your passphrase correct?"},
 }
