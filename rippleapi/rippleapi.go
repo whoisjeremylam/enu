@@ -18,6 +18,7 @@ import (
 )
 
 var defaultFee = "10000"
+var customCurrencyPrefix = "80"
 
 // Account set flags
 const AsfRequireDest = 1
@@ -685,9 +686,9 @@ func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAcco
 	return result, 0, nil
 }
 
-// Creates and sends the payment for the custom currency that is specified.
-// Returns the tx hash if successful
-func SendPayment(c context.Context, account string, destination string, quantity string, currency string, issuer string, secret string) (string, int64, error) {
+// Creates and signs the payment for the custom currency that is specified.
+// Returns the tx string if successful
+func CreatePayment(c context.Context, account string, destination string, quantity string, currency string, issuer string, secret string) (string, int64, error) {
 	if isInit == false {
 		Init()
 	}
@@ -695,14 +696,19 @@ func SendPayment(c context.Context, account string, destination string, quantity
 	var signedTx string
 	var errCode int64
 	var err error
-	var txHash string
+
+	customCurrency, err := ToCurrency(currency)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in ToCurrency(): %s", err.Error())
+		return "", consts.RippleErrors.InvalidCurrency.Code, errors.New(consts.RippleErrors.InvalidCurrency.Description)
+	}
 
 	if strings.ToUpper(currency) == "XRP" {
 		tx := PaymentXrpTx{
 			TransactionType: "Payment",
 			Account:         account,
 			Destination:     destination,
-			Amount:          fmt.Sprintf("%d", quantity),
+			Amount:          quantity,
 			Flags:           2147483648, // require canonical signature
 			Fee:             defaultFee,
 		}
@@ -714,8 +720,8 @@ func SendPayment(c context.Context, account string, destination string, quantity
 			Account:         account,
 			Destination:     destination,
 			Amount: Amount{
-				Value:    fmt.Sprintf("%d", quantity),
-				Currency: currency,
+				Value:    quantity,
+				Currency: customCurrency,
 				Issuer:   issuer,
 			},
 			Flags: 2147483648, // require canonical signature
@@ -732,12 +738,7 @@ func SendPayment(c context.Context, account string, destination string, quantity
 
 	log.Printf("signed! tx_blob: %s", signedTx)
 
-	txHash, errCode, err = Submit(c, signedTx)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Submit(): %s", err.Error())
-	}
-
-	return txHash, errCode, err
+	return signedTx, errCode, err
 }
 
 // Sets a specific flag on an account
@@ -969,5 +970,35 @@ func Uint64ToAmount(amount uint64) (string, error) {
 	// Change into string
 	result := bigAmount.Text('f', 15) // Ripple targets 15 decimal points of precision
 
+	return result, nil
+}
+
+// We allow currency names up to 19 characters long
+func ValidCurrencyName(currency string) (bool, error) {
+	return true, nil
+}
+
+// Truncate to 19 characters and convert to a hex string equivalent.
+// Prepend hex 80 to indicate a custom currency
+func ToCurrency(currency string) (string, error) {
+	// Error if currency given is less than 3 characters
+	if len(currency) < 3 {
+		return "", errors.New("Currency can not be less than 3 characters")
+	}
+
+	// Currencies 3 chars (like ISO currency_ should be kept as it is
+	if len(currency) == 3 {
+		return currency, nil
+	}
+
+	// Otherwise, assume it is a custom currency and hex encode the string
+	var length int
+	if len(currency) > 19 {
+		length = 19
+	} else {
+		length = len(currency)
+	}
+
+	result := customCurrencyPrefix + fmt.Sprintf("%x", currency[:length])
 	return result, nil
 }
