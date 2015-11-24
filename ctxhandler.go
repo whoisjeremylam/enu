@@ -13,6 +13,7 @@ import (
 	"github.com/vennd/enu/counterpartyhandlers"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
+	"github.com/vennd/enu/handlers"
 	"github.com/vennd/enu/log"
 	"github.com/vennd/enu/ripplehandlers"
 
@@ -55,15 +56,16 @@ var blockchainFunctions = map[string]blockchainFunction{
 		"paymentbyaddress": counterpartyhandlers.GetPaymentsByAddress,
 	},
 	"ripple": {
-		"walletCreate": ripplehandlers.WalletCreate,
-		"asset":        ripplehandlers.AssetCreate,
-		"dividend":     ripplehandlers.Unhandled,
+		"walletCreate":  ripplehandlers.WalletCreate,
+		"walletPayment": ripplehandlers.WalletSend,
+		"asset":         ripplehandlers.AssetCreate,
+		"dividend":      ripplehandlers.Unhandled,
 	},
 }
 
 func handle(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
 	// check generic args and parse
-	c2, m, err := CheckAndParseJsonCTX(c, w, r)
+	c2, m, err := handlers.CheckAndParseJsonCTX(c, w, r)
 	if err != nil {
 		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
 		return nil
@@ -100,7 +102,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.FluentfContext(consts.LOGINFO, ctx, "%s %s entered.", r.Method, r.URL.Path)
 
-	accessKey, err := CheckHeaderGeneric(ctx, w, r)
+	accessKey, err := handlers.CheckHeaderGeneric(ctx, w, r)
 	if err != nil {
 		return
 	}
@@ -128,7 +130,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if blockchainValid == false && userBlockchainIdValid == false {
 		log.FluentfContext(consts.LOGINFO, ctx, "Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
-		ReturnServerError(ctx, w, consts.GenericErrors.UnsupportedBlockchain.Code, errors.New(e))
+		handlers.ReturnServerError(ctx, w, consts.GenericErrors.UnsupportedBlockchain.Code, errors.New(e))
 
 		return
 	}

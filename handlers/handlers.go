@@ -167,7 +167,7 @@ func CheckHeaderGeneric(c context.Context, w http.ResponseWriter, r *http.Reques
 	return accessKey, nil
 }
 
-func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (map[string]interface{}, error) {
+func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Request) (context.Context, map[string]interface{}, error) {
 	//	var blockchainId string
 	var payload interface{}
 	var nonceDB int64
@@ -180,13 +180,13 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
 
-		return nil, err
+		return c, nil, err
 	}
 	if err := r.Body.Close(); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Body.Close(): %s", err.Error())
 		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
 
-		return nil, err
+		return c, nil, err
 	}
 
 	// If the body is an empty byte array then don't attempt to unmarshall the JSON and set a default
@@ -197,7 +197,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			log.FluentfContext(consts.LOGERROR, c, err.Error())                                   // Log the real error
 			ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, returnErr) // Send back sanitised error
 
-			return nil, returnErr
+			return c, nil, returnErr
 		}
 		log.FluentfContext(consts.LOGINFO, c, "Request received: %s", body)
 	} else if bytes.Compare(body, make([]byte, 0)) == 0 {
@@ -206,7 +206,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		log.FluentfContext(consts.LOGERROR, c, returnErr.Error())
 		ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, returnErr)
 
-		return nil, returnErr
+		return c, nil, returnErr
 	}
 
 	// Then look up secret and calculate digest
@@ -219,7 +219,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		err := errors.New(errorString)
 		ReturnUnauthorised(c, w, consts.GenericErrors.InvalidSignature.Code, err)
 
-		return nil, err
+		return c, nil, err
 	}
 
 	m := payload.(map[string]interface{})
@@ -240,7 +240,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			log.FluentfContext(consts.LOGERROR, c, "Nonce for accessKey %s provided is <= nonce in db. %d <= %d\n", accessKey, nonceInt, nonceDB)
 			ReturnUnauthorised(c, w, consts.GenericErrors.InvalidNonce.Code, errors.New(consts.GenericErrors.InvalidNonce.Description))
 
-			return nil, err
+			return c, nil, err
 		} else {
 			log.FluentfContext(consts.LOGINFO, c, "Nonce for accessKey %s provided is ok. (%s > %d)\n", accessKey, nonceInt, nonceDB)
 			database.UpdateNonce(accessKey, nonceInt)
@@ -248,51 +248,50 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
 				ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New("Nonce handling failed"))
 
-				return nil, err
+				return c, nil, err
 			}
 		}
 	}
 
-	// Arg checking
+	// Overwrite blockchain context if the blockchainId has been set as a parameter in the body
+	var c2 context.Context
+	if m["blockchainId"] != nil {
+		// check if blockchainId is valid
+		log.FluentfContext(consts.LOGINFO, c, "blockchainId specified as a body parameter. Overwriting blockchainId with: %s", m["blockchainId"].(string))
+		c2 = context.WithValue(c, consts.BlockchainIdKey, m["blockchainId"].(string))
+	} else {
+		c2 = c
+	}
 
+	err = ValidateParameters(c2, payload)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		ReturnUnprocessableEntity(c2, w, consts.GenericErrors.InvalidDocument.Code, err)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Parameters validated.")
+
+	return c2, m, nil
+}
+
+func ValidateParameters(c context.Context, parameters interface{}) error {
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
 	u, ok := c.Value(consts.RequestTypeKey).(string)
-	if ok {
 
-		check := make(map[string]string)
-		check["asset"] =
-			`
-		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"description":{"type":"string"},"asset":{"type":"string","minLength":4},"quantity":{"type":"integer"},"divisible":{"type":"boolean"}},"required":["sourceAddress","asset","quantity","divisible"]}
-	`
-		check["dividend"] =
-			`
-		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"dividendAsset":{"type":"string"},"quantityPerUnit":{"type":"integer"}},"required":["sourceAddress","asset","dividendAsset","quantityPerUnit"]}
-	`
-		check["walletCreate"] =
-			`
-		{"properties":{"numberOfAddresses":{"type":"integer"}}}
-	`
-		check["walletPayment"] =
-			`
-		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"destinationAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"quantity":{"type":"integer"}},"required":["sourceAddress","asset","quantity","destinationAddress"]}
-	`
-		check["simplePayment"] =
-			`
-		{"properties":{"sourceAddress":{"type":"string", "maxLength":34, "minLength":34},"destinationAddress":{"type":"string", "maxLength":34, "minLength":34},"asset":{"type":"string","minLength":4},"amount":{"type":"integer"},,"txFee":{"type":"integer"}},"required":["sourceAddress","destinationAddress","asset","amount"]}
-	`
-		check["activateaddress"] =
-			`
-		{"properties":{"address":{"type":"string","maxLength":34,"minLength":34},"amount":{"type":"integer"}},"required":["address","amount"]}
-	`
-		schemaLoader := gojsonschema.NewStringLoader(check[u])
-		documentLoader := gojsonschema.NewGoLoader(payload)
+	if ok {
+		schemaLoader := gojsonschema.NewStringLoader(consts.ParameterValidations[blockchainId][u])
+		documentLoader := gojsonschema.NewGoLoader(parameters)
+
+		log.Printf("Validating against: %s\n", consts.ParameterValidations[blockchainId][u])
 
 		result, err := gojsonschema.Validate(schemaLoader, documentLoader)
 		if err != nil {
-			panic(err.Error())
+			log.FluentfContext(consts.LOGERROR, c, "Error in gojsonschema.Validate(): %s", err.Error())
+			return err
 		}
 
 		if result.Valid() {
-			log.FluentfContext(consts.LOGINFO, c, "The document is valid\n")
+			return nil
 		} else {
 			var errorList string
 			for _, desc := range result.Errors() {
@@ -301,10 +300,11 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			}
 			err := errors.New("There was a problem with the parameters in your JSON request. Please correct these errors : " + errorList)
 			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDocument.Code, err)
 
-			return m, err
+			return err
 		}
 	}
-	return m, nil
+
+	// shouldn't reach here...
+	return nil
 }
