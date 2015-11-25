@@ -1367,7 +1367,7 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	env := c.Value(consts.EnvKey).(string)
 
 	// Write the payment with the generated payment id to the database
-	go database.InsertPayment(c, accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, 1500, paymentTag)
+	go database.InsertPayment(c, accessKey, 0, c.Value(consts.BlockchainIdKey).(string), paymentId, sourceAddress, destinationAddress, asset, "", quantity, "valid", 0, 1500, paymentTag)
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
@@ -1719,7 +1719,7 @@ func DelegatedActivateAddress(c context.Context, addressToActivate string, amoun
 		defer counterparty_Mutexes.m[sourceAddress].Unlock()
 
 		// Write the payment using the activationId as the paymentId to the db
-		go database.InsertPayment(c, accessKey, 0, activationId, sourceAddress, addressToActivate, asset, quantity, "valid", 0, 1500, "")
+		go database.InsertPayment(c, accessKey, 0, c.Value(consts.BlockchainIdKey).(string), activationId, sourceAddress, addressToActivate, asset, "", quantity, "valid", 0, 1500, "")
 
 		// Create the send from the internal wallet to the destination address
 		createResult, errorCode, err := CreateSend(c, sourceAddress, addressToActivate, asset, quantity, sourceAddressPubKey)

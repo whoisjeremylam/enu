@@ -62,9 +62,11 @@ type Payment struct {
 type Payments []Payment
 
 type SimplePayment struct {
+	BlockchainId            string `json:"blockchainId"`
 	SourceAddress           string `json:"sourceAddress"`
 	DestinationAddress      string `json:"destinationAddress"`
 	Asset                   string `json:"asset"`
+	Issuer                  string `json:"issuer"`
 	Amount                  uint64 `json:"amount"`
 	PaymentId               string `json:"paymentId"`
 	TxFee                   int64  `json:"txFee"`

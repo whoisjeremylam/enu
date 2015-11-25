@@ -43,7 +43,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request, m 
 		log.FluentfContext(consts.LOGINFO, c, "Generated paymentId: %s", simplePayment.PaymentId)
 	}
 
-	database.InsertPayment(c, c.Value(consts.AccessKeyKey).(string), 0, paymentId, sourceAddress, destinationAddress, asset, amount, "Authorized", 0, txFee, paymentTag)
+	database.InsertPayment(c, c.Value(consts.AccessKeyKey).(string), 0, c.Value(consts.BlockchainIdKey).(string), paymentId, sourceAddress, destinationAddress, asset, "", amount, "Authorized", 0, txFee, paymentTag)
 	// errorhandling here!!
 
 	simplePayment.SourceAddress = sourceAddress
