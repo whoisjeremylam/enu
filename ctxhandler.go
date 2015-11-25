@@ -78,6 +78,14 @@ func handle(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.A
 	requestType := c2.Value(consts.RequestTypeKey).(string)
 
 	log.FluentfContext(consts.LOGINFO, c, "Handling blockchainId: %s, requestType: %s", blockchainId, requestType)
+
+	// If the specified handler can't be found, return a 404
+	if blockchainFunctions[blockchainId][requestType] == nil {
+		handlers.ReturnNotFound(c, w, consts.GenericErrors.NotFound.Code, errors.New(consts.GenericErrors.NotFound.Description))
+
+		return nil
+	}
+
 	blockchainFunctions[blockchainId][requestType](c2, w, r, m)
 
 	return nil
