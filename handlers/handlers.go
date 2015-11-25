@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"sort"
 
 	"math/rand"
 	"net/http"
@@ -255,10 +256,20 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 
 	// Overwrite blockchain context if the blockchainId has been set as a parameter in the body
 	var c2 context.Context
-	if m["blockchainId"] != nil {
+	if m["blockchainId"] != nil && m["blockchainId"] != "" {
+		requestBlockchainId := m["blockchainId"].(string)
+
 		// check if blockchainId is valid
-		log.FluentfContext(consts.LOGINFO, c, "blockchainId specified as a body parameter. Overwriting blockchainId with: %s", m["blockchainId"].(string))
-		c2 = context.WithValue(c, consts.BlockchainIdKey, m["blockchainId"].(string))
+		supportedBlockchains := consts.SupportedBlockchains
+		sort.Strings(supportedBlockchains)
+
+		i := sort.SearchStrings(supportedBlockchains, requestBlockchainId)
+		blockchainValid := i < len(supportedBlockchains) && supportedBlockchains[i] == requestBlockchainId
+
+		if blockchainValid {
+			log.FluentfContext(consts.LOGINFO, c, "blockchainId specified as a body parameter. Overwriting blockchainId with: %s", m["blockchainId"].(string))
+			c2 = context.WithValue(c, consts.BlockchainIdKey, requestBlockchainId)
+		}
 	} else {
 		c2 = c
 	}
