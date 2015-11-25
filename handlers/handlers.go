@@ -278,7 +278,8 @@ func ValidateParameters(c context.Context, parameters interface{}) error {
 	blockchainId := c.Value(consts.BlockchainIdKey).(string)
 	u, ok := c.Value(consts.RequestTypeKey).(string)
 
-	if ok {
+	// Skip validation if a schema isn't found in the validations map
+	if ok && consts.ParameterValidations[blockchainId][u] != "" {
 		schemaLoader := gojsonschema.NewStringLoader(consts.ParameterValidations[blockchainId][u])
 		documentLoader := gojsonschema.NewGoLoader(parameters)
 
