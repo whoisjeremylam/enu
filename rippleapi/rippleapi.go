@@ -17,7 +17,7 @@ import (
 	"github.com/vennd/enu/log"
 )
 
-var defaultFee = "10000"
+var DefaultFee = "10000"
 var customCurrencyPrefix = "80"
 
 // Account set flags
@@ -756,7 +756,7 @@ func CreatePayment(c context.Context, account string, destination string, quanti
 			Destination:     destination,
 			Amount:          quantity,
 			Flags:           2147483648, // require canonical signature
-			Fee:             defaultFee,
+			Fee:             DefaultFee,
 		}
 
 		signedTx, errCode, err = Sign(c, tx, secret)
@@ -771,7 +771,7 @@ func CreatePayment(c context.Context, account string, destination string, quanti
 				Issuer:   issuer,
 			},
 			Flags: 2147483648, // require canonical signature
-			Fee:   defaultFee,
+			Fee:   DefaultFee,
 		}
 
 		signedTx, errCode, err = Sign(c, tx, secret)
@@ -802,7 +802,7 @@ func AccountSetFlag(c context.Context, account string, flag uint32, secret strin
 		TransactionType: "AccountSet",
 		Account:         account,
 		Flags:           2147483648, // require canonical signature
-		Fee:             defaultFee,
+		Fee:             DefaultFee,
 
 		SetFlag: flag,
 	}
@@ -841,7 +841,7 @@ func TrustSet(c context.Context, account string, currency string, value string, 
 		TransactionType: "TrustSet",
 		Account:         account,
 		Flags:           2147483648 & flag, // require canonical signature
-		Fee:             defaultFee,
+		Fee:             DefaultFee,
 
 		// Set the limit
 		LimitAmount: LimitAmount{

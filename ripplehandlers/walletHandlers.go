@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -133,7 +134,11 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	env := c.Value(consts.EnvKey).(string)
 
 	// Write the payment with the generated payment id to the database
-	go database.InsertPayment(c, accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, 1500, paymentTag)
+	defaultFee, err := strconv.ParseUint(rippleapi.DefaultFee, 10, 64)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in converting ripple fee: %s", err.Error())
+	}
+	go database.InsertPayment(c, accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, defaultFee, paymentTag)
 
 	// Mutex lock this address
 	ripple_Mutexes.Lock()
@@ -207,6 +212,7 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 
 		txId = txHash
 	} else {
+		log.FluentfContext(consts.LOGINFO, c, "In dev mode, not submitting tx to Ripple network.")
 		txId = "success"
 	}
 
