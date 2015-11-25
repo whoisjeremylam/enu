@@ -138,7 +138,7 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in converting ripple fee: %s", err.Error())
 	}
-	go database.InsertPayment(c, accessKey, 0, paymentId, sourceAddress, destinationAddress, asset, quantity, "valid", 0, defaultFee, paymentTag)
+	go database.InsertPayment(c, accessKey, 0, c.Value(consts.BlockchainIdKey).(string), paymentId, sourceAddress, destinationAddress, asset, issuer, quantity, "valid", 0, defaultFee, paymentTag)
 
 	// Mutex lock this address
 	ripple_Mutexes.Lock()
