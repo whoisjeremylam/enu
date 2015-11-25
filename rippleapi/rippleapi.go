@@ -451,14 +451,42 @@ func Submit(c context.Context, txHexString string) (string, int64, error) {
 		return "", errorCode, err
 	}
 
-	log.Printf("%#v", responseData)
+	//	log.Printf("%#v", responseData)
 
 	if responseData["result"] != nil {
-		if responseData["result"].(map[string]interface{})["status"] != nil && responseData["result"].(map[string]interface{})["status"] == "success" {
-			result = responseData["result"].(map[string]interface{})["tx_json"].(map[string]interface{})["hash"].(string)
+		r := responseData["result"].(map[string]interface{})
+
+		if r["engine_result"] != nil && r["engine_result"] == "tesSUCCESS" {
+			result = r["tx_json"].(map[string]interface{})["hash"].(string)
 		} else {
-			// do some errorhandling here
-			log.Printf("sign returned some kind of error")
+
+			var engineResult string
+			var engineResultCode int64
+			var engineResultMessage string
+
+			if r["engine_result"] != nil {
+				engineResult = r["engine_result"].(string)
+			}
+
+			if r["engine_result_code"] != nil {
+				engineResultCode = int64(r["engine_result_code"].(float64))
+			}
+
+			if r["engine_result_message"] != nil {
+				engineResultMessage = r["engine_result_message"].(string)
+			}
+
+			log.FluentfContext(consts.LOGERROR, c, "Error from submit engine_result: %s, engine_result_code: %d, engine_result_message: %s", engineResult, engineResultCode, engineResultMessage)
+
+			// tec* codes indicates the fee was lost
+			if strings.HasPrefix(engineResult, "tec") {
+				if engineResult == "tecPATH_DRY" {
+					return "", consts.RippleErrors.InvalidCurrencyOrNoTrustline.Code, errors.New(consts.RippleErrors.InvalidCurrencyOrNoTrustline.Description)
+				}
+				return "", consts.RippleErrors.SubmitErrorFeeLost.Code, errors.New(consts.RippleErrors.SubmitErrorFeeLost.Description)
+			}
+
+			return "", consts.RippleErrors.SubmitError.Code, errors.New(consts.RippleErrors.SubmitError.Description)
 		}
 	}
 
@@ -501,6 +529,7 @@ func Sign(c context.Context, tx interface{}, secret string) (string, int64, erro
 
 	if responseData["result"] != nil {
 		r := responseData["result"].(map[string]interface{})
+
 		if r["status"] != nil && r["status"] == "success" {
 			result = r["tx_blob"].(string)
 		} else {
@@ -515,6 +544,16 @@ func Sign(c context.Context, tx interface{}, secret string) (string, int64, erro
 				errorCode = int64(r["error_code"].(float64))
 			}
 			log.FluentfContext(consts.LOGERROR, c, "Error from signing: %s, errorCode: %d", errorMessage, errorCode)
+
+			// Invalid source
+			if errorCode == 55 {
+				return "", consts.RippleErrors.InvalidSource.Code, errors.New(consts.RippleErrors.InvalidSource.Description)
+			}
+
+			// Invalid destination
+			if errorCode == 29 {
+				return "", consts.RippleErrors.InvalidDestination.Code, errors.New(consts.RippleErrors.InvalidDestination.Description)
+			}
 
 			// do some errorhandling here
 			return "", consts.RippleErrors.SigningError.Code, errors.New(consts.RippleErrors.SigningError.Description)
