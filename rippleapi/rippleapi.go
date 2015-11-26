@@ -932,8 +932,19 @@ func GetAccountInfo(c context.Context, account string) (AccountInfo, int64, erro
 		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
+	r := responseData["result"].(map[string]interface{})
+
+	// Result returned but with an error
+	if r["error"] != nil && r["error_code"].(float64) == 18 {
+		// account not found, we won't raise an error but return an empty structure
+		return result, 0, nil
+	} else if r["error"] != nil {
+		// Otherwise we'll raise an error with the error message
+		return result, 0, errors.New(r["error_message"].(string))
+	}
+
 	// Map results
-	accountData := responseData["result"].(map[string]interface{})["account_data"].(map[string]interface{})
+	accountData := r["account_data"].(map[string]interface{})
 	result.Account = accountData["Account"].(string)
 	result.Balance = accountData["Balance"].(string)
 	result.Flags = uint32(accountData["Flags"].(float64))
