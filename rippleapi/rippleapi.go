@@ -130,42 +130,6 @@ type Payment struct {
 	No_direct_ripple    bool   `json:"no_direct_ripple"`
 }
 
-type Trustline struct {
-	Account                  string `json:"account"`
-	Limit                    string `json:"limit"`
-	Currency                 string `json:"currency"`
-	Counterparty             string `json:"counterparty"`
-	Account_allows_rippling  bool   `json:"account_allows_rippling"`
-	Account_trustline_frozen bool   `json:"account_trustline_frozen"`
-	State                    string `json:"state"`
-	Legder                   string `json:"ledger"`
-	Hash                     string `json:"hash"`
-}
-
-type TrustlineResult struct {
-	Success    bool      `json:"success"`
-	Trustlines Trustline `json:"trustline"`
-}
-
-type GetTrustlinesResult struct {
-	Ledger        int64          `json:"ledger"`
-	Validated     bool           `json:"validated"`
-	GetTrustLines []GetTrustline `json:"trustlines"`
-	Success       bool           `json:"success"`
-}
-
-type GetTrustline struct {
-	Account                       string `json:"account"`
-	Counterparty                  string `json:"counterparty"`
-	Currency                      string `json:"currency"`
-	Limit                         string `json:"trustlimit"`
-	Reciprocated_limit            string `json:"reciprocated_trust_limit"`
-	Account_allows_rippling       bool   `json:"account_allows_rippling"`
-	Counterparty_allows_rippling  bool   `json:"counterparty_allows_rippling"`
-	Account_trustline_frozen      bool   `json:"account_trustline_frozen"`
-	Counterparty_trustline_frozen bool   `json:"counterparty_trustline_frozen"`
-}
-
 type AccountlinesResult struct {
 	Account              string        `json:"account"`
 	Ledger_current_index int64         `json:"ledger_current_index"`
