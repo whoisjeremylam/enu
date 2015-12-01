@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
+	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/log"
 )
 
@@ -40,7 +41,7 @@ func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int, e
 	req, err := http.NewRequest(method, url, bytes.NewBufferString(postDataJson))
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("accessKey", apiKey)
-	req.Header.Set("signature", ComputeHmac512(postData, apiSecret))
+	req.Header.Set("signature", enulib.ComputeHmac512(postData, apiSecret))
 
 	// Perform request
 	clientPointer := &http.Client{}
