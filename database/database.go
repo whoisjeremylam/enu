@@ -1073,3 +1073,25 @@ func GetActivationByActivationId(c context.Context, accessKey string, activation
 
 	return result
 }
+
+// Inserts an activation request into the database
+func InsertTrustAsset(c context.Context, accessKey string, activationId string, blockchainId string, asset string, issuer string, amount uint64) {
+	if isInit == false {
+		Init()
+	}
+
+	stmt, err := Db.Prepare("insert into trustassets(activationId, blockchainId, accessKey, asset, issuer, trustAmount) values(?, ?, ?, ?, ?, ?)")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return
+	}
+	defer stmt.Close()
+
+	// Perform the insert
+	_, err = stmt.Exec(activationId, blockchainId, accessKey, asset, issuer, amount)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		return
+	}
+	defer stmt.Close()
+}

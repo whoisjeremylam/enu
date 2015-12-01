@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +20,9 @@ import (
 
 var DefaultFee = "10000"
 var customCurrencyPrefix = "80"
+var BaseReserve = 20000000
+var OwnerReserve = 5000000
+var DefaultAmountToTrust uint64 = 100000000000000
 
 // Account set flags
 const AsfRequireDest = 1
@@ -111,9 +115,9 @@ type Balance struct {
 }
 
 type Amount struct {
-	Value    string `json:"value"`
-	Currency string `json:"currency"`
-	Issuer   string `json:"issuer"`
+	Value    string `json:"value,omitempty"`
+	Currency string `json:"currency,omitempty"`
+	Issuer   string `json:"issuer,omitempty"`
 }
 
 type Payment struct {
@@ -238,7 +242,7 @@ type TrustSetStruct struct {
 	QualityOut  uint32      `json:",omitempty"`
 }
 
-type Lines struct {
+type Line struct {
 	Account      string `json:"account,omitempty"`
 	Balance      string `json:"balance,omitempty"`
 	Currency     string `json:"currency,omitempty"`
@@ -248,6 +252,24 @@ type Lines struct {
 	NoRipplePeer bool   `json:"no_ripple_peer,omitempty"`
 	QualityIn    uint   `json:"quality_in,omitempty"`
 	QualityOut   uint   `json:"quality_out,omitempty"`
+}
+
+type Lines []Line
+
+func (s Lines) Len() int {
+	return len(s)
+}
+
+func (s Lines) Contains(account string, currency string) bool {
+	var result bool = false
+
+	for _, line := range s {
+		if line.Account == account && line.Currency == currency {
+			result = true
+		}
+	}
+
+	return result
 }
 
 type AccountInfo struct {
@@ -831,11 +853,11 @@ func TrustSet(c context.Context, account string, currency string, value string, 
 	return txHash, errCode, err
 }
 
-func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) {
+func GetAccountLines(c context.Context, account string) (Lines, int64, error) {
 	var payload = make(map[string]interface{})
 	var params = make(map[string]interface{})
 	var paramsArray []map[string]interface{}
-	var result []Lines
+	var result Lines
 	var responseData map[string]interface{}
 
 	if isInit == false {
@@ -870,7 +892,7 @@ func GetAccountLines(c context.Context, account string) ([]Lines, int64, error) 
 	}
 
 	for _, line := range responseData["result"].(map[string]interface{})["lines"].([]interface{}) {
-		outputLine := Lines{
+		outputLine := Line{
 			Account:    line.(map[string]interface{})["account"].(string),
 			Balance:    line.(map[string]interface{})["balance"].(string),
 			Currency:   line.(map[string]interface{})["currency"].(string),
@@ -1021,4 +1043,65 @@ func ToCurrency(currency string) (string, error) {
 
 	result := customCurrencyPrefix + fmt.Sprintf("%x", currency[:length]) + strings.Repeat("00", 19-length) // pad out to 19 hex bytes
 	return result, nil
+}
+
+// Returns the total XRP that is required for the given number of transactions
+func CalculateFeeAmount(c context.Context, amount uint64) (uint64, string, error) {
+	// Get env and blockchain from context
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+
+	// Set some maximum and minimums
+	var thisAmount = amount
+	if thisAmount > 1000 {
+		thisAmount = 1000
+	}
+	if thisAmount < 20 {
+		thisAmount = 20
+	}
+
+	if blockchainId != consts.RippleBlockchainId {
+		errorString := fmt.Sprintf("Blockchain must be %s, got %s", consts.RippleBlockchainId, blockchainId)
+		log.FluentfContext(consts.LOGERROR, c, errorString)
+
+		return 0, "", errors.New(errorString)
+	}
+
+	quantity, err := strconv.ParseUint(DefaultFee, 10, 64)
+	if err != nil {
+		errorString := fmt.Sprintf("Unable to calculate the amount of XRP required")
+		log.FluentfContext(consts.LOGERROR, c, errorString)
+
+		return 0, "", errors.New(errorString)
+	}
+
+	quantity *= thisAmount
+
+	return quantity, "XRP", nil
+}
+
+// Returns the number of transactions that can be performed with the given amount of XRP
+// If the env value is not found in the context, calculations are defaulted to production
+//func CalculateNumberOfTransactions(c context.Context, amount uint64) (uint64, error) {
+//	// Get env and blockchain from context
+//	env := c.Value(consts.EnvKey).(string)
+//	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+
+//	if blockchainId != consts.CounterpartyBlockchainId {
+//		errorString := fmt.Sprintf("Blockchain must be %s, got %s", consts.CounterpartyBlockchainId, blockchainId)
+//		log.FluentfContext(consts.LOGERROR, c, errorString)
+
+//		return 0, errors.New(errorString)
+//	}
+
+//	if env == "dev" {
+//		return amount / (Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee), nil
+//	} else {
+//		return amount / (Counterparty_DefaultDustSize + Counterparty_DefaultTxFee), nil
+//	}
+//}
+
+// Calculates the reserve based upon the current reserve and number of account lines
+// Returns in 'drops' the amount of XRP required
+func CalculateReserve(c context.Context, accountLines uint64) uint64 {
+	return uint64(BaseReserve) + (accountLines * uint64(OwnerReserve))
 }

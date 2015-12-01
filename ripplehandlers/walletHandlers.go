@@ -9,6 +9,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/vennd/enu/internal/github.com/gorilla/mux"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
+
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
@@ -17,8 +20,6 @@ import (
 	"github.com/vennd/enu/log"
 	"github.com/vennd/enu/rippleapi"
 	"github.com/vennd/enu/ripplecrypto"
-
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 var ripple_BackEndPollRate = 3000
@@ -221,4 +222,203 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	log.FluentfContext(consts.LOGINFO, c, "Complete.")
 
 	return txId, 0, nil
+}
+
+func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
+	requestId := c.Value(consts.RequestIdKey).(string)
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	// Add to the context the RequestType
+	c = context.WithValue(c, consts.RequestTypeKey, "activateaddress")
+
+	vars := mux.Vars(r)
+	address := vars["address"]
+
+	if address == "" || len(address) != 34 {
+		w.WriteHeader(http.StatusBadRequest)
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
+		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+			return nil
+		}
+
+		return nil
+	}
+
+	// Get the amount from the parameters
+	var amount uint64
+	if m["amount"] == nil {
+		amount = consts.RippleAddressActivationAmount
+	} else {
+		amount = uint64(m["amount"].(float64))
+	}
+
+	// Get the assets to create trust lines for
+	var assets []rippleapi.Amount
+	if m["assets"] != nil {
+		a, ok := m["assets"].([]map[string]interface{})
+		if ok {
+			for _, b := range a {
+				var amount rippleapi.Amount
+
+				amount.Currency = b["currency"].(string)
+				amount.Issuer = b["issuer"].(string)
+
+				assets = append(assets, amount)
+			}
+		}
+	}
+
+	var passphrase string
+	if m["passphrase"] != nil {
+		passphrase = m["passphrase"].(string)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "ActivateAddress: received request address to activate: %s, number of transactions to activate: %d", address, amount)
+	// Generate an activationId
+	activationId := enulib.GenerateActivationId()
+
+	log.FluentfContext(consts.LOGINFO, c, "Generated activationId: %s", activationId)
+
+	// Return to the client the activationId and requestId and unblock the client
+	var result = map[string]interface{}{
+		"address":       address,
+		"amount":        amount,
+		"assets":        assets,
+		"activationId":  activationId,
+		"broadcastTxId": "",
+		"status":        "valid",
+		"errorMessage":  "",
+		"requestId":     requestId,
+	}
+
+	w.WriteHeader(http.StatusCreated)
+	if err := json.NewEncoder(w).Encode(result); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
+	}
+
+	go delegatedActivateAddress(c, address, passphrase, amount, assets, activationId)
+
+	return nil
+}
+
+// Concurrency safe to create and send transactions from a single address.
+func delegatedActivateAddress(c context.Context, addressToActivate string, passphrase string, amount uint64, assets []rippleapi.Amount, activationId string) (int64, error) {
+	var complete bool = false
+	var linesRequired []rippleapi.Amount
+	var numLinesRequired = 0
+	//	var retries int = 0
+
+	// Copy same context values to local variables which are often accessed
+	accessKey := c.Value(consts.AccessKeyKey).(string)
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+	//	env := c.Value(consts.EnvKey).(string)
+
+	// Need a better way to secure internal wallets
+	// Array of internal wallets that can be round robined to activate addresses
+	var wallets = []struct {
+		Address      string
+		Passphrase   string
+		BlockchainId string
+	}{
+		{"rpu8gxvRzQ2JLQMN7Goxs6x9zffH3sjQBd", "laid circle drag adore rainbow color peaceful other huge breathe release pen", "ripple"},
+	}
+
+	for complete == false {
+		// Check the address to activate to see how much XRP it already holds
+		accountInfo, _, err := rippleapi.GetAccountInfo(c, addressToActivate)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.GetAccountInfo(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		currentBalance, err := strconv.ParseUint(accountInfo.Balance, 10, 64)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in ParseUint(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		// Get trust lines for destination account
+		lines, _, err := rippleapi.GetAccountLines(c, addressToActivate)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in GetAccountLines(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		//		 Calculate how much XRP is required as reserve for address to activate right now
+		//		requiredReserve := rippleapi.CalculateReserve(c, uint64(len(lines)))
+
+		// Find the trust lines which were requested but don't exist
+		var linesUsed int = 0
+		for _, asset := range assets {
+			if lines.Contains(asset.Issuer, asset.Currency) {
+				linesUsed++
+
+				linesRequired = append(linesRequired, asset)
+			}
+		}
+		numLinesRequired = len(lines) - linesUsed + 1
+
+		// Calculate the target reserve which is reserve + enough XRP for all the trust lines which haven't been established + 1 spare
+		var targetReserve uint64
+		// If the account hasn't been created then the target reserve is based upon an empty wallet + requested trust lines + 1
+		if accountInfo.Balance == "0" {
+			targetReserve = rippleapi.CalculateReserve(c, uint64(len(assets))+1)
+		} else {
+			// The targetReserve is the current wallet + requested trust lines which don't already exist
+			targetReserve = rippleapi.CalculateReserve(c, uint64(numLinesRequired))
+		}
+
+		// We need to send xrp to cover the difference from the amount of xrp we want to reach vs what is already in the wallet
+		var amountXRPToSend = targetReserve - currentBalance
+
+		// Add on the amount required for the number of transactions the client wishes to be able to perform
+		txXRPAmount, _, err := rippleapi.CalculateFeeAmount(c, amount)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in CalculateFeeAmount(): %s", err.Error())
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+		amountXRPToSend += txXRPAmount
+
+		// Pick an internal address to send from
+		var randomNumber int = 0
+		var sourceAddress = wallets[randomNumber].Address
+
+		// Write the activation with the generated activation id to the database
+		database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amountXRPToSend)
+
+		// Send the xrp
+		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend, activationId, "")
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		complete = true
+	}
+
+	// For each trustline which doesn't already exist, create it
+	for _, line := range linesRequired {
+		database.InsertTrustAsset(c, accessKey, activationId, blockchainId, line.Currency, line.Issuer, rippleapi.DefaultAmountToTrust)
+
+		rippleAmount, err := rippleapi.Uint64ToAmount(rippleapi.DefaultAmountToTrust)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		_, _, err = rippleapi.TrustSet(c, addressToActivate, line.Currency, rippleAmount, line.Issuer, 0, passphrase)
+	}
+
+	return 0, nil
+
 }
