@@ -1363,9 +1363,6 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 		Init()
 	}
 
-	// Copy same context values to local variables which are often accessed
-	env := c.Value(consts.EnvKey).(string)
-
 	// Write the payment with the generated payment id to the database
 	go database.InsertPayment(c, accessKey, 0, c.Value(consts.BlockchainIdKey).(string), paymentId, sourceAddress, destinationAddress, asset, "", quantity, "valid", 0, 1500, paymentTag)
 
@@ -1421,26 +1418,18 @@ func DelegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	// Update the DB with the raw signed TX. This will allow re-transmissions if something went wrong with sending on the network
 	database.UpdatePaymentSignedRawTxByPaymentId(c, accessKey, paymentId, signed)
 
-	//	 Transmit the transaction if not in dev, otherwise stub out the return
-	var txId string
-	if env != "dev" {
-		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, err.Error())
-			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
-			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
-		}
-
-		txId = txIdSignedTx
-	} else {
-		txId = "success"
+	//	 Transmit the transaction
+	txIdSignedTx, err := bitcoinapi.SendRawTransaction(c, signed)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+		return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
 	}
 
-	database.UpdatePaymentCompleteByPaymentId(c, accessKey, paymentId, txId)
-
+	database.UpdatePaymentCompleteByPaymentId(c, accessKey, paymentId, txIdSignedTx)
 	log.FluentfContext(consts.LOGINFO, c, "Complete.")
 
-	return txId, 0, nil
+	return txIdSignedTx, 0, nil
 }
 
 // Concurrency safe to create and send transactions from a single address.
@@ -1448,9 +1437,6 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	if isInit == false {
 		Init()
 	}
-
-	// Copy same context values to local variables which are often accessed
-	env := c.Value(consts.EnvKey).(string)
 
 	// Write the asset with the generated asset id to the database
 	go database.InsertAsset(accessKey, assetId, sourceAddress, asset, assetDescription, quantity, divisible, "valid")
@@ -1504,24 +1490,17 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
 
-	//	 Transmit the transaction if not in dev, otherwise stub out the return
-	var txId string
-	if env != "dev" {
-		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
-			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
-		}
-
-		txId = txIdSignedTx
-	} else {
-		txId = "success"
+	//	 Transmit the transaction
+	txIdSignedTx, err := bitcoinapi.SendRawTransaction(c, signed)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+		return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
 	}
 
-	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txId)
+	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txIdSignedTx)
 
-	return txId, 0, nil
+	return txIdSignedTx, 0, nil
 }
 
 // Concurrency safe to create and send transactions from a single address.
@@ -1529,9 +1508,6 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	if isInit == false {
 		Init()
 	}
-
-	// Copy same context values to local variables which are often accessed
-	env := c.Value(consts.EnvKey).(string)
 
 	// Write the dividend with the generated dividend id to the database
 	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, "valid")
@@ -1584,23 +1560,16 @@ func DelegatedCreateDividend(c context.Context, accessKey string, passphrase str
 	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s", signed)
 
 	//	 Transmit the transaction if not in dev, otherwise stub out the return
-	var txId string
-	if env != "dev" {
-		txIdSignedTx, err := bitcoinapi.SendRawTransaction(signed)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
-			database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
-			return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
-		}
-
-		txId = txIdSignedTx
-	} else {
-		txId = "success"
+	txIdSignedTx, err := bitcoinapi.SendRawTransaction(c, signed)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+		return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
 	}
 
-	database.UpdateDividendCompleteByDividendId(c, accessKey, dividendId, txId)
+	database.UpdateDividendCompleteByDividendId(c, accessKey, dividendId, txIdSignedTx)
 
-	return txId, 0, nil
+	return txIdSignedTx, 0, nil
 }
 
 // For internal use only - don't expose to customers

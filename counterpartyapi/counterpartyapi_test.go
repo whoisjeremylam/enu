@@ -13,6 +13,7 @@ import (
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
+var c context.Context
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
 var sendAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
 var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
@@ -37,10 +38,17 @@ var getBalancesByAddressExpectedTestData []Balance = []Balance{
 	{Quantity: 250482117835, Asset: "XCP", Address: "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy"},
 }
 
+func setContext() {
+	c = context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
+	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
+	c = context.WithValue(c, consts.EnvKey, "dev")
+}
+
 func TestGetIssuances(t *testing.T) {
 	Init()
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	resultGetIssuances, errorCode, err := GetIssuances(c, "XBTC")
 	if err != nil {
@@ -57,8 +65,7 @@ func TestGetIssuances(t *testing.T) {
 
 func TestGetIssuancesDB(t *testing.T) {
 	Init()
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	resultGetIssuances, errorCode, err := GetIssuancesDB(c, "XBTC")
 
@@ -76,8 +83,7 @@ func TestGetIssuancesDB(t *testing.T) {
 }
 
 func TestGenerateRandomAssetName(t *testing.T) {
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	result, err := generateRandomAssetName(c)
 
@@ -94,8 +100,7 @@ func TestGenerateRandomAssetName(t *testing.T) {
 
 func TestGetBalancesByAsset(t *testing.T) {
 	Init()
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Not a real asset
 	resultGetBalances, errorCode, err := GetBalancesByAsset(c, "NOTASSETREALLY")
@@ -119,9 +124,7 @@ func TestGetBalancesByAsset(t *testing.T) {
 
 func TestGetBalancesByAddress(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Retrieve address which is empty
 	resultGetBalances, errorCode, err := GetBalancesByAddress(c, "1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
@@ -146,9 +149,7 @@ func TestGetBalancesByAddress(t *testing.T) {
 
 func TestGetSendsByAddress(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Retrieve address which is empty
 	resultGetSendsByAddress, errorCode, err := GetSendsByAddress(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
@@ -174,9 +175,7 @@ func TestGetSendsByAddress(t *testing.T) {
 
 func TestGetSendsByAddressDB(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Retrieve address which is empty
 	resultGetSendsByAddress, errorCode, err := GetSendsByAddressDB(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
@@ -216,9 +215,7 @@ func TestCreateSend(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.From)
@@ -250,9 +247,7 @@ func TestSignRawTransaction(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	for _, s := range testData {
 		result, err := signRawTransaction(c, s.Passphrase, s.UnsignedTx)
@@ -269,9 +264,7 @@ func TestSignRawTransaction(t *testing.T) {
 
 func TestSendRawTransaction(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	pubKey, err := counterpartycrypto.GetPublicKey(passphrase, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p")
 	if err != nil {
@@ -322,8 +315,7 @@ func TestCreateIssuance(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
+	setContext()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
@@ -363,9 +355,7 @@ func TestCreateDividend(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.SourceAddress)
@@ -403,12 +393,7 @@ func TestActivateAddress(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
-	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
-	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
-	c = context.WithValue(c, consts.EnvKey, "dev")
+	setContext()
 
 	for _, s := range testData {
 		txId, errorCode, err := DelegatedActivateAddress(c, s.AddressToActivate, s.Amount, s.ActivationId)
@@ -426,10 +411,9 @@ func TestActivateAddress(t *testing.T) {
 
 func TestGetRunningInfo(t *testing.T) {
 	var result RunningInfo
-	Init()
 
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	Init()
+	setContext()
 
 	result, errorCode, err := GetRunningInfo(c)
 	if err != nil {

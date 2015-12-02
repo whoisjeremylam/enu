@@ -137,9 +137,16 @@ func GetNewAddress() (string, error) {
 // Transmits to the bitcoin network the raw transaction as provided.
 // The transaction should be encoded as a hex string, as per the original Bitcoin RPC JSON API.
 // The TxId of the transaction is returned if successfully transmitted.
-func SendRawTransaction(txHexString string) (string, error) {
+func SendRawTransaction(c context.Context, txHexString string) (string, error) {
 	if isInit == false {
 		Init()
+	}
+
+	// Copy same context values to local variables which are often accessed
+	env := c.Value(consts.EnvKey).(string)
+
+	if env == "dev" {
+		return "success", nil
 	}
 
 	// Convert the hex string to a byte array
