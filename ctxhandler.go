@@ -56,13 +56,17 @@ var blockchainFunctions = map[string]blockchainFunction{
 		"paymentbyaddress": counterpartyhandlers.GetPaymentsByAddress,
 	},
 	"ripple": {
-		"walletCreate":  ripplehandlers.WalletCreate,
-		"walletPayment": ripplehandlers.WalletSend,
-		"asset":         ripplehandlers.AssetCreate,
-		"dividend":      ripplehandlers.Unhandled,
+		"walletCreate":    ripplehandlers.WalletCreate,
+		"walletPayment":   ripplehandlers.WalletSend,
+		"asset":           ripplehandlers.AssetCreate,
+		"activateaddress": ripplehandlers.ActivateAddress,
 
 		"getpayment":       ripplehandlers.GetPayment,
 		"paymentbyaddress": ripplehandlers.GetPaymentsByAddress,
+
+		// Unsupported
+		"address":  ripplehandlers.Unhandled,
+		"dividend": ripplehandlers.Unhandled,
 	},
 }
 
