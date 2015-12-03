@@ -1027,7 +1027,10 @@ func Uint64ToAmount(amount uint64) (string, error) {
 	bigAmount.Quo(&bigAmount, &bigSatoshi)
 
 	// Change into string
-	result := bigAmount.Text('f', 15) // Ripple targets 15 decimal points of precision
+	resultWithTrail := bigAmount.Text('f', 15) // Ripple targets 15 decimal points of precision
+
+	// Remove trailing zeros
+	result := strings.Split(resultWithTrail, ".")[0]
 
 	return result, nil
 }
