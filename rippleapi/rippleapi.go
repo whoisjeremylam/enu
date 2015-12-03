@@ -414,10 +414,19 @@ func Submit(c context.Context, txHexString string) (string, int64, error) {
 		Init()
 	}
 
+	// Copy same context values to local variables which are often accessed
+	env := c.Value(consts.EnvKey).(string)
+
 	var payload = make(map[string]interface{})
 	var params = make(map[string]interface{})
 	var paramsArray []map[string]interface{}
 	var result string
+
+	//	 If the env is set to dev then stub out the return
+	if env == "dev" {
+		log.FluentfContext(consts.LOGINFO, c, "In dev mode, not submitting tx to Ripple network.")
+		return "youwereasuccess", 0, nil
+	}
 
 	// Build parameters
 	params["tx_blob"] = txHexString
@@ -891,26 +900,34 @@ func GetAccountLines(c context.Context, account string) (Lines, int64, error) {
 		return result, consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
-	for _, line := range responseData["result"].(map[string]interface{})["lines"].([]interface{}) {
-		outputLine := Line{
-			Account:    line.(map[string]interface{})["account"].(string),
-			Balance:    line.(map[string]interface{})["balance"].(string),
-			Currency:   line.(map[string]interface{})["currency"].(string),
-			Limit:      line.(map[string]interface{})["limit"].(string),
-			LimitPeer:  line.(map[string]interface{})["limit_peer"].(string),
-			QualityIn:  uint(line.(map[string]interface{})["quality_in"].(float64)),
-			QualityOut: uint(line.(map[string]interface{})["quality_out"].(float64)),
-		}
+	r := responseData["result"].(map[string]interface{})
 
-		if line.(map[string]interface{})["no_ripple"] != nil {
-			outputLine.NoRipple = line.(map[string]interface{})["no_ripple"].(bool)
-		}
+	// Result returned but with an error
+	if r["error"] != nil && r["error_code"].(float64) == 18 {
+		// account not found, we won't raise an error but return an empty structure
+		return result, 0, nil
+	} else {
+		for _, line := range r["lines"].([]interface{}) {
+			outputLine := Line{
+				Account:    line.(map[string]interface{})["account"].(string),
+				Balance:    line.(map[string]interface{})["balance"].(string),
+				Currency:   line.(map[string]interface{})["currency"].(string),
+				Limit:      line.(map[string]interface{})["limit"].(string),
+				LimitPeer:  line.(map[string]interface{})["limit_peer"].(string),
+				QualityIn:  uint(line.(map[string]interface{})["quality_in"].(float64)),
+				QualityOut: uint(line.(map[string]interface{})["quality_out"].(float64)),
+			}
 
-		if line.(map[string]interface{})["no_ripple_peer"] != nil {
-			outputLine.NoRipplePeer = line.(map[string]interface{})["no_ripple_peer"].(bool)
-		}
+			if line.(map[string]interface{})["no_ripple"] != nil {
+				outputLine.NoRipple = line.(map[string]interface{})["no_ripple"].(bool)
+			}
 
-		result = append(result, outputLine)
+			if line.(map[string]interface{})["no_ripple_peer"] != nil {
+				outputLine.NoRipplePeer = line.(map[string]interface{})["no_ripple_peer"].(bool)
+			}
+
+			result = append(result, outputLine)
+		}
 	}
 
 	return result, 0, nil
