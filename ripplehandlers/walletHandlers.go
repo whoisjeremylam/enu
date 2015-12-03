@@ -131,8 +131,6 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request, m map
 
 // Concurrency safe to create and send transactions from a single address.
 func delegatedSend(c context.Context, accessKey string, passphrase string, sourceAddress string, destinationAddress string, asset string, issuer string, quantity uint64, paymentId string, paymentTag string) (string, int64, error) {
-	// Copy same context values to local variables which are often accessed
-	env := c.Value(consts.EnvKey).(string)
 
 	// Write the payment with the generated payment id to the database
 	defaultFee, err := strconv.ParseUint(rippleapi.DefaultFee, 10, 64)
@@ -200,28 +198,20 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 		return "", errCode, err
 	}
 
-	//	 Submit the transaction if not in dev, otherwise stub out the return
-	var txId string
-	if env != "dev" {
-		txHash, errCode, err := rippleapi.Submit(c, signedTx)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in Submit(): %s", err.Error())
-			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.RippleErrors.SubmitError.Code, consts.RippleErrors.SubmitError.Description)
+	//	 Submit the transaction
+	txHash, errCode, err := rippleapi.Submit(c, signedTx)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Submit(): %s", err.Error())
+		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.RippleErrors.SubmitError.Code, consts.RippleErrors.SubmitError.Description)
 
-			return "", errCode, err
-		}
-
-		txId = txHash
-	} else {
-		log.FluentfContext(consts.LOGINFO, c, "In dev mode, not submitting tx to Ripple network.")
-		txId = "success"
+		return "", errCode, err
 	}
 
-	database.UpdatePaymentCompleteByPaymentId(c, accessKey, paymentId, txId)
+	database.UpdatePaymentCompleteByPaymentId(c, accessKey, paymentId, txHash)
 
 	log.FluentfContext(consts.LOGINFO, c, "Complete.")
 
-	return txId, 0, nil
+	return txHash, 0, nil
 }
 
 func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
@@ -338,12 +328,19 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
 
-		currentBalance, err := strconv.ParseUint(accountInfo.Balance, 10, 64)
+		var currentBalance uint64
+		if accountInfo.Balance != "" {
+			currentBalance, err = strconv.ParseUint(accountInfo.Balance, 10, 64)
+		} else {
+			currentBalance = 0
+		}
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in ParseUint(): %s", err.Error())
 			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
+
+		log.FluentfContext(consts.LOGINFO, c, "Wallet currently contains %d XRP", currentBalance)
 
 		// Get trust lines for destination account
 		lines, _, err := rippleapi.GetAccountLines(c, addressToActivate)
@@ -367,6 +364,8 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		}
 		numLinesRequired = len(lines) - linesUsed + 1
 
+		log.FluentfContext(consts.LOGINFO, c, "Number of trust lines to be added: %d", numLinesRequired)
+
 		// Calculate the target reserve which is reserve + enough XRP for all the trust lines which haven't been established + 1 spare
 		var targetReserve uint64
 		// If the account hasn't been created then the target reserve is based upon an empty wallet + requested trust lines + 1
@@ -380,6 +379,8 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		// We need to send xrp to cover the difference from the amount of xrp we want to reach vs what is already in the wallet
 		var amountXRPToSend = targetReserve - currentBalance
 
+		log.FluentfContext(consts.LOGINFO, c, "XRP required to cover reserve + lines to create + 1: %d", amountXRPToSend)
+
 		// Add on the amount required for the number of transactions the client wishes to be able to perform
 		txXRPAmount, _, err := rippleapi.CalculateFeeAmount(c, amount)
 		if err != nil {
@@ -387,6 +388,9 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
 		amountXRPToSend += txXRPAmount
+
+		log.FluentfContext(consts.LOGINFO, c, "XRP for %d transactions txXRPAmount: %d", amount, txXRPAmount)
+		log.FluentfContext(consts.LOGINFO, c, "XRP that we need to send from our master wallet: %d", amountXRPToSend)
 
 		// Pick an internal address to send from
 		var randomNumber int = 0
@@ -396,12 +400,12 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amountXRPToSend)
 
 		// Send the xrp
-		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend, activationId, "")
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend(): %s", err.Error())
-			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		}
+		//		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend, activationId, "")
+		//		if err != nil {
+		//			log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend(): %s", err.Error())
+		//			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+		//			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		//		}
 
 		complete = true
 	}
