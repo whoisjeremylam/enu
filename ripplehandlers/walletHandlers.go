@@ -237,6 +237,8 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 		return nil
 	}
 
+	log.FluentfContext(consts.LOGINFO, c, "ActivateAddress got: %+#v", m)
+
 	// Get the amount from the parameters
 	var amount uint64
 	if m["amount"] == nil {
@@ -248,13 +250,15 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 	// Get the assets to create trust lines for
 	var assets []rippleapi.Amount
 	if m["assets"] != nil {
-		a, ok := m["assets"].([]map[string]interface{})
+		a, ok := m["assets"].([]interface{})
+		log.FluentfContext(consts.LOGINFO, c, "Ranging through assets: %+v", a)
 		if ok {
 			for _, b := range a {
 				var amount rippleapi.Amount
+				c := b.(map[string]interface{})
 
-				amount.Currency = b["currency"].(string)
-				amount.Issuer = b["issuer"].(string)
+				amount.Currency = c["currency"].(string)
+				amount.Issuer = c["issuer"].(string)
 
 				assets = append(assets, amount)
 			}
@@ -304,6 +308,8 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 	var numLinesRequired = 0
 	//	var retries int = 0
 
+	log.FluentfContext(consts.LOGINFO, c, "Number of trust lines requested: %d", len(assets))
+
 	// Copy same context values to local variables which are often accessed
 	accessKey := c.Value(consts.AccessKeyKey).(string)
 	blockchainId := c.Value(consts.BlockchainIdKey).(string)
@@ -319,6 +325,9 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		{"rpu8gxvRzQ2JLQMN7Goxs6x9zffH3sjQBd", "laid circle drag adore rainbow color peaceful other huge breathe release pen", "ripple"},
 	}
 
+	var currentBalance uint64 // The current amount of ripples in the account
+	var targetReserve uint64  // The amount we need to reach in this account to fulful the reserve and trustlines we want to create
+
 	for complete == false {
 		// Check the address to activate to see how much XRP it already holds
 		accountInfo, _, err := rippleapi.GetAccountInfo(c, addressToActivate)
@@ -328,7 +337,6 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
 
-		var currentBalance uint64
 		if accountInfo.Balance != "" {
 			currentBalance, err = strconv.ParseUint(accountInfo.Balance, 10, 64)
 		} else {
@@ -355,31 +363,32 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 
 		// Find the trust lines which were requested but don't exist
 		var linesUsed int = 0
+		var assetNamesReqired []string
 		for _, asset := range assets {
 			if lines.Contains(asset.Issuer, asset.Currency) {
 				linesUsed++
-
+			} else {
 				linesRequired = append(linesRequired, asset)
+				assetNamesReqired = append(assetNamesReqired, asset.Currency+"("+asset.Issuer+")")
 			}
 		}
-		numLinesRequired = len(lines) - linesUsed + 1
+		numLinesRequired = len(linesRequired)
 
-		log.FluentfContext(consts.LOGINFO, c, "Number of trust lines to be added: %d", numLinesRequired)
+		log.FluentfContext(consts.LOGINFO, c, "Number of trust lines to be added: %d, %s", numLinesRequired, strings.Join(assetNamesReqired, ", "))
 
 		// Calculate the target reserve which is reserve + enough XRP for all the trust lines which haven't been established + 1 spare
-		var targetReserve uint64
 		// If the account hasn't been created then the target reserve is based upon an empty wallet + requested trust lines + 1
-		if accountInfo.Balance == "0" {
-			targetReserve = rippleapi.CalculateReserve(c, uint64(len(assets))+1)
-		} else {
-			// The targetReserve is the current wallet + requested trust lines which don't already exist
-			targetReserve = rippleapi.CalculateReserve(c, uint64(numLinesRequired))
+		targetReserve = rippleapi.CalculateReserve(c, uint64(len(lines))+uint64(numLinesRequired))
+
+		// If the current balance is higher than the target reserve, then we don't need to send any XRP to meet the reserve
+		if currentBalance >= targetReserve {
+			targetReserve = currentBalance
 		}
 
 		// We need to send xrp to cover the difference from the amount of xrp we want to reach vs what is already in the wallet
 		var amountXRPToSend = targetReserve - currentBalance
 
-		log.FluentfContext(consts.LOGINFO, c, "XRP required to cover reserve + lines to create + 1: %d", amountXRPToSend)
+		log.FluentfContext(consts.LOGINFO, c, "XRP required to cover reserve + lines requested: %d", amountXRPToSend)
 
 		// Add on the amount required for the number of transactions the client wishes to be able to perform
 		txXRPAmount, _, err := rippleapi.CalculateFeeAmount(c, amount)
@@ -408,20 +417,55 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		//		}
 
 		complete = true
+
+		// Throttle
+		if complete == false {
+			log.FluentfContext(consts.LOGERROR, c, "Unable to send XRP waiting 1 minute and retrying...")
+
+			time.Sleep(time.Duration(1) * time.Minute)
+		}
+	}
+
+	// If reserve already is sufficient, proceed to create the trust line straight away, otherwise wait
+	if currentBalance < targetReserve {
+		log.FluentfContext(consts.LOGERROR, c, "Waiting for send of XRP to complete...")
+
+		time.Sleep(time.Duration(10000) * time.Millisecond)
+
+		log.FluentfContext(consts.LOGERROR, c, "Wait complete")
 	}
 
 	// For each trustline which doesn't already exist, create it
 	for _, line := range linesRequired {
+		log.FluentfContext(consts.LOGERROR, c, "Creating trust line: %s, %s, %d", line.Currency, line.Issuer, rippleapi.DefaultAmountToTrust)
 		database.InsertTrustAsset(c, accessKey, activationId, blockchainId, line.Currency, line.Issuer, rippleapi.DefaultAmountToTrust)
 
+		// Convert int to the ripple amount
 		rippleAmount, err := rippleapi.Uint64ToAmount(rippleapi.DefaultAmountToTrust)
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
 
-		_, _, err = rippleapi.TrustSet(c, addressToActivate, line.Currency, rippleAmount, line.Issuer, 0, passphrase)
+		// Convert asset name to ripple currency name
+		currency, err := rippleapi.ToCurrency(line.Currency)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		// Convert passphrase to ripple secret
+		seed := mneumonic.FromWords(strings.Split(passphrase, " "))
+		secret, err := ripplecrypto.ToSecret(seed.ToHex())
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in ripplecrypto.ToSecret(): %s", err.Error())
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
+
+		_, _, err = rippleapi.TrustSet(c, addressToActivate, currency, rippleAmount, line.Issuer, 0, secret)
 	}
+
+	log.FluentfContext(consts.LOGERROR, c, "delegatedActivateAddress() complete")
 
 	return 0, nil
 
