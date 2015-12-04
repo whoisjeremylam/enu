@@ -122,7 +122,7 @@ func InsertAsset(accessKey string, assetId string, sourceAddressValue string, di
 	return nil
 }
 
-func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enulib.Asset {
+func GetAssetByAssetId(c context.Context, accessKey string, assetId string) (enulib.Asset, error) {
 	if isInit == false {
 		Init()
 	}
@@ -137,7 +137,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	stmt, err := Db.Prepare("select rowId, assetId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=? and accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
-		return assetStruct
+		return assetStruct, err
 	}
 	defer stmt.Close()
 
@@ -145,7 +145,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 	row := stmt.QueryRow(assetId, accessKey)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to QueryRow. Reason: %s", err.Error())
-		return assetStruct
+		return assetStruct, err
 	}
 
 	var rowId string
@@ -164,11 +164,12 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) enul
 		}
 	} else if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
+		return assetStruct, err
 	} else {
 		assetStruct = enulib.Asset{SourceAddress: string(sourceAddress), DistributionAddress: string(distributionAddress), Asset: string(asset), Description: string(description), Quantity: quantity, AssetId: assetId, Status: string(status), ErrorMessage: string(errorMessage)}
 	}
 
-	return assetStruct
+	return assetStruct, nil
 }
 
 func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId string, errorCode int64, errorDescription string) error {
@@ -176,7 +177,10 @@ func UpdateAssetWithErrorByAssetId(c context.Context, accessKey string, assetId 
 		Init()
 	}
 
-	asset := GetAssetByAssetId(c, accessKey, assetId)
+	asset, err := GetAssetByAssetId(c, accessKey, assetId)
+	if err != nil {
+		return err
+	}
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -204,7 +208,10 @@ func UpdateAssetStatusByAssetId(c context.Context, accessKey string, assetId str
 		Init()
 	}
 
-	asset := GetAssetByAssetId(c, accessKey, assetId)
+	asset, err := GetAssetByAssetId(c, accessKey, assetId)
+	if err != nil {
+		return err
+	}
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -231,7 +238,10 @@ func UpdateAssetNameByAssetId(c context.Context, accessKey string, assetId strin
 		Init()
 	}
 
-	asset := GetAssetByAssetId(c, accessKey, assetId)
+	asset, err := GetAssetByAssetId(c, accessKey, assetId)
+	if err != nil {
+		return err
+	}
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)
@@ -258,7 +268,10 @@ func UpdateAssetCompleteByAssetId(c context.Context, accessKey string, assetId s
 		Init()
 	}
 
-	asset := GetAssetByAssetId(c, accessKey, assetId)
+	asset, err := GetAssetByAssetId(c, accessKey, assetId)
+	if err != nil {
+		return err
+	}
 
 	if asset.AssetId == "" {
 		errorString := fmt.Sprintf("Asset does not exist or cannot be accessed by %s\n", accessKey)

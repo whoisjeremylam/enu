@@ -74,9 +74,8 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 }
 
 func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
-	var asset enulib.Asset
+	//	var asset enulib.Asset
 	requestId := c.Value(consts.RequestIdKey).(string)
-	asset.RequestId = requestId
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	vars := mux.Vars(r)
@@ -91,7 +90,12 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[s
 
 	log.FluentfContext(consts.LOGINFO, c, "GetAsset called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
 
-	asset = database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
+	asset, err := database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
+	if err != nil {
+		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+
+		return nil
+	}
 	asset.RequestId = requestId
 
 	// Add the blockchain status
