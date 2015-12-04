@@ -39,8 +39,7 @@ func TestHttpGet(t *testing.T) {
 */
 
 func TestCreateWallet(t *testing.T) {
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "testing_"+enulib.GenerateRequestId())
+	setContext()
 
 	result, errCode, err := CreateWallet(c)
 
@@ -264,6 +263,7 @@ func TestPostTrustline(t *testing.T) {
 
 //}
 
+var c context.Context
 var amountTestData = []struct {
 	Amount          string
 	AmountUint64    uint64
@@ -275,7 +275,17 @@ var amountTestData = []struct {
 	{"-0.0", 0, "Negative 0.0"},
 }
 
+func setContext() {
+	c = context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
+	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
+	c = context.WithValue(c, consts.EnvKey, "dev")
+}
+
 func TestAmountToUint64(t *testing.T) {
+	setContext()
+
 	for _, s := range amountTestData {
 		result, err := AmountToUint64(s.Amount)
 
@@ -291,6 +301,8 @@ func TestAmountToUint64(t *testing.T) {
 }
 
 func TestUint64ToAmount(t *testing.T) {
+	setContext()
+
 	for _, s := range amountTestData {
 		result, err := Uint64ToAmount(s.AmountUint64)
 
@@ -318,6 +330,8 @@ func TestToCustomCurrency(t *testing.T) {
 		{"唯輝世那晴琉", "80e594afe8bc9de4b896e982a3e699b4e79089", "", "Nonenglish characters"},
 		{"abcdefghijklmnopqrstuvwxyz", "806162636465666768696a6b6c6d6e6f70717273", "", "Truncated to 19 characters"},
 	}
+
+	setContext()
 
 	for _, s := range testData {
 		result, err := ToCurrency(s.Currency)
