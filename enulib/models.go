@@ -99,10 +99,13 @@ type AddressBalances struct {
 }
 
 type Asset struct {
-	Passphrase              string `json:"passphrase"`
+	Passphrase              string `json:"passphrase,omitempty"`
 	SourceAddress           string `json:"sourceAddress"`
+	DistributionPassphrase  string `json:"distributionPassphrase,omitempty"`
+	DistributionAddress     string `json:"distributionAddress,omitempty"`
 	AssetId                 string `json:"assetId"`
 	Asset                   string `json:"asset"`
+	Issuer                  string `json:"issuer,omitempty"`
 	Description             string `json:"description"`
 	Quantity                uint64 `json:"quantity"`
 	Divisible               bool   `json:"divisible"`
@@ -123,7 +126,7 @@ type ReturnCode struct {
 }
 
 type Dividend struct {
-	Passphrase              string `json:"passphrase"`
+	Passphrase              string `json:"passphrase,omitempty"`
 	SourceAddress           string `json:"sourceAddress"`
 	DividendId              string `json:"dividendId"`
 	Asset                   string `json:"asset"`

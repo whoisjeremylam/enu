@@ -1439,7 +1439,7 @@ func DelegatedCreateIssuance(c context.Context, accessKey string, passphrase str
 	}
 
 	// Write the asset with the generated asset id to the database
-	go database.InsertAsset(accessKey, assetId, sourceAddress, asset, assetDescription, quantity, divisible, "valid")
+	go database.InsertAsset(accessKey, assetId, sourceAddress, "", asset, assetDescription, quantity, divisible, "valid")
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
