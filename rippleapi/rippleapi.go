@@ -34,6 +34,9 @@ const AsfNoFreeze = 6
 const AsfGlobalFreeze = 7
 const AsfDefaultRipple = 8
 
+// AccountRoot Flags
+const LsfDefaultRipple = 8388608
+
 // Trust set flags (on the transaction)
 const TfSetfAuth = 65536
 const TfSetNoRipple = 131072
