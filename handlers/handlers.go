@@ -229,7 +229,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	var nonceInt int64
 	if m["nonce"] != nil {
 		nonceInt := int64(m["nonce"].(float64))
-		log.FluentfContext(consts.LOGINFO, c, "Nonce received: %s", nonceInt)
+		log.FluentfContext(consts.LOGINFO, c, "Nonce received: %d", nonceInt)
 	} else {
 		nonceInt = 0
 	}
