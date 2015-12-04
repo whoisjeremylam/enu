@@ -56,6 +56,7 @@ type GenericStruct struct {
 	NotFound              ErrCodes
 	FunctionNotAvailable  ErrCodes
 	InvalidPassphrase     ErrCodes
+	InvalidAssetId        ErrCodes
 
 	GeneralError ErrCodes
 }
@@ -71,7 +72,9 @@ var GenericErrors = GenericStruct{
 	NotFound:              ErrCodes{8, "Not found"},
 	FunctionNotAvailable:  ErrCodes{9, "The function is not available on the selected blockchain."},
 	InvalidPassphrase:     ErrCodes{10, "The passphrase provided is not valid."},
-	GeneralError:          ErrCodes{13, "Misc error. Please contact Vennd.io support."},
+	InvalidAssetId:        ErrCodes{11, "The specified asset id is invalid."},
+
+	GeneralError: ErrCodes{13, "Misc error. Please contact Vennd.io support."},
 }
 
 type RippleStruct struct {

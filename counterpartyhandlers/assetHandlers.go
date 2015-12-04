@@ -83,7 +83,7 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[s
 	assetId := vars["assetId"]
 
 	if assetId == "" || len(assetId) < 16 {
-		handlers.ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDividendId.Code, errors.New(consts.GenericErrors.InvalidDividendId.Description))
+		handlers.ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidAssetId.Code, errors.New(consts.GenericErrors.InvalidAssetId.Description))
 
 		return nil
 
