@@ -73,54 +73,6 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	return nil
 }
 
-func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
-	//	var asset enulib.Asset
-	requestId := c.Value(consts.RequestIdKey).(string)
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	vars := mux.Vars(r)
-	assetId := vars["assetId"]
-
-	if assetId == "" || len(assetId) < 16 {
-		handlers.ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidAssetId.Code, errors.New(consts.GenericErrors.InvalidAssetId.Description))
-
-		return nil
-
-	}
-
-	log.FluentfContext(consts.LOGINFO, c, "GetAsset called for '%s' by '%s'\n", assetId, c.Value(consts.AccessKeyKey).(string))
-
-	asset, err := database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
-	if err != nil {
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
-
-		return nil
-	}
-	asset.RequestId = requestId
-
-	// Add the blockchain status
-	if asset.BroadcastTxId != "" {
-		confirmations, err := bitcoinapi.GetConfirmations(asset.BroadcastTxId)
-		if err == nil || confirmations == 0 {
-			asset.BlockchainStatus = "unconfimed"
-			asset.BlockchainConfirmations = 0
-		}
-
-		asset.BlockchainStatus = "confirmed"
-		asset.BlockchainConfirmations = confirmations
-	}
-
-	if err := json.NewEncoder(w).Encode(asset); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
-
-		return nil
-	}
-
-	w.WriteHeader(http.StatusOK)
-	return nil
-}
-
 func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
 
 	var dividendStruct enulib.Dividend

@@ -13,6 +13,7 @@ import (
 	"github.com/vennd/enu/counterpartyhandlers"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
+	"github.com/vennd/enu/generalhandlers"
 	"github.com/vennd/enu/handlers"
 	"github.com/vennd/enu/log"
 	"github.com/vennd/enu/ripplehandlers"
@@ -43,11 +44,11 @@ var blockchainFunctions = map[string]blockchainFunction{
 
 		// Asset handlers
 		"asset":       counterpartyhandlers.AssetCreate,
+		"getasset":    generalhandlers.GetAsset,
 		"dividend":    counterpartyhandlers.DividendCreate,
 		"issuances":   counterpartyhandlers.AssetIssuances,
 		"ledger":      counterpartyhandlers.AssetLedger,
 		"getdividend": counterpartyhandlers.GetDividend,
-		"getasset":    counterpartyhandlers.GetAsset,
 
 		// Payment handlers
 		"simplepayment":    counterpartyhandlers.PaymentCreate,
@@ -56,15 +57,18 @@ var blockchainFunctions = map[string]blockchainFunction{
 		"paymentbyaddress": counterpartyhandlers.GetPaymentsByAddress,
 	},
 	"ripple": {
+		// Address handlers
 		"walletCreate":    ripplehandlers.WalletCreate,
 		"walletPayment":   ripplehandlers.WalletSend,
 		"activateaddress": ripplehandlers.ActivateAddress,
 
+		// Payment handlers
 		"getpayment":       ripplehandlers.GetPayment,
 		"paymentbyaddress": ripplehandlers.GetPaymentsByAddress,
 
 		// Asset handlers
-		"asset": ripplehandlers.AssetCreate,
+		"asset":    ripplehandlers.AssetCreate,
+		"getasset": generalhandlers.GetAsset,
 
 		// Unsupported
 		"address":  ripplehandlers.Unhandled,
