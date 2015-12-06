@@ -78,29 +78,31 @@ var GenericErrors = GenericStruct{
 }
 
 type RippleStruct struct {
-	MiscError                    ErrCodes
-	Timeout                      ErrCodes
-	InvalidAmount                ErrCodes
-	InvalidCurrency              ErrCodes
-	SubmitError                  ErrCodes
-	IssuerMustBeGiven            ErrCodes
-	SigningError                 ErrCodes
-	SubmitErrorFeeLost           ErrCodes
-	InvalidCurrencyOrNoTrustline ErrCodes
-	InvalidSource                ErrCodes
-	InvalidDestination           ErrCodes
+	MiscError                     ErrCodes
+	Timeout                       ErrCodes
+	InvalidAmount                 ErrCodes
+	InvalidCurrency               ErrCodes
+	SubmitError                   ErrCodes
+	IssuerMustBeGiven             ErrCodes
+	SigningError                  ErrCodes
+	SubmitErrorFeeLost            ErrCodes
+	InvalidCurrencyOrNoTrustline  ErrCodes
+	InvalidSource                 ErrCodes
+	InvalidDestination            ErrCodes
+	DistributionPassphraseMissing ErrCodes
 }
 
 var RippleErrors = RippleStruct{
-	MiscError:                    ErrCodes{2000, "Misc error when contacting Ripple. Please contact Vennd.io support."},
-	Timeout:                      ErrCodes{2001, "Timeout when contacting Ripple. Please try again later."},
-	InvalidAmount:                ErrCodes{2002, "The amount specified is not a valid amount."},
-	InvalidCurrency:              ErrCodes{2003, "The currency is invalid. Ripple currencies must be 3 characters or longer."},
-	SubmitError:                  ErrCodes{2004, "The Ripple node rejected the transaction submission. Please try again."},
-	IssuerMustBeGiven:            ErrCodes{2005, "If the currency is not XRP, the issuer must be provided."},
-	SigningError:                 ErrCodes{2006, "Unable to sign transaction. Is your passphrase correct?"},
-	SubmitErrorFeeLost:           ErrCodes{2007, "The transaction was submitted to the Ripple network but was invalid."},
-	InvalidCurrencyOrNoTrustline: ErrCodes{2008, "The specified asset is invalid, or you must activate the destination wallet to accept the asset."},
-	InvalidSource:                ErrCodes{2009, "The specified source address is invalid."},
-	InvalidDestination:           ErrCodes{2010, "The specified destination address is invalid."},
+	MiscError:                     ErrCodes{2000, "Misc error when contacting Ripple. Please contact Vennd.io support."},
+	Timeout:                       ErrCodes{2001, "Timeout when contacting Ripple. Please try again later."},
+	InvalidAmount:                 ErrCodes{2002, "The amount specified is not a valid amount."},
+	InvalidCurrency:               ErrCodes{2003, "The currency is invalid. Ripple currencies must be 3 characters or longer."},
+	SubmitError:                   ErrCodes{2004, "The Ripple node rejected the transaction submission. Please try again."},
+	IssuerMustBeGiven:             ErrCodes{2005, "If the currency is not XRP, the issuer must be provided."},
+	SigningError:                  ErrCodes{2006, "Unable to sign transaction. Is your passphrase correct?"},
+	SubmitErrorFeeLost:            ErrCodes{2007, "The transaction was submitted to the Ripple network but was invalid."},
+	InvalidCurrencyOrNoTrustline:  ErrCodes{2008, "The specified asset is invalid, or you must activate the destination wallet to accept the asset."},
+	InvalidSource:                 ErrCodes{2009, "The specified source address is invalid."},
+	InvalidDestination:            ErrCodes{2010, "The specified destination address is invalid."},
+	DistributionPassphraseMissing: ErrCodes{2011, "If a distribution address is specified, the passphrase for the distribution address must be given."},
 }
