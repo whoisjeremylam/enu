@@ -1,12 +1,17 @@
 package ripplecrypto
 
 import (
-	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
 	"fmt"
+
 	"math/big"
 	"strings"
 
+	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/internal/github.com/vennd/mneumonic"
+	"github.com/vennd/enu/log"
+
+	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
+	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
 type RippleWallet struct {
@@ -48,6 +53,22 @@ func ToSecret(hexString string) (string, error) {
 	return string(address), nil
 }
 
+// Convert passphrase to Ripple secret
+func PassphraseToSecret(c context.Context, passphrase string) string {
+	var result string
+
+	seed := mneumonic.FromWords(strings.Split(passphrase, " "))
+	secret, err := ToSecret(seed.ToHex())
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in ripplecrypto.ToSecret(): %s", err.Error())
+
+		return result
+	}
+
+	return secret
+}
+
+// Generates a ripple wallet offline
 func CreateWallet(numberOfAddressesToGenerate int) (RippleWallet, error) {
 	var wallet RippleWallet
 	var numAddresses int
