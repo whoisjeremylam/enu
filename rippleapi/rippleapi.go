@@ -19,6 +19,7 @@ import (
 )
 
 var DefaultFee = "10000"
+var DefaultFeeI uint64 = 10000
 var customCurrencyPrefix = "80"
 var BaseReserve = 20000000
 var OwnerReserve = 5000000
@@ -865,6 +866,7 @@ func TrustSet(c context.Context, account string, currency string, value string, 
 	return txHash, errCode, err
 }
 
+// Gets the trust lines for a given account
 func GetAccountLines(c context.Context, account string) (Lines, int64, error) {
 	var payload = make(map[string]interface{})
 	var params = make(map[string]interface{})
