@@ -362,7 +362,6 @@ func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int
 	var apiResp ApiResult
 
 	postDataJson := string(postData)
-	//postDataJson := `{"method":"account_lines","params":[{"account":"rE1Lec75PEmeDFwAuumto2Nbo8ZwG3aT9V","ledger":"current"}]}`
 	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postRPCAPI() posting: %s", postDataJson)
 
 	// Set headers
@@ -396,7 +395,7 @@ func postRPCAPI(c context.Context, postData []byte) (map[string]interface{}, int
 
 	// Success, read body and return
 	body, err := ioutil.ReadAll(apiResp.resp.Body)
-	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postRPCAPI() body returned: %s", string(body))
+	//	log.FluentfContext(consts.LOGDEBUG, c, "rippleapi postRPCAPI() body returned: %s", string(body))
 
 	defer apiResp.resp.Body.Close()
 
