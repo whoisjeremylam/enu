@@ -173,7 +173,7 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	// Convert asset name to ripple currency name
 	currency, err := rippleapi.ToCurrency(asset)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
+		log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.ToCurrency(): %s", err.Error())
 		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.GenericErrors.GeneralError.Code, consts.GenericErrors.GeneralError.Description)
 
 		return "", consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description)
@@ -438,7 +438,6 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 
 	// For each trustline which doesn't already exist, create it
 	for _, line := range linesRequired {
-		log.FluentfContext(consts.LOGERROR, c, "Creating trust line: %s, %s, %d", line.Currency, line.Issuer, rippleapi.DefaultAmountToTrust)
 		database.InsertTrustAsset(c, accessKey, activationId, blockchainId, line.Currency, line.Issuer, rippleapi.DefaultAmountToTrust)
 
 		// Convert int to the ripple amount
@@ -454,6 +453,8 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 			log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
+
+		log.FluentfContext(consts.LOGERROR, c, "Creating trust line: currency=%s->%s, issuer=%s, amountToTrust=%d", line.Currency, currency, line.Issuer, rippleapi.DefaultAmountToTrust)
 
 		// Convert passphrase to ripple secret
 		seed := mneumonic.FromWords(strings.Split(passphrase, " "))
