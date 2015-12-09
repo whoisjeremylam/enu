@@ -366,11 +366,12 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		var linesUsed int = 0
 		var assetNamesReqired []string
 		for _, asset := range assets {
-			if lines.Contains(asset.Issuer, asset.Currency) {
+			rippleAsset, _ := rippleapi.ToCurrency(asset.Currency)
+			if lines.Contains(asset.Issuer, rippleAsset) {
 				linesUsed++
 			} else {
 				linesRequired = append(linesRequired, asset)
-				assetNamesReqired = append(assetNamesReqired, asset.Currency+"("+asset.Issuer+")")
+				assetNamesReqired = append(assetNamesReqired, asset.Currency+"(issuer="+asset.Issuer+")")
 			}
 		}
 		numLinesRequired = len(linesRequired)
