@@ -156,8 +156,8 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	defer ripple_Mutexes.m[sourceAddress].Unlock()
 
 	// We must sleep for at least the time it takes for most transactions to enter a ledger
-	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", ripple_BackEndPollRate+5000)
-	time.Sleep(time.Duration(ripple_BackEndPollRate+5000) * time.Millisecond)
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping %d milliseconds", ripple_BackEndPollRate+1000)
+	time.Sleep(time.Duration(ripple_BackEndPollRate+1000) * time.Millisecond)
 
 	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
