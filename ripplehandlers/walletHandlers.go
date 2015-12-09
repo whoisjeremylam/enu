@@ -301,7 +301,8 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 	return nil
 }
 
-// Concurrency safe to create and send transactions from a single address.
+// Concurrency safe to activate an an address.
+// Trust lines can be added by specifying a slice of rippleapi.Amounts
 func delegatedActivateAddress(c context.Context, addressToActivate string, passphrase string, amount uint64, assets []rippleapi.Amount, activationId string) (int64, error) {
 	var complete bool = false
 	var linesRequired []rippleapi.Amount
