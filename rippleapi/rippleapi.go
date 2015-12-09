@@ -1084,8 +1084,8 @@ func CalculateFeeAmount(c context.Context, amount uint64) (uint64, string, error
 	if thisAmount > 1000 {
 		thisAmount = 1000
 	}
-	if thisAmount < 20 {
-		thisAmount = 20
+	if thisAmount < 1 {
+		thisAmount = 1
 	}
 
 	if blockchainId != consts.RippleBlockchainId {
