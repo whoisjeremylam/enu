@@ -22,7 +22,7 @@ import (
 	"github.com/vennd/enu/ripplecrypto"
 )
 
-var ripple_BackEndPollRate = 3000
+var ripple_BackEndPollRate = 1000
 
 var ripple_Mutexes = struct {
 	sync.RWMutex
