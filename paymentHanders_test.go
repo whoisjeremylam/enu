@@ -7,8 +7,6 @@ import (
 )
 
 func TestGetPayment(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/payment/3c9d554a7d28d31ba75f215173dbc78e"
 	var result map[string]interface{}
@@ -35,8 +33,6 @@ func TestGetPayment(t *testing.T) {
 }
 
 func TestGetPaymentsByAddress(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/payment/address/unittesting1"
 	var result []map[string]interface{}

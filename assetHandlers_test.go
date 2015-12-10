@@ -12,8 +12,6 @@ var passphrase string = "attention stranger fate plain huge poetry view precious
 var sourceAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
 
 func TestGetDividend(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/asset/dividend/556dfb84e6f08480f066d1719cefba25"
 	var result map[string]interface{}
@@ -40,8 +38,6 @@ func TestGetDividend(t *testing.T) {
 }
 
 func TestGetAsset(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/asset/470cf33c0069f14c8e57aaf5823605da"
 	var result map[string]interface{}
@@ -68,8 +64,6 @@ func TestGetAsset(t *testing.T) {
 }
 
 func TestAssetCreate(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/asset"
 

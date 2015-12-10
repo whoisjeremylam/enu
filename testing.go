@@ -25,11 +25,13 @@ func InitTesting() {
 
 	router := NewRouter()
 
-	log.Println("Enu Test API server started")
+	log.Println("Enu Unit Test API server started")
 	log.Println(http.ListenAndServe("localhost:8081", router).Error())
 }
 
 func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int, error) {
+	InitTesting()
+
 	if method != "POST" && method != "GET" {
 		return nil, -1000, errors.New("DoEnuAPI must be called for a POST or GET method only")
 	}

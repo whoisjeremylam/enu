@@ -10,8 +10,6 @@ import (
 )
 
 func TestCounterpartyWalletCreate(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/wallet"
 	var wallet counterpartycrypto.CounterpartyWallet
@@ -81,8 +79,6 @@ func TestCounterpartyWalletCreate(t *testing.T) {
 }
 
 func TestWalletBalance(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/wallet/balances/1GaZfh9VhxL4J8tBt2jrDvictZEKc8kcHx" // Balance from test address which is used for composing unit testing transactions
 	//	var url = baseURL + "/wallet/balances/19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A" // Zero wallet
@@ -111,8 +107,6 @@ func TestWalletBalance(t *testing.T) {
 }
 
 func TestRippleWalletCreate(t *testing.T) {
-	go InitTesting()
-
 	// Make URL from base URL
 	var url = baseURL + "/wallet"
 	var wallet map[string]interface{}
