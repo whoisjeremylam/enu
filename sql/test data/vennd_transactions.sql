@@ -16,6 +16,23 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `transactions`
+--
+
+DROP TABLE IF EXISTS `transactions`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `transactions` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `blockId` bigint(20) DEFAULT NULL,
+  `txid` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`rowid`),
+  KEY `transactions1` (`blockId`),
+  KEY `transactions2` (`txid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `transactions`
 --
 
@@ -33,4 +50,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-10-03  9:22:48
+-- Dump completed on 2015-12-11  3:48:02

@@ -16,6 +16,23 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `blocks`
+--
+
+DROP TABLE IF EXISTS `blocks`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `blocks` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `blockId` bigint(20) DEFAULT NULL,
+  `status` varchar(100) DEFAULT NULL,
+  `duration` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`rowid`),
+  UNIQUE KEY `blocks1` (`blockId`)
+) ENGINE=InnoDB AUTO_INCREMENT=331 DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `blocks`
 --
 
@@ -34,4 +51,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-10-03  9:22:38
+-- Dump completed on 2015-12-11  3:47:49

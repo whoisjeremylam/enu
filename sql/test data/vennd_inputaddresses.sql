@@ -16,6 +16,23 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `inputaddresses`
+--
+
+DROP TABLE IF EXISTS `inputaddresses`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `inputaddresses` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `txid` varchar(200) DEFAULT NULL,
+  `address` varchar(200) DEFAULT NULL,
+  PRIMARY KEY (`rowid`),
+  KEY `inputAddresses1` (`txid`),
+  KEY `inputAddresses2` (`address`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `inputaddresses`
 --
 
@@ -33,4 +50,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-10-03  9:23:25
+-- Dump completed on 2015-12-11  3:48:56
