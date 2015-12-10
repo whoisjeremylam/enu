@@ -371,7 +371,7 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 				linesUsed++
 			} else {
 				linesRequired = append(linesRequired, asset)
-				assetNamesReqired = append(assetNamesReqired, asset.Currency+"(issuer="+asset.Issuer+")")
+				assetNamesReqired = append(assetNamesReqired, asset.Issuer+"."+asset.Currency)
 			}
 		}
 		numLinesRequired = len(linesRequired)
@@ -411,12 +411,12 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amountXRPToSend)
 
 		// Send the xrp
-		//		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend, activationId, "")
-		//		if err != nil {
-		//			log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend(): %s", err.Error())
-		//			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-		//			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		//		}
+		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend*consts.Satoshi, activationId, "")
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+		}
 
 		complete = true
 
