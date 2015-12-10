@@ -3,7 +3,7 @@ package ripplehandlers
 import (
 	"encoding/json"
 	"net/http"
-	"strconv"
+	//	"strconv"
 	"strings"
 	"time"
 
@@ -98,7 +98,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	}
 
 	// Start asset creation in async mode
-	go delegatedAssetCreate(c, sourceAddress, passphrase, distributionAddress, distributionPassphrase, rippleAsset, asset, quantity, assetId)
+	go delegatedAssetCreate(c, sourceAddress, passphrase, distributionAddress, distributionPassphrase, asset, asset, quantity, assetId)
 
 	return nil
 }
@@ -159,9 +159,9 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 
 	//	Activate the distribution wallet if necessary
 	assets := []rippleapi.Amount{
-		{Currency: rippleAsset, Issuer: issuingAddress},
+		{Currency: asset, Issuer: issuingAddress},
 	}
-	_, err = delegatedActivateAddress(c, distributionAddress, distributionPassphrase, 100, assets, assetId)
+	_, err = delegatedActivateAddress(c, distributionAddress, distributionPassphrase, 1, assets, assetId)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in delegatedActivateAddress(): %s", err.Error())
 
@@ -170,7 +170,7 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Waiting until address activation complete...")
-	time.Sleep(time.Duration(30) * time.Second)
+	time.Sleep(time.Duration(10) * time.Second)
 	log.FluentfContext(consts.LOGINFO, c, "Done")
 
 	// The distribution wallet should be set up now at this stage
@@ -184,72 +184,11 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
-	// Create trustline if one doesn't exist
+	// A trust line should exist by this stage.
 	if lines.Contains(issuingAddress, rippleAsset) == false {
-		log.FluentfContext(consts.LOGINFO, c, "Trust line from distribution %s to issuer %s does not exist", distributionAddress, issuingAddress)
+		log.FluentfContext(consts.LOGERROR, c, "Trust line from distribution %s to issuer %s does not exist for %s", distributionAddress, issuingAddress, asset+"->"+rippleAsset)
 
-		// Check if the distribution address is funded sufficiently
-		accountInfo, _, err := rippleapi.GetAccountInfo(c, distributionAddress)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.GetAccountInfo: %s", err.Error())
-
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		}
-
-		accountBalance, err := strconv.ParseUint(accountInfo.Balance, 10, 64)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in ParseUint(): %s", err.Error())
-
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		}
-
-		// Retrieve the current number of trust lines
-		accountLines, _, err := rippleapi.GetAccountLines(c, distributionAddress)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.GetAccountLines: %s", err.Error())
-
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		}
-
-		// Calculate what the reserve should be including the new trust line that we need to create to the issuer
-		reserveRequired := rippleapi.CalculateReserve(c, uint64(accountLines.Len())+1) + rippleapi.DefaultFeeI
-
-		log.FluentfContext(consts.LOGERROR, c, "Distribution address: %s holds %d XRP, requires %d XRP", distributionAddress, accountBalance, reserveRequired)
-
-		// If there isn't enough XRP in the address, error out
-		if accountBalance < reserveRequired {
-			log.FluentfContext(consts.LOGERROR, c, consts.RippleErrors.DistributionInsufficientFunds.Description)
-
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.DistributionInsufficientFunds.Code, consts.RippleErrors.DistributionInsufficientFunds.Description)
-			return consts.RippleErrors.DistributionInsufficientFunds.Code, errors.New(consts.RippleErrors.DistributionInsufficientFunds.Description)
-		}
-
-		defaultTrustAmount, err := rippleapi.Uint64ToAmount(rippleapi.DefaultAmountToTrust)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.ToCurrency (for defaultAmountToTrust): %s", err.Error())
-
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		}
-
-		log.FluentfContext(consts.LOGINFO, c, "Creating trust line from distribution %s to issuer %s for %s", distributionAddress, issuingAddress, asset)
-
-		txhash, _, err := rippleapi.TrustSet(c, distributionAddress, asset, defaultTrustAmount, issuingAddress, 0, distributionPassphrase)
-		if err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.TrustSet: %s", err.Error())
-
-			database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
-		}
-
-		log.FluentfContext(consts.LOGINFO, c, "Waiting until address activation complete...")
-		time.Sleep(time.Duration(30) * time.Second)
-		log.FluentfContext(consts.LOGINFO, c, "Done")
-
-		log.FluentfContext(consts.LOGERROR, c, "Trust line created from distribution account: %s to issuer: %s for %s. Txhash: %s", issuingAddress, distributionAddress, asset, txhash)
+		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
 	// Pay from the issuer wallet to the distribution wallet the amount of custom currency specified
