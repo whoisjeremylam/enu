@@ -30,7 +30,7 @@ CREATE TABLE `activations` (
   `addressToActivate` varchar(200) NOT NULL,
   `amount` bigint(10) NOT NULL,
   PRIMARY KEY (`rowid`)
-) ENGINE=InnoDB AUTO_INCREMENT=259 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=1529 DEFAULT CHARSET=latin1;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -45,7 +45,7 @@ CREATE TABLE `addresses` (
   `accessKey` varchar(64) DEFAULT NULL,
   `sourceAddress` varchar(100) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
-) ENGINE=InnoDB AUTO_INCREMENT=207 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=357 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -87,7 +87,9 @@ CREATE TABLE `assets` (
   `accessKey` varchar(64) DEFAULT NULL,
   `assetId` varchar(200) DEFAULT NULL,
   `sourceAddress` varchar(200) DEFAULT NULL,
+  `distributionAddress` varchar(200) DEFAULT NULL,
   `asset` varchar(200) DEFAULT NULL,
+  `blockchainId` varchar(50) DEFAULT NULL,
   `description` varchar(200) DEFAULT NULL,
   `quantity` bigint(20) DEFAULT NULL,
   `divisible` tinyint(1) DEFAULT NULL,
@@ -99,9 +101,10 @@ CREATE TABLE `assets` (
   `requestId` varchar(200) DEFAULT NULL,
   `retryCount` tinyint(4) DEFAULT NULL,
   `signedRawTx` text,
+  `issuer` varchar(200) DEFAULT NULL,
   PRIMARY KEY (`rowid`),
   KEY `assets1` (`assetId`)
-) ENGINE=InnoDB AUTO_INCREMENT=155 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=255 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -288,10 +291,12 @@ CREATE TABLE `payments` (
   `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
   `accessKey` varchar(64) DEFAULT NULL,
   `blockId` bigint(20) DEFAULT NULL,
+  `blockchainId` varchar(50) DEFAULT NULL,
   `sourceTxid` varchar(200) DEFAULT NULL,
   `sourceAddress` varchar(200) DEFAULT NULL,
   `destinationAddress` varchar(200) DEFAULT NULL,
   `outAsset` varchar(200) DEFAULT NULL,
+  `issuer` varchar(200) DEFAULT NULL,
   `outAmount` bigint(20) DEFAULT NULL,
   `status` varchar(200) DEFAULT NULL,
   `lastUpdatedBlockId` bigint(20) DEFAULT NULL,
@@ -305,7 +310,7 @@ CREATE TABLE `payments` (
   `signedRawTx` text,
   PRIMARY KEY (`rowid`),
   KEY `payments1` (`blockId`)
-) ENGINE=InnoDB AUTO_INCREMENT=397 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=1742 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
@@ -344,6 +349,25 @@ CREATE TABLE `transactions` (
 /*!40101 SET character_set_client = @saved_cs_client */;
 
 --
+-- Table structure for table `trustassets`
+--
+
+DROP TABLE IF EXISTS `trustassets`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `trustassets` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `activationId` varchar(45) DEFAULT NULL,
+  `blockchainId` varchar(50) DEFAULT NULL,
+  `accessKey` varchar(64) DEFAULT NULL,
+  `asset` varchar(200) DEFAULT NULL,
+  `issuer` varchar(200) DEFAULT NULL,
+  `trustAmount` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`rowid`)
+) ENGINE=InnoDB AUTO_INCREMENT=74 DEFAULT CHARSET=latin1;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Table structure for table `userkeys`
 --
 
@@ -361,7 +385,7 @@ CREATE TABLE `userkeys` (
   `blockchainId` varchar(100) DEFAULT NULL,
   `status` varchar(10) DEFAULT NULL,
   PRIMARY KEY (`rowId`)
-) ENGINE=InnoDB AUTO_INCREMENT=187 DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB AUTO_INCREMENT=337 DEFAULT CHARSET=utf8;
 /*!40101 SET character_set_client = @saved_cs_client */;
 /*!40103 SET TIME_ZONE=@OLD_TIME_ZONE */;
 
@@ -373,4 +397,4 @@ CREATE TABLE `userkeys` (
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-10-03  8:40:22
+-- Dump completed on 2015-12-10 19:17:51
