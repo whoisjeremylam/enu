@@ -278,6 +278,8 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, err.Error())
 		ReturnUnprocessableEntity(c2, w, consts.GenericErrors.InvalidDocument.Code, err)
+
+		return c2, m, err
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "Parameters validated.")
