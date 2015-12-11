@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io/ioutil"
 	"net/http"
+	"sync"
 
 	"github.com/vennd/enu/enulib"
 	"github.com/vennd/enu/log"
@@ -14,23 +15,26 @@ var isInit = false
 var apiKey = "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16"
 var apiSecret = "a06d8cfa8692973c755b3b7321a8af7de448ec56dcfe3739716f5fa11187e4ac"
 var baseURL = "http://localhost:8081"
+var once sync.Once
 
 // Creates a local server to serve client tests
 func InitTesting() {
-	if isInit == true {
-		return
+	//	if isInit == true {
+	//		return
+	//	}
+
+	initialise := func() {
+		router := NewRouter()
+
+		log.Println("Enu Unit Test API server started")
+		log.Println(http.ListenAndServe("localhost:8081", router).Error())
 	}
 
-	isInit = true
-
-	router := NewRouter()
-
-	log.Println("Enu Unit Test API server started")
-	log.Println(http.ListenAndServe("localhost:8081", router).Error())
+	once.Do(initialise)
 }
 
 func DoEnuAPITesting(method string, url string, postData []byte) ([]byte, int, error) {
-	InitTesting()
+	go InitTesting()
 
 	if method != "POST" && method != "GET" {
 		return nil, -1000, errors.New("DoEnuAPI must be called for a POST or GET method only")
