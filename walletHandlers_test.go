@@ -131,6 +131,4 @@ func TestRippleWalletCreate(t *testing.T) {
 	if err := json.Unmarshal(responseData, &wallet); err != nil {
 		t.Errorf("Error in API call. Unable to unmarshal responseData. Error: %s", err)
 	}
-
-	t.Errorf("%+v", wallet)
 }
