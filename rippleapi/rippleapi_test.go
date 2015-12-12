@@ -264,16 +264,6 @@ func TestPostTrustline(t *testing.T) {
 //}
 
 var c context.Context
-var amountTestData = []struct {
-	Amount          string
-	AmountUint64    uint64
-	CaseDescription string
-}{
-	{"0.00000001", 1, "1 satoshi"},
-	{"100000000", 10000000000000000, "1 satoshi * 1 satoshi"},
-	{"0.0", 0, "Positive 0.0"},
-	{"-0.0", 0, "Negative 0.0"},
-}
 
 func setContext() {
 	c = context.TODO()
@@ -284,6 +274,16 @@ func setContext() {
 }
 
 func TestAmountToUint64(t *testing.T) {
+	var amountTestData = []struct {
+		Amount          string
+		AmountUint64    uint64
+		CaseDescription string
+	}{
+		{"0.00000001", 1, "1 satoshi"},
+		{"100000000", 10000000000000000, "1 satoshi * 1 satoshi"},
+		{"0.0", 0, "Positive 0.0"},
+		{"-0.0", 0, "Negative 0.0"},
+	}
 	setContext()
 
 	for _, s := range amountTestData {
@@ -301,6 +301,15 @@ func TestAmountToUint64(t *testing.T) {
 }
 
 func TestUint64ToAmount(t *testing.T) {
+	var amountTestData = []struct {
+		Amount          string
+		AmountUint64    uint64
+		CaseDescription string
+	}{
+		{"0.00000001", 1, "1 satoshi"},
+		{"100000000", 10000000000000000, "1 satoshi * 1 satoshi"},
+		{"0", 0, "0"},
+	}
 	setContext()
 
 	for _, s := range amountTestData {
@@ -325,9 +334,9 @@ func TestToCustomCurrency(t *testing.T) {
 		CaseDescription string
 	}{
 		{"abc", "abc", "", "3 character currencies are left as is"},
-		{"amazon.com", "80616d617a6f6e2e636f6d", "", "Custom currency"},
+		{"amazon.com", "80616d617a6f6e2e636f6d000000000000000000", "", "Custom currency"},
 		{"24", "", "Currency can not be less than 3 characters", "Invalid currency"},
-		{"唯輝世那晴琉", "80e594afe8bc9de4b896e982a3e699b4e79089", "", "Nonenglish characters"},
+		{"唯輝世那晴琉", "80e594afe8bc9de4b896e982a3e699b4e7908900", "", "Nonenglish characters"},
 		{"abcdefghijklmnopqrstuvwxyz", "806162636465666768696a6b6c6d6e6f70717273", "", "Truncated to 19 characters"},
 	}
 
