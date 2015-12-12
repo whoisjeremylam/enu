@@ -270,7 +270,7 @@ func (s Lines) Contains(account string, currency string) bool {
 	//	log.Printf("searching for account:%s, currency:%s", account, currency)
 
 	for _, line := range s {
-		log.Printf("account:%s, currency:%s", line.Account, line.Currency)
+		//		log.Printf("account:%s, currency:%s", line.Account, line.Currency)
 		if line.Account == account && strings.ToUpper(line.Currency) == strings.ToUpper(currency) {
 			result = true
 			//			log.Printf("found")
