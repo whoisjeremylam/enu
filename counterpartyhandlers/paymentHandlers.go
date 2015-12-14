@@ -82,7 +82,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	if payment.Status == "Not found" || payment.Status == "" {
 		errorString := fmt.Sprintf("PaymentId: %s not found", paymentId)
 		log.FluentfContext(consts.LOGERROR, c, errorString)
-		handlers.ReturnNotFound(c, w, consts.GenericErrors.NotFound.Code, errors.New(errorString))
+		handlers.ReturnNotFoundWithCustomError(c, w, consts.GenericErrors.NotFound.Code, errorString)
 		return nil
 	}
 
