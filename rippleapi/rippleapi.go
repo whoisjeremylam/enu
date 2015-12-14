@@ -2,6 +2,7 @@ package rippleapi
 
 import (
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -1050,27 +1051,59 @@ func ValidCurrencyName(currency string) (bool, error) {
 
 // Truncate to 19 characters and convert to a hex string equivalent.
 // Prepend hex 80 to indicate a custom currency
-func ToCurrency(currency string) (string, error) {
+func ToCurrency(asset string) (string, error) {
+	// Error if currency given is less than 3 characters
+	if len(asset) < 3 {
+		return "", errors.New("Currency can not be less than 3 characters")
+	}
+
+	// Currencies 3 chars (like ISO currency should be kept as it is
+	if len(asset) == 3 {
+		return asset, nil
+	}
+
+	// Otherwise, assume it is a custom currency and hex encode the string
+	var length int
+	if len(asset) > 19 {
+		length = 19
+	} else {
+		length = len(asset)
+	}
+
+	result := customCurrencyPrefix + fmt.Sprintf("%x", asset[:length]) + strings.Repeat("00", 19-length) // pad out to 19 hex bytes
+	return result, nil
+}
+
+// Converts a ripple currency to a normal string
+// Where the currency is 3 characters, it is returned as is
+// Where the currency is a 160 bit hex encoded string, it is converted to the ascii representation
+func FromCurrency(currency string) (string, error) {
 	// Error if currency given is less than 3 characters
 	if len(currency) < 3 {
 		return "", errors.New("Currency can not be less than 3 characters")
 	}
 
-	// Currencies 3 chars (like ISO currency_ should be kept as it is
+	if len(currency) > 3 && len(currency) != 40 {
+		return "", errors.New("Custom currencies must be 160 bits (40 characters)")
+	}
+
+	// Currencies 3 chars (like ISO currency should be kept as it is
 	if len(currency) == 3 {
 		return currency, nil
 	}
 
-	// Otherwise, assume it is a custom currency and hex encode the string
-	var length int
-	if len(currency) > 19 {
-		length = 19
-	} else {
-		length = len(currency)
+	// Otherwise, assume it is a custom currency.
+	// Remove the leading "80" and trailing "00"
+	// decode the remainder of the hex bytes to ascii
+	trim := strings.TrimLeft(currency, "80")
+	trim = strings.TrimRight(trim, "00")
+
+	decoded, err := hex.DecodeString(trim)
+	if err != nil {
+		return "", err
 	}
 
-	result := customCurrencyPrefix + fmt.Sprintf("%x", currency[:length]) + strings.Repeat("00", 19-length) // pad out to 19 hex bytes
-	return result, nil
+	return string(decoded), nil
 }
 
 // Returns the total XRP that is required for the given number of transactions

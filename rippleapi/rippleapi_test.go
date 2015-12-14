@@ -355,3 +355,33 @@ func TestToCustomCurrency(t *testing.T) {
 		}
 	}
 }
+
+func TestFromCustomCurrency(t *testing.T) {
+	var testData = []struct {
+		Currency        string
+		RippleCurrency  string
+		ExpectedError   string
+		CaseDescription string
+	}{
+		{"abc", "abc", "", "3 character currencies are left as is"},
+		{"amazon.com", "80616d617a6f6e2e636f6d000000000000000000", "", "Custom currency"},
+		{"", "24", "Currency can not be less than 3 characters", "Invalid currency"},
+		{"唯輝世那晴琉", "80e594afe8bc9de4b896e982a3e699b4e7908900", "", "Nonenglish characters"},
+		{"abcdefghijklmnopqrs", "806162636465666768696a6b6c6d6e6f70717273", "", "Truncated to 19 characters"},
+	}
+
+	setContext()
+
+	for _, s := range testData {
+		result, err := FromCurrency(s.RippleCurrency)
+
+		if result != s.Currency || (err != nil && err.Error() != s.ExpectedError) {
+			t.Errorf("Expected: %s, Got: %s\nCase: %s\n", s.Currency, result, s.CaseDescription)
+
+			// Additionally log the error if we got an error
+			if err != nil {
+				t.Error(err.Error())
+			}
+		}
+	}
+}
