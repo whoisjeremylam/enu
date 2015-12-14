@@ -92,7 +92,8 @@ func handle(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.A
 
 	// If the specified handler can't be found, return a 404
 	if blockchainFunctions[blockchainId][requestType] == nil {
-		handlers.ReturnNotFound(c, w, consts.GenericErrors.NotFound.Code, errors.New(consts.GenericErrors.NotFound.Description))
+		log.FluentfContext(consts.LOGINFO, c, "No function could be found in blockchainFunctions to handle blockchainId: %s, requestType: %s", blockchainId, requestType)
+		handlers.ReturnNotFoundWithCustomError(c, w, consts.GenericErrors.FunctionNotAvailable.Code, consts.GenericErrors.FunctionNotAvailable.Description)
 
 		return nil
 	}
