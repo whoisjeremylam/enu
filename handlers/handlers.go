@@ -99,8 +99,8 @@ func ReturnOK(c context.Context, w http.ResponseWriter) {
 	}
 }
 
-func ReturnNotFound(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
-	returnCode := enulib.ReturnCode{Code: -3, Description: "Not found", RequestId: c.Value(consts.RequestIdKey).(string)}
+func ReturnNotFound(c context.Context, w http.ResponseWriter) {
+	returnCode := enulib.ReturnCode{Code: consts.GenericErrors.NotFound.Code, Description: consts.GenericErrors.NotFound.Description, RequestId: c.Value(consts.RequestIdKey).(string)}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusNotFound)
@@ -110,7 +110,7 @@ func ReturnNotFound(c context.Context, w http.ResponseWriter, errorCode int64, e
 }
 
 func ReturnNotFoundWithCustomError(c context.Context, w http.ResponseWriter, errorCode int64, errorString string) {
-	returnCode := enulib.ReturnCode{Code: -3, Description: errorString, RequestId: c.Value(consts.RequestIdKey).(string)}
+	returnCode := enulib.ReturnCode{Code: errorCode, Description: errorString, RequestId: c.Value(consts.RequestIdKey).(string)}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusNotFound)
@@ -257,6 +257,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	// Overwrite blockchain context if the blockchainId has been set as a parameter in the body
 	var c2 context.Context
 	if m["blockchainId"] != nil && m["blockchainId"] != "" {
+		log.FluentfContext(consts.LOGINFO, c, "User specified in body requested blockchainId: %s", m["blockchainId"].(string))
 		requestBlockchainId := m["blockchainId"].(string)
 
 		// check if blockchainId is valid
@@ -269,6 +270,10 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 		if blockchainValid {
 			log.FluentfContext(consts.LOGINFO, c, "blockchainId specified as a body parameter. Overwriting blockchainId with: %s", m["blockchainId"].(string))
 			c2 = context.WithValue(c, consts.BlockchainIdKey, requestBlockchainId)
+		} else {
+			log.FluentfContext(consts.LOGERROR, c, "Unsupported blockchainId: %s", m["blockchainId"].(string))
+			ReturnBadRequest(c, w, consts.GenericErrors.UnsupportedBlockchain.Code, errors.New(consts.GenericErrors.UnsupportedBlockchain.Description+" Given: "+m["blockchainId"].(string)))
+			return c, m, errors.New(consts.GenericErrors.UnsupportedBlockchain.Description)
 		}
 	} else {
 		c2 = c
