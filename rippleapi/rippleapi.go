@@ -605,6 +605,8 @@ func CreateWallet(c context.Context) (Wallet, int64, error) {
 }
 
 // Returns the balances, including xrp held by the account
+// Assumes that all custom currencies ripple via a central issuing address.
+// ie it doesn't sum balances of the same currency against different trust lines
 func GetAccountBalances(c context.Context, account string) ([]Balance, int64, error) {
 	var result []Balance
 
@@ -628,12 +630,13 @@ func GetAccountBalances(c context.Context, account string) ([]Balance, int64, er
 
 		// If the balance on the trustline is > 0, then save it into the result array
 		if value.Cmp(big.NewFloat(0)) == 1 {
+
 			balance.Value = line.Balance
 			balance.Currency = line.Currency
 			balance.Counterparty = line.Account
-		}
 
-		result = append(result, balance)
+			result = append(result, balance)
+		}
 	}
 
 	// Retrieve account information, which contains the XRP balance
@@ -646,7 +649,15 @@ func GetAccountBalances(c context.Context, account string) ([]Balance, int64, er
 
 		xrpBalance.Counterparty = ""
 		xrpBalance.Currency = "XRP"
-		xrpBalance.Value = accountInfo.Balance
+
+		var xcpBalance big.Float
+		var xcpBalanceFloat big.Float
+		xcpBalance.SetString(accountInfo.Balance)
+		xcpBalanceFloat.Quo(&xcpBalance, big.NewFloat(1000000))
+
+		resultWithTrail := xcpBalanceFloat.Text('f', 15) // Ripple targets 15 decimal points of precision
+
+		xrpBalance.Value = strings.TrimRight(strings.TrimRight(resultWithTrail, "0"), ".") // Remove trailing zeros
 
 		result = append(result, xrpBalance)
 	}
