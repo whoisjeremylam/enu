@@ -365,7 +365,7 @@ func TestFromCustomCurrency(t *testing.T) {
 	}{
 		{"abc", "abc", "", "3 character currencies are left as is"},
 		{"amazon.com", "80616d617a6f6e2e636f6d000000000000000000", "", "Custom currency"},
-		{"", "24", "Currency can not be less than 3 characters", "Invalid currency"},
+		{"", "24", "24 is less than 3 characters. Currency can not be less than 3 characters", "Invalid currency"},
 		{"唯輝世那晴琉", "80e594afe8bc9de4b896e982a3e699b4e7908900", "", "Nonenglish characters"},
 		{"abcdefghijklmnopqrs", "806162636465666768696a6b6c6d6e6f70717273", "", "Truncated to 19 characters"},
 	}
