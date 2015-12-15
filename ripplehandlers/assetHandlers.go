@@ -94,7 +94,10 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	// Return to the client the assetId and unblock the client
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(assetStruct); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		handlers.ReturnServerError(c, w)
+
+		return nil
 	}
 
 	// Start asset creation in async mode

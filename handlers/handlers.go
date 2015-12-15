@@ -43,7 +43,7 @@ func ReturnUnauthorised(c context.Context, w http.ResponseWriter, errorCode int6
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusForbidden)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
@@ -54,7 +54,7 @@ func ReturnBadRequest(c context.Context, w http.ResponseWriter, errorCode int64,
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusBadRequest)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
@@ -70,7 +70,7 @@ func ReturnUnprocessableEntity(c context.Context, w http.ResponseWriter, errorCo
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(422)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
@@ -80,7 +80,7 @@ func ReturnCreated(c context.Context, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
@@ -90,7 +90,7 @@ func ReturnOK(c context.Context, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
@@ -100,7 +100,7 @@ func ReturnNotFound(c context.Context, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusNotFound)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
