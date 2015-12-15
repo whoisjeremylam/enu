@@ -35,10 +35,10 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 
 	// Create the wallet
-	wallet, errCode, err := rippleapi.CreateWallet(c)
+	wallet, errorCode, err := rippleapi.CreateWallet(c)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in CreateWallet(): %s", err.Error())
-		handlers.ReturnServerError(c, w, errCode, err)
+		handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 
 		return nil
 	}
@@ -60,7 +60,7 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(walletModel); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -98,7 +98,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request, m map
 	// If a custom asset is specified, then an issuer must be provided
 	if strings.ToUpper(asset) != "XRP" && issuer == "" {
 		log.FluentfContext(consts.LOGERROR, c, consts.RippleErrors.IssuerMustBeGiven.Description)
-		handlers.ReturnBadRequest(c, w, consts.RippleErrors.IssuerMustBeGiven.Code, errors.New(consts.RippleErrors.IssuerMustBeGiven.Description))
+		handlers.ReturnBadRequest(c, w, consts.RippleErrors.IssuerMustBeGiven.Code, consts.RippleErrors.IssuerMustBeGiven.Description)
 		return nil
 	}
 
@@ -118,7 +118,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request, m map
 
 	if err := json.NewEncoder(w).Encode(walletPayment); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -229,7 +229,7 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+			handlers.ReturnServerError(c, w)
 
 			return nil
 		}
@@ -291,7 +291,7 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}

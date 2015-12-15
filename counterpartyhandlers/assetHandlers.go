@@ -2,7 +2,6 @@ package counterpartyhandlers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/vennd/enu/bitcoinapi"
@@ -18,7 +17,6 @@ import (
 )
 
 func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
-
 	var assetStruct enulib.Asset
 	requestId := c.Value(consts.RequestIdKey).(string)
 	assetStruct.RequestId = requestId
@@ -35,9 +33,9 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 
 	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
 	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error: %s\n", err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in counterpartycrypto.GetPublicKey(): %s\n", err)
 
-		handlers.ReturnServerError(c, w, consts.CounterpartyErrors.MiscError.Code, errors.New(consts.CounterpartyErrors.MiscError.Description))
+		handlers.ReturnServerError(c, w)
 		return nil
 	}
 
@@ -46,7 +44,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	// Generate random asset name
 	randomAssetName, errorCode, err := counterpartyapi.GenerateRandomAssetName(c)
 	if err != nil {
-		handlers.ReturnServerError(c, w, errorCode, err)
+		handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 
 		return nil
 	}
@@ -99,7 +97,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request, m
 		returnCode := enulib.ReturnCode{RequestId: requestId, Code: -3, Description: err.Error()}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+			handlers.ReturnServerError(c, w)
 
 			return nil
 		}
@@ -121,7 +119,7 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request, m
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(dividendStruct); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -196,7 +194,7 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request, m
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(issuanceForAsset); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -227,13 +225,13 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 
 	result, errorCode, err := counterpartyapi.GetBalancesByAsset(c, asset)
 	if err != nil {
-		handlers.ReturnServerError(c, w, errorCode, err)
+		handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 		return nil
 	}
 
 	resultIssuances, errorCode, err := counterpartyapi.GetIssuances(c, asset)
 	if err != nil {
-		handlers.ReturnServerError(c, w, errorCode, err)
+		handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 		return nil
 	}
 
@@ -285,7 +283,7 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 
 	if err = json.NewEncoder(w).Encode(assetBalances); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -304,7 +302,8 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	dividendId := vars["dividendId"]
 
 	if dividendId == "" || len(dividendId) < 16 {
-		handlers.ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidDividendId.Code, errors.New(consts.GenericErrors.InvalidDividendId.Description))
+		log.FluentfContext(consts.LOGERROR, c, "Invalid dividendId")
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidDividendId.Code, consts.GenericErrors.InvalidDividendId.Description)
 
 		return nil
 
@@ -336,7 +335,7 @@ func GetDividend(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 
 	if err := json.NewEncoder(w).Encode(dividend); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}

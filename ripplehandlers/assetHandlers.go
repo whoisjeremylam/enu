@@ -59,7 +59,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	//   If a distribution address has been specified, the passphrase must also be specified
 	if distributionAddress != "" && distributionPassphrase == "" {
 		log.FluentfContext(consts.LOGERROR, c, "If a distribution address is specified, the passphrase for the distribution address must be given.")
-		handlers.ReturnServerError(c, w, consts.RippleErrors.DistributionPassphraseMissing.Code, errors.New(consts.RippleErrors.DistributionPassphraseMissing.Description))
+		handlers.ReturnBadRequest(c, w, consts.RippleErrors.DistributionPassphraseMissing.Code, consts.RippleErrors.DistributionPassphraseMissing.Description)
 
 		return nil
 	}
@@ -68,11 +68,11 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	if distributionAddress == "" {
 		//  create the wallet
 		//  activate the wallet specifying a trust line for the asset from the issuing address
-		wallet, errCode, err := rippleapi.CreateWallet(c)
+		wallet, errorCode, err := rippleapi.CreateWallet(c)
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.CreateWallet: %s", err.Error())
 
-			handlers.ReturnServerError(c, w, errCode, err)
+			handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 			return nil
 		}
 

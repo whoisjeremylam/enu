@@ -24,6 +24,7 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[s
 	assetId := vars["assetId"]
 
 	if assetId == "" || len(assetId) < 16 {
+		log.FluentfContext(consts.LOGERROR, c, "Invalid assetId")
 		handlers.ReturnUnprocessableEntity(c, w, consts.GenericErrors.InvalidAssetId.Code, errors.New(consts.GenericErrors.InvalidAssetId.Description))
 
 		return nil
@@ -34,7 +35,7 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[s
 
 	asset, err := database.GetAssetByAssetId(c, c.Value(consts.AccessKeyKey).(string), assetId)
 	if err != nil {
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -54,7 +55,7 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[s
 
 	if err := json.NewEncoder(w).Encode(asset); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}

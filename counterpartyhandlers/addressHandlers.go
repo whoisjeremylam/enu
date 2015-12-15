@@ -2,7 +2,6 @@ package counterpartyhandlers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/vennd/enu/bitcoinapi"
@@ -24,7 +23,7 @@ func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request, m 
 	newAddress, err := bitcoinapi.GetNewAddress()
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Unable to create a new bitcoin address. Error: %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 		return nil
 	}
 	address.Value = newAddress
@@ -37,7 +36,7 @@ func AddressCreate(c context.Context, w http.ResponseWriter, r *http.Request, m 
 		w.WriteHeader(http.StatusCreated)
 		if err = json.NewEncoder(w).Encode(address); err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+			handlers.ReturnServerError(c, w)
 
 			return nil
 		}

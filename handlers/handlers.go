@@ -110,25 +110,27 @@ func ReturnNotFoundWithCustomError(c context.Context, w http.ResponseWriter, err
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusNotFound)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
-func ReturnServerError(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
-	var returnCode enulib.ReturnCode
-
-	if e == nil {
-		log.FluentfContext(consts.LOGERROR, c, "Unspecified server error.\n")
-		returnCode = enulib.ReturnCode{Code: -10000, Description: "Unspecified server error. Please contact Vennd.io support.", RequestId: c.Value(consts.RequestIdKey).(string)}
-	} else {
-		log.FluentfContext(consts.LOGERROR, c, "Server error: %s\n", e.Error())
-		returnCode = enulib.ReturnCode{Code: -10000, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
-	}
+func ReturnServerError(c context.Context, w http.ResponseWriter) {
+	returnCode := enulib.ReturnCode{Code: consts.GenericErrors.GeneralError.Code, Description: consts.GenericErrors.GeneralError.Description, RequestId: c.Value(consts.RequestIdKey).(string)}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusInternalServerError)
 	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-		panic(err)
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+	}
+}
+
+func ReturnServerErrorWithCustomError(c context.Context, w http.ResponseWriter, errorCode int64, errorString string) {
+	returnCode := enulib.ReturnCode{Code: errorCode, Description: errorString, RequestId: c.Value(consts.RequestIdKey).(string)}
+
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+	w.WriteHeader(http.StatusInternalServerError)
+	if err := json.NewEncoder(w).Encode(returnCode); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 	}
 }
 
@@ -174,13 +176,13 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 	body, err := ioutil.ReadAll(io.LimitReader(r.Body, 512000))
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		ReturnServerError(c, w)
 
 		return c, nil, err
 	}
 	if err := r.Body.Close(); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Body.Close(): %s", err.Error())
-		ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		ReturnServerError(c, w)
 
 		return c, nil, err
 	}
@@ -242,7 +244,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			database.UpdateNonce(accessKey, nonceInt)
 			if err != nil {
 				log.FluentfContext(consts.LOGERROR, c, "Nonce update failed, error: %s", err.Error())
-				ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New("Nonce handling failed"))
+				ReturnServerError(c, w)
 
 				return c, nil, err
 			}
@@ -267,7 +269,7 @@ func CheckAndParseJsonCTX(c context.Context, w http.ResponseWriter, r *http.Requ
 			c2 = context.WithValue(c, consts.BlockchainIdKey, requestBlockchainId)
 		} else {
 			log.FluentfContext(consts.LOGERROR, c, "Unsupported blockchainId: %s", m["blockchainId"].(string))
-			ReturnBadRequest(c, w, consts.GenericErrors.UnsupportedBlockchain.Code, errors.New(consts.GenericErrors.UnsupportedBlockchain.Description+" Given: "+m["blockchainId"].(string)))
+			ReturnBadRequest(c, w, consts.GenericErrors.UnsupportedBlockchain.Code, consts.GenericErrors.UnsupportedBlockchain.Description+" Given: "+m["blockchainId"].(string))
 			return c, m, errors.New(consts.GenericErrors.UnsupportedBlockchain.Description)
 		}
 	} else {
