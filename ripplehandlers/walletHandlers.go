@@ -162,12 +162,19 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	log.FluentfContext(consts.LOGINFO, c, "Sleep complete")
 
 	// Convert int to the ripple amount
-	amount, err := rippleapi.Uint64ToAmount(quantity)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
-		database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.GenericErrors.GeneralError.Code, consts.GenericErrors.GeneralError.Description)
+	var amount string
+	if strings.ToUpper(asset) == "XRP" {
+		a := strconv.FormatUint(quantity, 10)
+		amount = a
+	} else {
+		a, err := rippleapi.Uint64ToAmount(quantity)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in Uint64ToAmount(): %s", err.Error())
+			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, paymentId, consts.GenericErrors.GeneralError.Code, consts.GenericErrors.GeneralError.Description)
 
-		return "", consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description)
+			return "", consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description)
+		}
+		amount = a
 	}
 
 	// Convert asset name to ripple currency name
