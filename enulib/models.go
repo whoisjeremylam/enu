@@ -21,6 +21,7 @@ type Blocks struct {
 
 type Amount struct {
 	Asset    string `json:"asset"`
+	Issuer   string `json:"issuer"`
 	Quantity uint64 `json:"quantity"`
 }
 

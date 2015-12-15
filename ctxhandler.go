@@ -59,6 +59,7 @@ var blockchainFunctions = map[string]blockchainFunction{
 		// Address handlers
 		"walletCreate":    ripplehandlers.WalletCreate,
 		"walletPayment":   ripplehandlers.WalletSend,
+		"walletBalance":   ripplehandlers.WalletBalance,
 		"activateaddress": ripplehandlers.ActivateAddress,
 
 		// Payment handlers

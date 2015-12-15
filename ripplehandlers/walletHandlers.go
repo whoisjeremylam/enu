@@ -473,3 +473,94 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 	return 0, nil
 
 }
+
+func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
+	var xrpBalance uint64
+	var walletbalance enulib.AddressBalances
+
+	requestId := c.Value(consts.RequestIdKey).(string)
+	walletbalance.RequestId = requestId
+	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
+
+	vars := mux.Vars(r)
+	address := vars["address"]
+
+	if address == "" || len(address) != 34 {
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidAddress.Code, consts.GenericErrors.InvalidAddress.Description)
+		return nil
+	}
+
+	// Get ripple balances
+	result, _, err := rippleapi.GetAccountBalances(c, address)
+	if err != nil {
+		handlers.ReturnServerError(c, w)
+		return nil
+	}
+
+	// Iterate and gather the balances to return
+	walletbalance.Address = address
+	walletbalance.BlockchainId = consts.RippleBlockchainId
+	for _, item := range result {
+		var balance enulib.Amount
+
+		log.Fluentf(consts.LOGINFO, "%s %s %s", item.Currency, item.Value, item.Counterparty)
+
+		// Convert from ripple currency format
+		asset, err := rippleapi.FromCurrency(item.Currency)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.FromCurrency(): %s", err.Error())
+			handlers.ReturnServerError(c, w)
+
+			return nil
+		}
+
+		// Convert to satoshi denomination
+		quantity, err := rippleapi.AmountToUint64(item.Value)
+		if err != nil {
+			log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.AmountToUint64(): %s", err.Error())
+			handlers.ReturnServerError(c, w)
+
+			return nil
+		}
+
+		balance.Asset = asset
+		balance.Quantity = quantity
+		balance.Issuer = item.Counterparty
+
+		// If we got a xrp balance, save it for use later
+		if strings.ToUpper(asset) == "XRP" {
+			xrpBalance = quantity
+		}
+
+		walletbalance.Balances = append(walletbalance.Balances, balance)
+	}
+
+	// Calculate number of transactions possible
+	// First get the trust lines that are used
+	lines, _, err := rippleapi.GetAccountLines(c, address)
+	if err != nil {
+		handlers.ReturnServerError(c, w)
+		return nil
+	}
+
+	// Then calculate reserve required using the number of lines
+	reserveRequired := rippleapi.CalculateReserve(c, uint64(len(lines)))
+
+	// The number of transactions is calculated by the difference between the xrp balance and the reserve
+	numberOfTransactions, err := rippleapi.CalculateNumberOfTransactions(c, xrpBalance-reserveRequired)
+	if err != nil {
+		numberOfTransactions = 0
+		log.FluentfContext(consts.LOGERROR, c, "Unable to calculate number of transactions: %s", err.Error())
+	}
+	walletbalance.NumberOfTransactions = numberOfTransactions
+
+	w.WriteHeader(http.StatusOK)
+	if err = json.NewEncoder(w).Encode(walletbalance); err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
+		handlers.ReturnServerError(c, w)
+
+		return nil
+	}
+
+	return nil
+}

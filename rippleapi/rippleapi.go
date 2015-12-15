@@ -1091,7 +1091,7 @@ func ToCurrency(asset string) (string, error) {
 func FromCurrency(currency string) (string, error) {
 	// Error if currency given is less than 3 characters
 	if len(currency) < 3 {
-		return "", errors.New("Currency can not be less than 3 characters")
+		return "", errors.New(currency + " is less than 3 characters. Currency can not be less than 3 characters")
 	}
 
 	if len(currency) > 3 && len(currency) != 40 {
@@ -1151,29 +1151,22 @@ func CalculateFeeAmount(c context.Context, amount uint64) (uint64, string, error
 	return quantity, "XRP", nil
 }
 
-// Returns the number of transactions that can be performed with the given amount of XRP
-// If the env value is not found in the context, calculations are defaulted to production
-//func CalculateNumberOfTransactions(c context.Context, amount uint64) (uint64, error) {
-//	// Get env and blockchain from context
-//	env := c.Value(consts.EnvKey).(string)
-//	blockchainId := c.Value(consts.BlockchainIdKey).(string)
-
-//	if blockchainId != consts.CounterpartyBlockchainId {
-//		errorString := fmt.Sprintf("Blockchain must be %s, got %s", consts.CounterpartyBlockchainId, blockchainId)
-//		log.FluentfContext(consts.LOGERROR, c, errorString)
-
-//		return 0, errors.New(errorString)
-//	}
-
-//	if env == "dev" {
-//		return amount / (Counterparty_DefaultDustSize + Counterparty_DefaultTestingTxFee), nil
-//	} else {
-//		return amount / (Counterparty_DefaultDustSize + Counterparty_DefaultTxFee), nil
-//	}
-//}
-
 // Calculates the reserve based upon the current reserve and number of account lines
 // Returns in 'drops' the amount of XRP required
 func CalculateReserve(c context.Context, accountLines uint64) uint64 {
 	return uint64(BaseReserve) + (accountLines * uint64(OwnerReserve))
+}
+
+// Returns the number of transactions that can be performed with the given amount of XRP
+func CalculateNumberOfTransactions(c context.Context, amount uint64) (uint64, error) {
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+
+	if blockchainId != consts.RippleBlockchainId {
+		errorString := fmt.Sprintf("Blockchain must be %s, got %s", consts.RippleBlockchainId, blockchainId)
+		log.FluentfContext(consts.LOGERROR, c, errorString)
+
+		return 0, errors.New(errorString)
+	}
+
+	return amount / DefaultFeeI, nil
 }
