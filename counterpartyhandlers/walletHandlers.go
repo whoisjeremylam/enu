@@ -2,7 +2,6 @@ package counterpartyhandlers
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	"github.com/vennd/enu/bitcoinapi"
@@ -35,7 +34,7 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	wallet, err = counterpartycrypto.CreateWallet(number)
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in CreateWallet(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -46,7 +45,7 @@ func WalletCreate(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	w.WriteHeader(http.StatusCreated)
 	if err = json.NewEncoder(w).Encode(wallet); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -92,7 +91,7 @@ func WalletSend(c context.Context, w http.ResponseWriter, r *http.Request, m map
 
 	if err := json.NewEncoder(w).Encode(walletPayment); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -125,7 +124,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request, m 
 	// Get counterparty balances
 	result, errorCode, err := counterpartyapi.GetBalancesByAddress(c, address)
 	if err != nil {
-		handlers.ReturnServerError(c, w, errorCode, err)
+		handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 		return nil
 	}
 
@@ -156,7 +155,7 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request, m 
 	w.WriteHeader(http.StatusOK)
 	if err = json.NewEncoder(w).Encode(walletbalance); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -179,7 +178,7 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+			handlers.ReturnServerError(c, w)
 
 			return nil
 		}
@@ -215,7 +214,7 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(result); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}

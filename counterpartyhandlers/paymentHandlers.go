@@ -57,7 +57,7 @@ func PaymentCreate(c context.Context, w http.ResponseWriter, r *http.Request, m 
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(simplePayment); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -103,7 +103,7 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(payment); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -148,7 +148,7 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request, m map
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(payment); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
@@ -196,7 +196,7 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(w).Encode(payments); err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		handlers.ReturnServerError(c, w)
 
 		return nil
 	}
