@@ -57,6 +57,9 @@ type GenericStruct struct {
 	FunctionNotAvailable  ErrCodes
 	InvalidPassphrase     ErrCodes
 	InvalidAssetId        ErrCodes
+	InvalidPaymentId      ErrCodes
+	InvalidAddress        ErrCodes
+	InvalidAsset          ErrCodes
 
 	GeneralError ErrCodes
 }
@@ -73,8 +76,10 @@ var GenericErrors = GenericStruct{
 	FunctionNotAvailable:  ErrCodes{9, "The function is not available on the selected blockchain."},
 	InvalidPassphrase:     ErrCodes{10, "The passphrase provided is not valid."},
 	InvalidAssetId:        ErrCodes{11, "The specified asset id is invalid."},
-
-	GeneralError: ErrCodes{13, "Misc error. Please contact Vennd.io support."},
+	InvalidPaymentId:      ErrCodes{12, "The specified paymentId is invalid. Please correct the paymentId and resubmit."},
+	GeneralError:          ErrCodes{13, "Misc error. Please contact Vennd.io support."},
+	InvalidAddress:        ErrCodes{14, "The specified address is invalid. Please correct the address and resubmit."},
+	InvalidAsset:          ErrCodes{15, "The specified asset is invalid. Please correct the asset and resubmit."},
 }
 
 type RippleStruct struct {
