@@ -144,21 +144,16 @@ func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request, m
 	asset := vars["asset"]
 
 	if asset == "" || len(asset) < 5 {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of asset code received in the request"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		log.FluentfContext(consts.LOGERROR, c, "Invalid asset")
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidAsset.Code, consts.GenericErrors.InvalidAsset.Description)
 
-			return nil
-		}
 		return nil
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "AssetIssuances: received request asset: %s from accessKey: %s\n", asset, c.Value(consts.AccessKeyKey).(string))
 	result, errorCode, err := counterpartyapi.GetIssuances(c, asset)
 	if err != nil {
-		handlers.ReturnServerError(c, w, errorCode, err)
+		handlers.ReturnServerErrorWithCustomError(c, w, errorCode, err.Error())
 
 		return nil
 	}
@@ -222,11 +217,9 @@ func AssetLedger(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	asset := vars["asset"]
 
 	if asset == "" || len(asset) < 5 {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of asset code received in the request"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			panic(err)
-		}
+		log.FluentfContext(consts.LOGERROR, c, "Invalid asset")
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidAsset.Code, consts.GenericErrors.InvalidAsset.Description)
+
 		return nil
 	}
 

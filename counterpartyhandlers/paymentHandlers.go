@@ -122,16 +122,10 @@ func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request, m map
 	paymentId := vars["paymentId"]
 
 	if paymentId == "" || len(paymentId) < 16 {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect paymentId"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		log.FluentfContext(consts.LOGERROR, c, "Invalid paymentId")
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidPaymentId.Code, consts.GenericErrors.InvalidPaymentId.Description)
 
-			return nil
-		}
 		return nil
-
 	}
 
 	log.FluentfContext(consts.LOGINFO, c, "GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
@@ -173,14 +167,9 @@ func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Requ
 	address := vars["address"]
 
 	if address == "" {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect address"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
+		log.FluentfContext(consts.LOGERROR, c, "Invalid address")
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidAddress.Code, consts.GenericErrors.InvalidAddress.Description)
 
-			return nil
-		}
 		return nil
 	}
 

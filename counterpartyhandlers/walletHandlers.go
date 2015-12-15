@@ -114,14 +114,8 @@ func WalletBalance(c context.Context, w http.ResponseWriter, r *http.Request, m 
 	address := vars["address"]
 
 	if address == "" || len(address) != 34 {
-		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
-		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
-			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-			handlers.ReturnServerError(c, w, consts.GenericErrors.GeneralError.Code, errors.New(consts.GenericErrors.GeneralError.Description))
-
-			return nil
-		}
+		log.FluentfContext(consts.LOGERROR, c, "Invalid address")
+		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidAddress.Code, consts.GenericErrors.InvalidAddress.Description)
 
 		return nil
 	}

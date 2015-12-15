@@ -47,14 +47,9 @@ func ReturnUnauthorised(c context.Context, w http.ResponseWriter, errorCode int6
 	}
 }
 
-func ReturnBadRequest(c context.Context, w http.ResponseWriter, errorCode int64, e error) {
-	var returnCode enulib.ReturnCode
+func ReturnBadRequest(c context.Context, w http.ResponseWriter, errorCode int64, errorString string) {
 
-	if e == nil {
-		returnCode = enulib.ReturnCode{Code: errorCode, Description: "Bad Request", RequestId: c.Value(consts.RequestIdKey).(string)}
-	} else {
-		returnCode = enulib.ReturnCode{Code: errorCode, Description: e.Error(), RequestId: c.Value(consts.RequestIdKey).(string)}
-	}
+	returnCode := enulib.ReturnCode{Code: errorCode, Description: errorString, RequestId: c.Value(consts.RequestIdKey).(string)}
 
 	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
 	w.WriteHeader(http.StatusBadRequest)
