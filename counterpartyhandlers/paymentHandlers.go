@@ -111,51 +111,6 @@ func PaymentRetry(c context.Context, w http.ResponseWriter, r *http.Request, m m
 	return nil
 }
 
-func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
-
-	var payment enulib.SimplePayment
-	requestId := c.Value(consts.RequestIdKey).(string)
-	payment.RequestId = requestId
-	w.Header().Set("Content-Type", "application/json; charset=UTF-8")
-
-	vars := mux.Vars(r)
-	paymentId := vars["paymentId"]
-
-	if paymentId == "" || len(paymentId) < 16 {
-		log.FluentfContext(consts.LOGERROR, c, "Invalid paymentId")
-		handlers.ReturnBadRequest(c, w, consts.GenericErrors.InvalidPaymentId.Code, consts.GenericErrors.InvalidPaymentId.Description)
-
-		return nil
-	}
-
-	log.FluentfContext(consts.LOGINFO, c, "GetPayment called for '%s' by '%s'\n", paymentId, c.Value(consts.AccessKeyKey).(string))
-
-	payment = database.GetPaymentByPaymentId(c, c.Value(consts.AccessKeyKey).(string), paymentId)
-	// errorhandling here!!
-
-	// Add the blockchain status
-	if payment.BroadcastTxId != "" {
-		confirmations, err := bitcoinapi.GetConfirmations(payment.BroadcastTxId)
-		if err == nil || confirmations == 0 {
-			payment.BlockchainStatus = "unconfimed"
-			payment.BlockchainConfirmations = 0
-		}
-
-		payment.BlockchainStatus = "confirmed"
-		payment.BlockchainConfirmations = confirmations
-	}
-
-	w.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(w).Encode(payment); err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
-		handlers.ReturnServerError(c, w)
-
-		return nil
-	}
-
-	return nil
-}
-
 func GetPaymentsByAddress(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
 
 	var payment enulib.SimplePayment

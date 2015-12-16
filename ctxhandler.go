@@ -52,7 +52,7 @@ var blockchainFunctions = map[string]blockchainFunction{
 		// Payment handlers
 		"simplepayment":    counterpartyhandlers.PaymentCreate,
 		"paymentretry":     counterpartyhandlers.PaymentRetry,
-		"getpayment":       counterpartyhandlers.GetPayment,
+		"getpayment":       generalhandlers.GetPayment,
 		"paymentbyaddress": counterpartyhandlers.GetPaymentsByAddress,
 	},
 	"ripple": {
@@ -63,7 +63,7 @@ var blockchainFunctions = map[string]blockchainFunction{
 		"activateaddress": ripplehandlers.ActivateAddress,
 
 		// Payment handlers
-		"getpayment":       ripplehandlers.GetPayment,
+		"getpayment":       generalhandlers.GetPayment,
 		"paymentbyaddress": ripplehandlers.GetPaymentsByAddress,
 
 		// Asset handlers
