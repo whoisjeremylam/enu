@@ -486,6 +486,10 @@ func Submit(c context.Context, txHexString string) (string, int64, error) {
 				if engineResult == "tecPATH_DRY" {
 					return "", consts.RippleErrors.InvalidCurrencyOrNoTrustline.Code, errors.New(consts.RippleErrors.InvalidCurrencyOrNoTrustline.Description)
 				}
+
+				if engineResult == "tecUNFUNDED_PAYMENT" {
+					return "", consts.RippleErrors.InsufficientXRP.Code, errors.New(consts.RippleErrors.InsufficientXRP.Description)
+				}
 				return "", consts.RippleErrors.SubmitErrorFeeLost.Code, errors.New(consts.RippleErrors.SubmitErrorFeeLost.Description)
 			}
 

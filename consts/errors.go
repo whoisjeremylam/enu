@@ -96,6 +96,7 @@ type RippleStruct struct {
 	InvalidDestination            ErrCodes
 	DistributionPassphraseMissing ErrCodes
 	DistributionInsufficientFunds ErrCodes
+	InsufficientXRP               ErrCodes
 }
 
 var RippleErrors = RippleStruct{
@@ -111,5 +112,6 @@ var RippleErrors = RippleStruct{
 	InvalidSource:                 ErrCodes{2009, "The specified source address is invalid."},
 	InvalidDestination:            ErrCodes{2010, "The specified destination address is invalid."},
 	DistributionPassphraseMissing: ErrCodes{2011, "If a distribution address is specified, the passphrase for the distribution address must be given."},
-	DistributionInsufficientFunds: ErrCodes{2012, "The specified distribution address does not contain sufficient funds. Please active the address and try again."},
+	DistributionInsufficientFunds: ErrCodes{2012, "The specified distribution address does not contain sufficient funds. Please activate the address and try again."},
+	InsufficientXRP:               ErrCodes{2013, "There was insufficient XRP in the address to perform the payment. Please activate the address and try again."},
 }
