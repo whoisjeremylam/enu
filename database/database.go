@@ -487,7 +487,7 @@ func GetPaymentByPaymentId(c context.Context, accessKey string, paymentId string
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 	}
 
-	payment = enulib.SimplePayment{SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage)}
+	payment = enulib.SimplePayment{BlockchainId: string(blockchainId), SourceAddress: string(sourceAddress), DestinationAddress: string(destinationAddress), Asset: string(asset), Amount: amount, PaymentId: string(sourceTxId), Status: string(status), BroadcastTxId: string(broadcastTxId), TxFee: txFee, ErrorMessage: string(errorMessage)}
 
 	return payment
 }
