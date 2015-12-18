@@ -419,8 +419,8 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		// Write the activation with the generated activation id to the database
 		database.InsertActivation(c, accessKey, activationId, blockchainId, sourceAddress, amountXRPToSend)
 
-		// Send the xrp
-		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend*consts.Satoshi, activationId, "")
+		// Send the xrp - note that XRP must be specified in satoshis so we multiply by 100
+		_, _, err = delegatedSend(c, accessKey, wallets[randomNumber].Passphrase, wallets[randomNumber].Address, addressToActivate, "XRP", "", amountXRPToSend*100, activationId, "")
 		if err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend(): %s", err.Error())
 			database.UpdatePaymentWithErrorByPaymentId(c, accessKey, activationId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
