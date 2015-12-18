@@ -439,7 +439,7 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 
 	// If reserve already is sufficient, proceed to create the trust line straight away, otherwise wait
 	if currentBalance < targetReserve {
-		log.FluentfContext(consts.LOGERROR, c, "Waiting for send of XRP to complete...")
+		log.FluentfContext(consts.LOGINFO, c, "Waiting for send of XRP to complete...")
 
 		time.Sleep(time.Duration(10000) * time.Millisecond)
 
@@ -464,7 +464,7 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 			return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 		}
 
-		log.FluentfContext(consts.LOGERROR, c, "Creating trust line: currency=%s->%s, issuer=%s, amountToTrust=%d", line.Currency, currency, line.Issuer, rippleapi.DefaultAmountToTrust)
+		log.FluentfContext(consts.LOGINFO, c, "Creating trust line: currency=%s->%s, issuer=%s, amountToTrust=%d", line.Currency, currency, line.Issuer, rippleapi.DefaultAmountToTrust)
 
 		// Convert passphrase to ripple secret
 		seed := mneumonic.FromWords(strings.Split(passphrase, " "))
@@ -477,7 +477,7 @@ func delegatedActivateAddress(c context.Context, addressToActivate string, passp
 		_, _, err = rippleapi.TrustSet(c, addressToActivate, currency, rippleAmount, line.Issuer, 0, secret)
 	}
 
-	log.FluentfContext(consts.LOGERROR, c, "delegatedActivateAddress() complete")
+	log.FluentfContext(consts.LOGINFO, c, "delegatedActivateAddress() complete")
 
 	return 0, nil
 
