@@ -167,7 +167,7 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 		// Amounts are specified in satoshis in the Enu API
 		// Convert to a string and truncate the last two characters
 		a := strconv.FormatUint(quantity, 10)
-		amount = a[:len(a)-3]
+		amount = a[:len(a)-2]
 	} else {
 		a, err := rippleapi.Uint64ToAmount(quantity)
 		if err != nil {
