@@ -164,8 +164,10 @@ func delegatedSend(c context.Context, accessKey string, passphrase string, sourc
 	// Convert int to the ripple amount
 	var amount string
 	if strings.ToUpper(asset) == "XRP" {
+		// Amounts are specified in satoshis in the Enu API
+		// Convert to a string and truncate the last two characters
 		a := strconv.FormatUint(quantity, 10)
-		amount = a
+		amount = a[:len(a)-3]
 	} else {
 		a, err := rippleapi.Uint64ToAmount(quantity)
 		if err != nil {

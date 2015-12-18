@@ -757,6 +757,7 @@ func GetCurrenciesByAccount(c context.Context, account string) (CurrenciesByAcco
 }
 
 // Creates and signs the payment for the custom currency that is specified.
+// If XRP is specified, then the amount MUST be specifed in droplets
 // Returns the tx string if successful
 func CreatePayment(c context.Context, account string, destination string, quantity string, currency string, issuer string, secret string) (string, int64, error) {
 	if isInit == false {
