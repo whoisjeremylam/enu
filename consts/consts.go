@@ -26,6 +26,7 @@ var AccessKeyStatuses = []string{AccessKeyValidStatus, AccessKeyInvalidStatus, A
 const LOGINFO = "INFO"
 const LOGERROR = "ERROR"
 const LOGDEBUG = "DEBUG"
+const LOGEVENT = "EVENT" // Something occured which would impact the account of the user. ie activation of an address or successful completion of an API call
 
 const CounterpartyAddressActivationAmount = 100 // Number of transactions to activate Counterparty addresses by default
 const RippleAddressActivationAmount = 100       // Number of transactions to activate Counterparty addresses by default
