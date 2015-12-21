@@ -40,6 +40,10 @@ func GetAsset(c context.Context, w http.ResponseWriter, r *http.Request, m map[s
 		return nil
 	}
 	asset.RequestId = requestId
+	
+		if asset.BlockchainId == consts.RippleBlockchainId {
+		asset.Issuer = asset.SourceAddress
+	}
 
 	// Add the blockchain status
 	if asset.BroadcastTxId != "" && asset.BlockchainId == consts.CounterpartyBlockchainId {

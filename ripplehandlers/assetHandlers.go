@@ -115,10 +115,19 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 
 	// Copy same context values to local variables which are often accessed
 	accessKey := c.Value(consts.AccessKeyKey).(string)
-	//	blockchainId := c.Value(consts.BlockchainIdKey).(string)
+		blockchainId := c.Value(consts.BlockchainIdKey).(string)
 
+	// Convert asset name to ripple currency encoding
+	rippleAsset, err := rippleapi.ToCurrency(asset)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.ToCurrency(): %s", err.Error())
+
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+	
 	// Write the asset with the generated asset id to the database
-	go database.InsertAsset(accessKey, assetId, issuingAddress, distributionAddress, asset, assetDescription, quantity, true, "valid")
+	go database.InsertAsset(accessKey, blockchainId,  assetId, issuingAddress, distributionAddress, rippleAsset, assetDescription, quantity, true, "valid")
 
 	// Set issuer up as a gateway https://ripple.com/build/gateway-guide/
 	// set DefaultRipple on the issuer https://ripple.com/build/gateway-guide/#defaultripple
@@ -150,15 +159,6 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 		log.FluentfContext(consts.LOGINFO, c, "defaultRipple has now been set on %s. TxId: %s", issuingAddress, txHash)
 	} else {
 		log.FluentfContext(consts.LOGINFO, c, "defaultRipple is already set on issuingAddress: %s", issuingAddress)
-	}
-
-	// Convert asset name to ripple currency encoding
-	rippleAsset, err := rippleapi.ToCurrency(asset)
-	if err != nil {
-		log.FluentfContext(consts.LOGERROR, c, "Error in rippleapi.ToCurrency(): %s", err.Error())
-
-		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
-		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
 
 	//	Activate the distribution wallet if necessary

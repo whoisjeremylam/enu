@@ -101,19 +101,19 @@ func InitWithConfigPath(configFilePath string) {
 }
 
 // Inserts an asset into the assets database
-func InsertAsset(accessKey string, assetId string, sourceAddressValue string, distributionAddressValue string, assetValue string, descriptionValue string, quantityValue uint64, divisibleValue bool, status string) error {
+func InsertAsset(accessKey string, blockchainId string, assetId string, sourceAddressValue string, distributionAddressValue string, assetValue string, descriptionValue string, quantityValue uint64, divisibleValue bool, status string) error {
 	if isInit == false {
 		Init()
 	}
 
-	stmt, err := Db.Prepare("insert into assets(accessKey, assetId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status) values(?, ?, ?, ?, ?, ?, ?, ?, ?)")
+	stmt, err := Db.Prepare("insert into assets(accessKey, blockchainId, assetId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status) values(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
 	if err != nil {
 		return err
 	}
 	defer stmt.Close()
 
 	// Perform the insert
-	_, err = stmt.Exec(accessKey, assetId, sourceAddressValue, distributionAddressValue, assetValue, descriptionValue, quantityValue, divisibleValue, status)
+	_, err = stmt.Exec(accessKey, blockchainId, assetId, sourceAddressValue, distributionAddressValue, assetValue, descriptionValue, quantityValue, divisibleValue, status)
 	if err != nil {
 		return err
 	}
@@ -133,8 +133,8 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) (enu
 	assetStruct.Status = consts.NotFound
 
 	//	 Query DB
-	log.FluentfContext(consts.LOGINFO, c, "select rowId, assetId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=%s and accessKey=%s", assetId, accessKey)
-	stmt, err := Db.Prepare("select rowId, assetId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=? and accessKey=?")
+	log.FluentfContext(consts.LOGINFO, c, "select rowId, assetId, blockchainId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=%s and accessKey=%s", assetId, accessKey)
+	stmt, err := Db.Prepare("select rowId, assetId, blockchainId, sourceAddress, distributionAddress, asset, description, quantity, divisible, status, errorDescription, broadcastTxId from assets where assetId=? and accessKey=?")
 	if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to prepare statement. Reason: %s", err.Error())
 		return assetStruct, err
@@ -149,6 +149,7 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) (enu
 	}
 
 	var rowId string
+	var blockchainId []byte
 	var sourceAddress []byte
 	var distributionAddress []byte
 	var asset []byte
@@ -159,14 +160,14 @@ func GetAssetByAssetId(c context.Context, accessKey string, assetId string) (enu
 	var errorMessage []byte
 	var broadcastTxId []byte
 
-	if err := row.Scan(&rowId, &assetId, &sourceAddress, &distributionAddress, &asset, &description, &quantity, &divisible, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
+	if err := row.Scan(&rowId, &assetId, &blockchainId, &sourceAddress, &distributionAddress, &asset, &description, &quantity, &divisible, &status, &errorMessage, &broadcastTxId); err == sql.ErrNoRows {
 		if err.Error() == "sql: no rows in result set" {
 		}
 	} else if err != nil {
 		log.FluentfContext(consts.LOGERROR, c, "Failed to Scan. Reason: %s", err.Error())
 		return assetStruct, err
 	} else {
-		assetStruct = enulib.Asset{SourceAddress: string(sourceAddress), DistributionAddress: string(distributionAddress), Asset: string(asset), Description: string(description), Quantity: quantity, AssetId: assetId, Status: string(status), ErrorMessage: string(errorMessage)}
+		assetStruct = enulib.Asset{BlockchainId: string(blockchainId), SourceAddress: string(sourceAddress), DistributionAddress: string(distributionAddress), Asset: string(asset), Description: string(description), Quantity: quantity, AssetId: assetId, Status: string(status), ErrorMessage: string(errorMessage)}
 	}
 
 	return assetStruct, nil
