@@ -86,6 +86,7 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 		assetStruct.DistributionPassphrase = distributionPassphrase
 	}
 
+	assetStruct.BlockchainId = consts.RippleBlockchainId
 	assetStruct.Asset = rippleAsset
 	assetStruct.Description = asset
 	assetStruct.Quantity = quantity
