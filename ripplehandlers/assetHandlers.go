@@ -196,8 +196,14 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 	}
 
 	// Pay from the issuer wallet to the distribution wallet the amount of custom currency specified
-	_, errCode, err := delegatedSend(c, accessKey, issuingPassphrase, issuingAddress, distributionAddress, asset, issuingAddress, quantity, assetId, "Asset creation")
+	payTxId, _, err := delegatedSend(c, accessKey, issuingPassphrase, issuingAddress, distributionAddress, asset, issuingAddress, quantity, assetId, "Asset creation")
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in delegatedSend: %s", err.Error())
 
-	return errCode, err
-
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
+		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
+	}
+	
+	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, payTxId)
+	return 0, nil
 }
