@@ -24,7 +24,7 @@ var DefaultFeeI uint64 = 10000
 var customCurrencyPrefix = "80"
 var BaseReserve = 20000000
 var OwnerReserve = 5000000
-var DefaultAmountToTrust uint64 = 100000000000000
+var DefaultAmountToTrust uint64 = 100000000000000000
 
 // Account set flags
 const AsfRequireDest = 1
