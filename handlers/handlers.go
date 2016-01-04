@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"os"
 	"sort"
 
 	"math/rand"
@@ -29,6 +30,55 @@ var quotes = [...]string{"Here's to the crazy ones. The misfits. The rebels. The
 	"A friend is someone with whom you dare to be yourself. - Fran Crane",
 	"Be yourself; everyone else is already taken. - Oscar Wilde",
 	"Forty-two is a pronic number and an abundant number; its prime factorization 2 · 3 · 7 makes it the second sphenic number and also the second of the form { 2 · 3 · r }. As with all sphenic numbers of this form, the aliquot sum is abundant by 12. 42 is also the second sphenic number to be bracketed by twin primes; 30 is also a pronic number and also rests between two primes. 42 has a 14-member aliquot sequence 42, 54, 66, 78, 90, 144, 259, 45, 33, 15, 9, 4, 3, 1, 0 and is itself part of the aliquot sequence commencing with the first sphenic number 30. Further, 42 is the 10th member of the 3-aliquot tree.",
+}
+
+// Handles the '/serverinfo' path
+func Serverinfo(w http.ResponseWriter, r *http.Request) {
+	type version struct {
+		Full       string `json:"full"`
+		Major      uint32 `json:"major"`
+		Minor      uint32 `json:"minor"`
+		Patch      uint32 `json:"patch"`
+		Prerelease string `json:"prerelease"`
+		Tag        string `json:"tag"`
+	}
+
+	type ReleaseNote struct {
+		IssueNumber           uint32 `json:"issueNumber"`
+		InternalExternalIssue uint32 `json:"internalExternalIssue"`
+		Description           string `json:"description"`
+	}
+
+	type serverinfo struct {
+		Environment  string               `json:"env"`
+		Version      version              `json:"version"`
+		ReleaseNotes []enulib.ReleaseNote `json:"releaseNotes"`
+	}
+
+	var result = serverinfo{
+		Version: version{Major: enulib.VersionMajor, Minor: enulib.VersionMinor, Patch: enulib.VersionPatch, Prerelease: enulib.VersionPrerelease, Tag: enulib.VersionTag},
+	}
+
+	// Populate a human readable string
+	result.Version.Full = fmt.Sprintf("%d.%d.%d-%s", enulib.VersionMajor, enulib.VersionMinor, enulib.VersionPatch, enulib.VersionPrerelease)
+
+	// Populate env
+	env := os.Getenv("ENV")
+	if env == "" {
+		env = "unspecified"
+	}
+	result.Environment = env
+
+	// Populate release notes
+	result.ReleaseNotes = enulib.ReleaseNotes
+
+	// Return result as json
+	j, err := json.MarshalIndent(result, "", "  ")
+	if err != nil {
+		return
+	}
+
+	fmt.Fprintf(w, "%s\n", string(j))
 }
 
 func ReturnUnauthorised(c context.Context, w http.ResponseWriter, errorCode int64, e error) {

@@ -11,6 +11,8 @@ func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
 	router.HandleFunc("/", handlers.Index).Methods("GET")
+	router.HandleFunc("/serverinfo", handlers.Serverinfo).Methods("GET")
+
 	router.Handle("/payment", ctxHandler(PaymentCreate)).Methods("POST")
 	router.Handle("/payment/address", ctxHandler(AddressCreate)).Methods("POST")
 	router.Handle("/payment/address/{address}", ctxHandler(GetPaymentsByAddress)).Methods("GET")
