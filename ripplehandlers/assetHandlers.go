@@ -116,7 +116,7 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 
 	// Copy same context values to local variables which are often accessed
 	accessKey := c.Value(consts.AccessKeyKey).(string)
-		blockchainId := c.Value(consts.BlockchainIdKey).(string)
+	blockchainId := c.Value(consts.BlockchainIdKey).(string)
 
 	// Convert asset name to ripple currency encoding
 	rippleAsset, err := rippleapi.ToCurrency(asset)
@@ -126,9 +126,9 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
 		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
-	
+
 	// Write the asset with the generated asset id to the database
-	go database.InsertAsset(accessKey, blockchainId,  assetId, issuingAddress, distributionAddress, rippleAsset, assetDescription, quantity, true, "valid")
+	go database.InsertAsset(accessKey, blockchainId, assetId, issuingAddress, distributionAddress, rippleAsset, assetDescription, quantity, true, "valid")
 
 	// Set issuer up as a gateway https://ripple.com/build/gateway-guide/
 	// set DefaultRipple on the issuer https://ripple.com/build/gateway-guide/#defaultripple
@@ -204,7 +204,7 @@ func delegatedAssetCreate(c context.Context, issuingAddress string, issuingPassp
 		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.RippleErrors.MiscError.Code, consts.RippleErrors.MiscError.Description)
 		return consts.RippleErrors.MiscError.Code, errors.New(consts.RippleErrors.MiscError.Description)
 	}
-	
+
 	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, payTxId)
 	return 0, nil
 }

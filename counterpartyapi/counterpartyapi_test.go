@@ -250,7 +250,7 @@ func TestSignRawTransaction(t *testing.T) {
 	setContext()
 
 	for _, s := range testData {
-		result, err := signRawTransaction(c, s.Passphrase, s.UnsignedTx)
+		result, err := SignRawTransaction(c, s.Passphrase, s.UnsignedTx)
 
 		if s.ExpectedResult != result {
 			t.Errorf("Expected: %s, Got: %s\n", s.ExpectedResult, result)
@@ -280,7 +280,7 @@ func TestSendRawTransaction(t *testing.T) {
 		return
 	}
 
-	signedRawTransactionHexString, err := signRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
+	signedRawTransactionHexString, err := SignRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -367,7 +367,7 @@ func TestCreateDividend(t *testing.T) {
 			t.Errorf("Unable to retrieve pubkey for: %s\n", s.SourceAddress)
 		}
 
-		resultCreateIssuance, errorCode, err := createDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
+		resultCreateIssuance, errorCode, err := CreateDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
 
 		if s.ExpectedResult != resultCreateIssuance || s.ExpectedErrorCode != errorCode {
 			if err == nil {
@@ -375,36 +375,6 @@ func TestCreateDividend(t *testing.T) {
 			}
 
 			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateIssuance, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
-		}
-	}
-}
-
-func TestActivateAddress(t *testing.T) {
-	var testData = []struct {
-		AddressToActivate string
-		Amount            uint64
-		ActivationId      string
-		ExpectedResult    string
-		ExpectedErrorCode int64
-		CaseDescription   string
-	}{
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10, "TestActivateAddress1", "success", 0, "Successful case"},
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "success", 0, "Successful. Defaults kick in"},
-	}
-
-	Init()
-	setContext()
-
-	for _, s := range testData {
-		txId, errorCode, err := DelegatedActivateAddress(c, s.AddressToActivate, s.Amount, s.ActivationId)
-
-		if txId != s.ExpectedResult || errorCode != s.ExpectedErrorCode {
-			t.Errorf("Expected: %s errorCode: %d, Got: %s errorCode: %d\nCase: %s\n", s.ExpectedResult, s.ExpectedErrorCode, txId, errorCode, s.CaseDescription)
-
-			// Additionally log the error if we got an error
-			if err != nil {
-				t.Error(err.Error())
-			}
 		}
 	}
 }

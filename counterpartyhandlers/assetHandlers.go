@@ -2,7 +2,10 @@ package counterpartyhandlers
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"sync"
+	"time"
 
 	"github.com/vennd/enu/bitcoinapi"
 	"github.com/vennd/enu/consts"
@@ -69,9 +72,76 @@ func AssetCreate(c context.Context, w http.ResponseWriter, r *http.Request, m ma
 	}
 
 	// Start asset creation in async mode
-	go counterpartyapi.DelegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, randomAssetName, asset, quantity, divisible)
+	go delegatedCreateIssuance(c, c.Value(consts.AccessKeyKey).(string), passphrase, sourceAddress, assetId, randomAssetName, asset, quantity, divisible)
 
 	return nil
+}
+
+// Concurrency safe to create and send transactions from a single address.
+func delegatedCreateIssuance(c context.Context, accessKey string, passphrase string, sourceAddress string, assetId string, asset string, assetDescription string, quantity uint64, divisible bool) (string, int64, error) {
+	// Write the asset with the generated asset id to the database
+	go database.InsertAsset(accessKey, c.Value(consts.BlockchainIdKey).(string), assetId, sourceAddress, "", asset, assetDescription, quantity, divisible, "valid")
+
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error with GetPublicKey(): %s", err)
+		return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
+	}
+
+	// Mutex lock this address
+	counterparty_Mutexes.Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+
+	// If an entry doesn't currently exist in the map for that address
+	if counterparty_Mutexes.m[sourceAddress] == nil {
+		log.Printf("Created new entry in map for %s\n", sourceAddress)
+		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
+	}
+
+	counterparty_Mutexes.m[sourceAddress].Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked: %s\n", sourceAddress)
+
+	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
+
+	defer counterparty_Mutexes.Unlock()
+	defer counterparty_Mutexes.m[sourceAddress].Unlock()
+
+	log.FluentfContext(consts.LOGINFO, c, "Composing the CreateNumericIssuance transaction")
+	// Create the issuance
+	createResult, errCode, err := counterpartyapi.CreateIssuance(c, sourceAddress, asset, assetDescription, quantity, divisible, sourceAddressPubKey)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in CreateIssuance(): %s", err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, errCode, err.Error())
+		return "", errCode, err
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Created issuance of %d %s (%s) at %s: %s\n", quantity, asset, assetDescription, sourceAddress, createResult)
+	//	database.UpdateAssetNameByAssetId(c, accessKey, assetId, asset)
+
+	// Sign the transactions
+	signed, err := counterpartyapi.SignRawTransaction(c, passphrase, createResult)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SignRawTransaction(): %s", err.Error())
+
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s\n", signed)
+
+	//	 Transmit the transaction
+	txIdSignedTx, err := bitcoinapi.SendRawTransaction(c, signed)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+		database.UpdateAssetWithErrorByAssetId(c, accessKey, assetId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+		return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
+	}
+
+	database.UpdateAssetCompleteByAssetId(c, accessKey, assetId, txIdSignedTx)
+
+	return txIdSignedTx, 0, nil
 }
 
 func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
@@ -128,9 +198,74 @@ func DividendCreate(c context.Context, w http.ResponseWriter, r *http.Request, m
 	}
 
 	// Start dividend creation in async mode
-	go counterpartyapi.DelegatedCreateDividend(c, c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
+	go delegatedCreateDividend(c, c.Value(consts.AccessKeyKey).(string), passphrase, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit)
 
 	return nil
+}
+
+// Concurrency safe to create and send transactions from a single address.
+func delegatedCreateDividend(c context.Context, accessKey string, passphrase string, dividendId string, sourceAddress string, asset string, dividendAsset string, quantityPerUnit uint64) (string, int64, error) {
+	// Write the dividend with the generated dividend id to the database
+	go database.InsertDividend(accessKey, dividendId, sourceAddress, asset, dividendAsset, quantityPerUnit, "valid")
+
+	sourceAddressPubKey, err := counterpartycrypto.GetPublicKey(passphrase, sourceAddress)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Err in GetPublicKey(): %s\n", err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.InvalidPassphrase.Code, consts.CounterpartyErrors.InvalidPassphrase.Description)
+		return "", consts.CounterpartyErrors.InvalidPassphrase.Code, errors.New(consts.CounterpartyErrors.InvalidPassphrase.Description)
+	}
+
+	// Mutex lock this address
+	counterparty_Mutexes.Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked the map") // The map of mutexes must be locked before we modify the mutexes stored in the map
+
+	// If an entry doesn't currently exist in the map for that address
+	if counterparty_Mutexes.m[sourceAddress] == nil {
+		log.FluentfContext(consts.LOGINFO, c, "Created new entry in map for %s\n", sourceAddress)
+		counterparty_Mutexes.m[sourceAddress] = new(sync.Mutex)
+	}
+
+	counterparty_Mutexes.m[sourceAddress].Lock()
+	log.FluentfContext(consts.LOGINFO, c, "Locked: %s", sourceAddress)
+
+	// We must sleep for at least the time it takes for any transactions to propagate through to the counterparty mempool
+	log.FluentfContext(consts.LOGINFO, c, "Sleeping")
+	time.Sleep(time.Duration(counterparty_BackEndPollRate+3000) * time.Millisecond)
+
+	defer counterparty_Mutexes.Unlock()
+	defer counterparty_Mutexes.m[sourceAddress].Unlock()
+
+	// Create the dividend
+	createResult, errorCode, err := counterpartyapi.CreateDividend(c, sourceAddress, asset, dividendAsset, quantityPerUnit, sourceAddressPubKey)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in CreateDividend(): %s errorCode: %d", err.Error(), errorCode)
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.ComposeError.Code, consts.CounterpartyErrors.ComposeError.Description)
+		return "", errorCode, err
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Created dividend of %d %s for each %s from address %s: %s\n", quantityPerUnit, dividendAsset, asset, sourceAddress, createResult)
+
+	// Sign the transactions
+	signed, err := counterpartyapi.SignRawTransaction(c, passphrase, createResult)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SignRawTransaction: %s", err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.SigningError.Code, consts.CounterpartyErrors.SigningError.Description)
+		return "", consts.CounterpartyErrors.SigningError.Code, errors.New(consts.CounterpartyErrors.SigningError.Description)
+	}
+
+	log.FluentfContext(consts.LOGINFO, c, "Signed tx: %s", signed)
+
+	//	 Transmit the transaction if not in dev, otherwise stub out the return
+	txIdSignedTx, err := bitcoinapi.SendRawTransaction(c, signed)
+	if err != nil {
+		log.FluentfContext(consts.LOGERROR, c, "Error in SendRawTransaction(): %s", err.Error())
+		database.UpdateDividendWithErrorByDividendId(c, accessKey, dividendId, consts.CounterpartyErrors.BroadcastError.Code, consts.CounterpartyErrors.BroadcastError.Description)
+		return "", consts.CounterpartyErrors.BroadcastError.Code, errors.New(consts.CounterpartyErrors.BroadcastError.Description)
+	}
+
+	database.UpdateDividendCompleteByDividendId(c, accessKey, dividendId, txIdSignedTx)
+
+	return txIdSignedTx, 0, nil
 }
 
 func AssetIssuances(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {
