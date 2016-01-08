@@ -60,6 +60,7 @@ type GenericStruct struct {
 	InvalidPaymentId      ErrCodes
 	InvalidAddress        ErrCodes
 	InvalidAsset          ErrCodes
+	ApiKeyDisabled        ErrCodes
 
 	GeneralError ErrCodes
 }
@@ -80,6 +81,7 @@ var GenericErrors = GenericStruct{
 	GeneralError:          ErrCodes{13, "Misc error. Please contact Vennd.io support."},
 	InvalidAddress:        ErrCodes{14, "The specified address is invalid. Please correct the address and resubmit."},
 	InvalidAsset:          ErrCodes{15, "The specified asset is invalid. Please correct the asset and resubmit."},
+	ApiKeyDisabled:        ErrCodes{16, "The specified API is valid. However, it has been disabled by an administrator."},
 }
 
 type RippleStruct struct {
