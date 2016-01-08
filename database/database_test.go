@@ -213,3 +213,20 @@ func TestInsertTrustAsset(t *testing.T) {
 	//		t.Errorf("Expected: %s, %s, %s, %d, %d, %s, %s. Got: %s, %s, %s, %d, %d, %s, %s", "InternalAddress", "AddressToActive", "BTC", 1, 1500, "", payment.SourceAddress, payment.DestinationAddress, payment.Asset, payment.Amount, payment.TxFee, payment.PaymentTag)
 	//	}
 }
+
+//
+func TestGetAssetByAssetId(t *testing.T) {
+	var assetId string = "1e33a6997f0ab51d30713ede33abd0c5"
+	var accessKey string = "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16"
+	requestId := "test_" + enulib.GenerateRequestId()
+
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, consts.RequestIdKey, requestId)
+
+	assetRequest, err := GetAssetByAssetId(ctx, accessKey, assetId)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	t.Logf("%+#v", assetRequest)
+}
