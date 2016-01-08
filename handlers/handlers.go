@@ -60,7 +60,7 @@ func Serverinfo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Populate a human readable string
-	result.Version.Full = fmt.Sprintf("%d.%d.%d-%s", enulib.VersionMajor, enulib.VersionMinor, enulib.VersionPatch, enulib.VersionPrerelease)
+	result.Version.Full = fmt.Sprintf("%d.%d.%d-%s+%s", enulib.VersionMajor, enulib.VersionMinor, enulib.VersionPatch, enulib.VersionPrerelease, enulib.VersionTag)
 
 	// Populate env
 	env := os.Getenv("ENV")
