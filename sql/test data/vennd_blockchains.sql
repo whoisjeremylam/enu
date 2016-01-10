@@ -16,6 +16,20 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `blockchains`
+--
+
+DROP TABLE IF EXISTS `blockchains`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `blockchains` (
+  `rowId` bigint(20) NOT NULL AUTO_INCREMENT,
+  `blockchainId` varchar(50) DEFAULT NULL,
+  PRIMARY KEY (`rowId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `blockchains`
 --
 
@@ -33,4 +47,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-10-03  9:22:54
+-- Dump completed on 2015-12-11  3:48:10

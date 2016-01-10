@@ -1,6 +1,7 @@
 package counterpartyapi
 
 import (
+	"errors"
 	"log"
 	"reflect"
 	"testing"
@@ -12,6 +13,7 @@ import (
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
+var c context.Context
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"
 var sendAddress string = "1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb"
 var destinationAddress string = "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1"
@@ -36,10 +38,17 @@ var getBalancesByAddressExpectedTestData []Balance = []Balance{
 	{Quantity: 250482117835, Asset: "XCP", Address: "1MPUSDQ7MVrqbSTFfacNP1V9KBooz9XKgy"},
 }
 
+func setContext() {
+	c = context.TODO()
+	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
+	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
+	c = context.WithValue(c, consts.EnvKey, "dev")
+}
+
 func TestGetIssuances(t *testing.T) {
 	Init()
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	resultGetIssuances, errorCode, err := GetIssuances(c, "XBTC")
 	if err != nil {
@@ -56,8 +65,7 @@ func TestGetIssuances(t *testing.T) {
 
 func TestGetIssuancesDB(t *testing.T) {
 	Init()
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	resultGetIssuances, errorCode, err := GetIssuancesDB(c, "XBTC")
 
@@ -75,8 +83,7 @@ func TestGetIssuancesDB(t *testing.T) {
 }
 
 func TestGenerateRandomAssetName(t *testing.T) {
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	result, err := generateRandomAssetName(c)
 
@@ -93,8 +100,7 @@ func TestGenerateRandomAssetName(t *testing.T) {
 
 func TestGetBalancesByAsset(t *testing.T) {
 	Init()
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Not a real asset
 	resultGetBalances, errorCode, err := GetBalancesByAsset(c, "NOTASSETREALLY")
@@ -118,9 +124,7 @@ func TestGetBalancesByAsset(t *testing.T) {
 
 func TestGetBalancesByAddress(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Retrieve address which is empty
 	resultGetBalances, errorCode, err := GetBalancesByAddress(c, "1enuEmptyAdd8ALj6mfBsbifRoD4miY36v")
@@ -145,9 +149,7 @@ func TestGetBalancesByAddress(t *testing.T) {
 
 func TestGetSendsByAddress(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Retrieve address which is empty
 	resultGetSendsByAddress, errorCode, err := GetSendsByAddress(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
@@ -173,9 +175,7 @@ func TestGetSendsByAddress(t *testing.T) {
 
 func TestGetSendsByAddressDB(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	// Retrieve address which is empty
 	resultGetSendsByAddress, errorCode, err := GetSendsByAddressDB(c, "19An2wpGDyDwES8hXNvDovc49ihc7iNMMD")
@@ -209,15 +209,13 @@ func TestCreateSend(t *testing.T) {
 		ExpectedErrorCode int64
 		CaseDescription   string
 	}{
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1cf4dd66ab2270b6d5fe5cd684372883bc787751725b08ac68c6835847468f0700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Successful case"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "0100000001366878895666dbc4f343bf5fe05970026eeaccbb9082b49f3ddd50c35f2ef48c010000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff0336150000000000001976a914b889eba98a2026448b6acab4a71a1d22590ddd5888ac00000000000000001e6a1cdae3d29c0c90f579f9faa974fdc09e40e635d9c16dab0a464ee5c44cbe490700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Successful case"},
 		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 9999, "", consts.CounterpartyErrors.InsufficientFunds.Code, "Insufficient counterparty token"},
 		{"1Badaddress", "1HpkZBjNFRFagyj6Q2adRSagkfNDERZhg1", "SHIMA", 1000, "", consts.CounterpartyErrors.MalformedAddress.Code, "Address cannot be derived from passphrase"},
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.From)
@@ -229,6 +227,9 @@ func TestCreateSend(t *testing.T) {
 		resultCreateSend, errorCode, err := CreateSend(c, s.From, s.To, "SHIMA", s.Amount, pubKey)
 
 		if s.ExpectedResult != resultCreateSend || s.ExpectedErrorCode != errorCode {
+			if err == nil {
+				err = errors.New("No error")
+			}
 			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateSend, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
 		}
 	}
@@ -246,12 +247,10 @@ func TestSignRawTransaction(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	for _, s := range testData {
-		result, err := signRawTransaction(c, s.Passphrase, s.UnsignedTx)
+		result, err := SignRawTransaction(c, s.Passphrase, s.UnsignedTx)
 
 		if s.ExpectedResult != result {
 			t.Errorf("Expected: %s, Got: %s\n", s.ExpectedResult, result)
@@ -265,9 +264,7 @@ func TestSignRawTransaction(t *testing.T) {
 
 func TestSendRawTransaction(t *testing.T) {
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	pubKey, err := counterpartycrypto.GetPublicKey(passphrase, "1HdnKzzCKFzNEJbmYoa3RcY4MhKPP3NB7p")
 	if err != nil {
@@ -283,7 +280,7 @@ func TestSendRawTransaction(t *testing.T) {
 		return
 	}
 
-	signedRawTransactionHexString, err := signRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
+	signedRawTransactionHexString, err := SignRawTransaction(c, "attention stranger fate plain huge poetry view precious drug world try age", payload)
 	if err != nil {
 		t.Error(err.Error())
 	}
@@ -311,15 +308,14 @@ func TestCreateIssuance(t *testing.T) {
 		ExpectedErrorCode int64
 		CaseDescription   string
 	}{
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "JOGHJOHV", "JOGHJOHV", 1000000, true, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e0000000000006951210298d07cad2072b0d8a75cd684232883bc69d2f8908008ac68c68354ed3a639c032102478c64444c18c4916693d58aa155339adfef540e1d412ad249528f36fbdc7af821026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae04860700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Alphabetic asset name"},
-		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "A8133401331811274061", "TEST ASSET", 1000000, true, "01000000034b3687a1a10d2613d7ec54a7fb8e845eb9bd75468a999402443163a85dd3c62c000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff41b2f1a5acdf198dbb6d1f79c1f64b9bc75589ef0449f8cc6219e63af24de4c7000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff09be6bb4793c357111b3915a79419c5a789c82002509322f29b0f210f8c8b741000000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e0000000000006951210286d07cad2072b0d8a75cd68423585c19132667af1608ac68c68354ed3a639c8d2103478c64444c18c491648ddf9ebd3f3d81daaa000e1d412ad249528f36fbdc7a1921026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae04860700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Numeric asset name"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "JOGHJOHV", "JOGHJOHV", 1000000, true, "0100000001366878895666dbc4f343bf5fe05970026eeaccbb9082b49f3ddd50c35f2ef48c010000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e00000000000069512102b6eec89a0e92f374a0faa974e9c09e40f7907023b6ab0a464ee5c8e6d9c6026b210263bc223fb2f27c623e7a6bb34a64c411b40115ef9b69436d638c667b3d9b695d21026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae7c400700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Alphabetic asset name"},
+		{"1CipmbDRHn89cgqs6XbjswkrDxvCKA8Tfb", "A8133401331811274061", "TEST ASSET", 1000000, true, "0100000001366878895666dbc4f343bf5fe05970026eeaccbb9082b49f3ddd50c35f2ef48c010000001976a9148092503d3303106c4844c639db0f60298c573f7488acffffffff02781e00000000000069512103a8eec89a0e92f374a0faa974e9b041e58d64ef1c20ab0a464ee5c8e6d9c6024e210363bc223fb2f27c623c6461a7560eca0ab14441ef9b69436d638c667b3d9b692e21026e2d0f2ca390f63c6e8786fa48d33544427997dbe4a9ebac14ffe8c8ef903bb653ae7c400700000000001976a9148092503d3303106c4844c639db0f60298c573f7488ac00000000", 0, "Numeric asset name"},
 		{"19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A", "JOGHJOHV", "JOGHJOHV", 1000000, true, "", consts.CounterpartyErrors.InsufficientFunds.Code, "Alphabetic asset name from address with insufficient XCP"},
 		{"19kXH7PdizT1mWdQAzY9H4Yyc4iTLTVT5A", "A8133401331811274061", "TEST ASSET", 1000000, true, "", consts.CounterpartyErrors.InsufficientFees.Code, "Numeric asset name from address with insufficient BTC"},
 	}
 
 	Init()
-
-	c := context.TODO()
+	setContext()
 	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
 
 	for _, s := range testData {
@@ -335,6 +331,10 @@ func TestCreateIssuance(t *testing.T) {
 		resultCreateIssuance, errorCode, err := createIssuance(c, s.SourceAddress, s.Asset, s.Description, s.Quantity, s.Divisible, pubKey)
 
 		if s.ExpectedResult != resultCreateIssuance || s.ExpectedErrorCode != errorCode {
+			if err == nil {
+				err = errors.New("No error")
+			}
+
 			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateIssuance, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
 		}
 	}
@@ -355,9 +355,7 @@ func TestCreateDividend(t *testing.T) {
 	}
 
 	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	setContext()
 
 	for _, s := range testData {
 		pubKey, err := counterpartycrypto.GetPublicKey(passphrase, s.SourceAddress)
@@ -369,55 +367,23 @@ func TestCreateDividend(t *testing.T) {
 			t.Errorf("Unable to retrieve pubkey for: %s\n", s.SourceAddress)
 		}
 
-		resultCreateIssuance, errorCode, err := createDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
+		resultCreateIssuance, errorCode, err := CreateDividend(c, s.SourceAddress, s.Asset, s.DividendAsset, s.QuantityPerUnit, pubKey)
 
 		if s.ExpectedResult != resultCreateIssuance || s.ExpectedErrorCode != errorCode {
-			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateIssuance, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
-		}
-	}
-}
-
-func TestActivateAddress(t *testing.T) {
-	var testData = []struct {
-		AddressToActivate string
-		Amount            uint64
-		ActivationId      string
-		ExpectedResult    string
-		ExpectedErrorCode int64
-		CaseDescription   string
-	}{
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10, "TestActivateAddress1", "success", 0, "Successful case"},
-		{"1KgUFkLpypNbNsJJKsTN5qjwq76gKWsH7d", 10000000000, "TestActivateAddress2", "success", 0, "Successful. Defaults kick in"},
-	}
-
-	Init()
-
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
-	c = context.WithValue(c, consts.AccessKeyKey, "unittesting")
-	c = context.WithValue(c, consts.BlockchainIdKey, "counterparty")
-	c = context.WithValue(c, consts.EnvKey, "dev")
-
-	for _, s := range testData {
-		txId, errorCode, err := DelegatedActivateAddress(c, s.AddressToActivate, s.Amount, s.ActivationId)
-
-		if txId != s.ExpectedResult || errorCode != s.ExpectedErrorCode {
-			t.Errorf("Expected: %s errorCode: %d, Got: %s errorCode: %d\nCase: %s\n", s.ExpectedResult, s.ExpectedErrorCode, txId, errorCode, s.CaseDescription)
-
-			// Additionally log the error if we got an error
-			if err != nil {
-				t.Error(err.Error())
+			if err == nil {
+				err = errors.New("No error")
 			}
+
+			t.Errorf("Expected: %s errorCode=%d, Got: %s errorCode=%d\nCase: %s\n%s\nRequestId:%s\n", s.ExpectedResult, s.ExpectedErrorCode, resultCreateIssuance, errorCode, s.CaseDescription, err.Error(), c.Value(consts.RequestIdKey))
 		}
 	}
 }
 
 func TestGetRunningInfo(t *testing.T) {
 	var result RunningInfo
-	Init()
 
-	c := context.TODO()
-	c = context.WithValue(c, consts.RequestIdKey, "test"+enulib.GenerateRequestId())
+	Init()
+	setContext()
 
 	result, errorCode, err := GetRunningInfo(c)
 	if err != nil {

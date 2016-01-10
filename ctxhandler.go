@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,20 +9,101 @@ import (
 	"time"
 
 	"github.com/vennd/enu/consts"
+	"github.com/vennd/enu/counterpartyhandlers"
 	"github.com/vennd/enu/database"
 	"github.com/vennd/enu/enulib"
+	"github.com/vennd/enu/generalhandlers"
+	"github.com/vennd/enu/handlers"
 	"github.com/vennd/enu/log"
+	"github.com/vennd/enu/ripplehandlers"
 
 	"github.com/vennd/enu/internal/golang.org/x/net/context"
 )
 
+/*
 type appError struct {
 	Error   error
 	Message string
 	Code    int
 }
+*/
 
-type ctxHandler func(context.Context, http.ResponseWriter, *http.Request) *appError
+type blockchainHandler func(context.Context, http.ResponseWriter, *http.Request, map[string]interface{}) *enulib.AppError
+type blockchainFunction map[string]blockchainHandler
+
+// Contains the function to call for each respective blockchain and requestType
+var blockchainFunctions = map[string]blockchainFunction{
+	"counterparty": {
+		// Address handlers
+		"address":         counterpartyhandlers.AddressCreate,
+		"walletCreate":    counterpartyhandlers.WalletCreate,
+		"walletPayment":   counterpartyhandlers.WalletSend,
+		"walletBalance":   counterpartyhandlers.WalletBalance,
+		"activateaddress": counterpartyhandlers.ActivateAddress,
+
+		// Asset handlers
+		"asset":       counterpartyhandlers.AssetCreate,
+		"getasset":    generalhandlers.GetAsset,
+		"dividend":    counterpartyhandlers.DividendCreate,
+		"issuances":   counterpartyhandlers.AssetIssuances,
+		"ledger":      counterpartyhandlers.AssetLedger,
+		"getdividend": counterpartyhandlers.GetDividend,
+
+		// Payment handlers
+		"simplepayment":    counterpartyhandlers.PaymentCreate,
+		"paymentretry":     counterpartyhandlers.PaymentRetry,
+		"getpayment":       generalhandlers.GetPayment,
+		"paymentbyaddress": generalhandlers.GetPaymentsByAddress,
+	},
+	"ripple": {
+		// Address handlers
+		"walletCreate":    ripplehandlers.WalletCreate,
+		"walletPayment":   ripplehandlers.WalletSend,
+		"walletBalance":   ripplehandlers.WalletBalance,
+		"activateaddress": ripplehandlers.ActivateAddress,
+
+		// Payment handlers
+		"getpayment":       generalhandlers.GetPayment,
+		"paymentbyaddress": generalhandlers.GetPaymentsByAddress,
+
+		// Asset handlers
+		"asset":    ripplehandlers.AssetCreate,
+		"getasset": generalhandlers.GetAsset,
+
+		// Unsupported
+		"address":  ripplehandlers.Unhandled,
+		"dividend": ripplehandlers.Unhandled,
+	},
+}
+
+func handle(c context.Context, w http.ResponseWriter, r *http.Request) *enulib.AppError {
+	// check generic args and parse
+	c2, m, err := handlers.CheckAndParseJsonCTX(c, w, r)
+	if err != nil {
+		// Status errors are handled inside CheckAndParseJsonCTX, so we just exit gracefully
+		return nil
+	}
+
+	// Look up the required function in the map and execute
+	blockchainId := c2.Value(consts.BlockchainIdKey).(string)
+	requestType := c2.Value(consts.RequestTypeKey).(string)
+
+	log.FluentfContext(consts.LOGINFO, c, "Handling blockchainId: %s, requestType: %s", blockchainId, requestType)
+
+	// If the specified handler can't be found, return a 404
+	if blockchainFunctions[blockchainId][requestType] == nil {
+		log.FluentfContext(consts.LOGINFO, c, "No function could be found in blockchainFunctions to handle blockchainId: %s, requestType: %s", blockchainId, requestType)
+		handlers.ReturnNotFoundWithCustomError(c, w, consts.GenericErrors.FunctionNotAvailable.Code, consts.GenericErrors.FunctionNotAvailable.Description)
+
+		return nil
+	}
+
+	blockchainFunctions[blockchainId][requestType](c2, w, r, m)
+
+	return nil
+}
+
+type ctxHandler func(context.Context, http.ResponseWriter, *http.Request) *enulib.AppError
 
 func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
@@ -44,7 +124,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	log.FluentfContext(consts.LOGINFO, ctx, "%s %s entered.", r.Method, r.URL.Path)
 
-	accessKey, err := CheckHeaderGeneric(ctx, w, r)
+	accessKey, err := handlers.CheckHeaderGeneric(ctx, w, r)
 	if err != nil {
 		return
 	}
@@ -72,7 +152,7 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if blockchainValid == false && userBlockchainIdValid == false {
 		log.FluentfContext(consts.LOGINFO, ctx, "Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
 		e := fmt.Sprintf("Unsupported blockchain. Valid values: %s", strings.Join(supportedBlockchains, ", "))
-		ReturnServerError(ctx, w, consts.GenericErrors.UnsupportedBlockchain.Code, errors.New(e))
+		handlers.ReturnServerErrorWithCustomError(ctx, w, consts.GenericErrors.UnsupportedBlockchain.Code, e)
 
 		return
 	}
@@ -80,8 +160,10 @@ func (fn ctxHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// If the blockchain was explicitly given in the resource path, use it. Otherwise use the blockchain from the user's profile
 	var blockchainId string
 	if blockchainValid == true {
+		log.FluentfContext(consts.LOGINFO, ctx, "Using blockchain specifed in URL: %s", requestBlockchainId)
 		blockchainId = requestBlockchainId
 	} else {
+		log.FluentfContext(consts.LOGINFO, ctx, "Using user's default blockchain: %s", usersDefaultBlockchain)
 		blockchainId = usersDefaultBlockchain
 	}
 

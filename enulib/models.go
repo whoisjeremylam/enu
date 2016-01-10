@@ -15,6 +15,7 @@ type Blocks struct {
 
 type Amount struct {
 	Asset    string `json:"asset"`
+	Issuer   string `json:"issuer"`
 	Quantity uint64 `json:"quantity"`
 }
 
@@ -56,9 +57,11 @@ type Payment struct {
 type Payments []Payment
 
 type SimplePayment struct {
+	BlockchainId            string `json:"blockchainId"`
 	SourceAddress           string `json:"sourceAddress"`
 	DestinationAddress      string `json:"destinationAddress"`
 	Asset                   string `json:"asset"`
+	Issuer                  string `json:"issuer"`
 	Amount                  uint64 `json:"amount"`
 	PaymentId               string `json:"paymentId"`
 	TxFee                   int64  `json:"txFee"`
@@ -77,8 +80,8 @@ type Address struct {
 	Value      string `json:"value"`
 	PublicKey  string `json:"publicKey"`
 	PrivateKey string `json:"privateKey"`
-	RequestId  string `json:"requestId"`
-	Nonce      int64  `json:"nonce"`
+	RequestId  string `json:"requestId,omitempty"`
+	Nonce      int64  `json:"nonce,omitempty"`
 }
 
 type AddressBalances struct {
@@ -91,10 +94,13 @@ type AddressBalances struct {
 }
 
 type Asset struct {
-	Passphrase              string `json:"passphrase"`
+	Passphrase              string `json:"passphrase,omitempty"`
 	SourceAddress           string `json:"sourceAddress"`
+	DistributionPassphrase  string `json:"distributionPassphrase,omitempty"`
+	DistributionAddress     string `json:"distributionAddress,omitempty"`
 	AssetId                 string `json:"assetId"`
 	Asset                   string `json:"asset"`
+	Issuer                  string `json:"issuer,omitempty"`
 	Description             string `json:"description"`
 	Quantity                uint64 `json:"quantity"`
 	Divisible               bool   `json:"divisible"`
@@ -114,7 +120,7 @@ type ReturnCode struct {
 }
 
 type Dividend struct {
-	Passphrase              string `json:"passphrase"`
+	Passphrase              string `json:"passphrase,omitempty"`
 	SourceAddress           string `json:"sourceAddress"`
 	DividendId              string `json:"dividendId"`
 	Asset                   string `json:"asset"`
@@ -156,4 +162,18 @@ type WalletPayment struct {
 	PaymentTag         string `json:"paymentTag"`
 	RequestId          string `json:"requestId"`
 	Nonce              int64  `json:"nonce"`
+}
+
+type Wallet struct {
+	Passphrase    string   `json:"passphrase"`
+	HexSeed       string   `json:"hexSeed"`
+	Addresses     []string `json:"addresses"`
+	RequestId     string   `json:"requestId"`
+	BlockchainId  string   `json:"blockchainId,omitempty"`
+	KeyType       string   `json:"key_type,omitempty"`
+	MasterKey     string   `json:"master_key,omitempty"`
+	MasterSeed    string   `json:"master_seed,omitempty"`
+	MasterSeedHex string   `json:"master_seed_hex,omitempty"`
+	PublicKey     string   `json:"public_key,omitempty"`
+	PublicKeyHex  string   `json:"public_key_hex,omitempty"`
 }

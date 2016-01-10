@@ -3,13 +3,16 @@ package main
 import (
 	//	"net/http"
 
+	"github.com/vennd/enu/handlers"
 	"github.com/vennd/enu/internal/github.com/gorilla/mux"
 )
 
 func NewRouter() *mux.Router {
 	router := mux.NewRouter().StrictSlash(true)
 
-	router.HandleFunc("/", Index).Methods("GET")
+	router.HandleFunc("/", handlers.Index).Methods("GET")
+	router.HandleFunc("/serverinfo", handlers.Serverinfo).Methods("GET")
+
 	router.Handle("/payment", ctxHandler(PaymentCreate)).Methods("POST")
 	router.Handle("/payment/address", ctxHandler(AddressCreate)).Methods("POST")
 	router.Handle("/payment/address/{address}", ctxHandler(GetPaymentsByAddress)).Methods("GET")

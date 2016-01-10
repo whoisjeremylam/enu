@@ -13,10 +13,9 @@
 "counterpartyuser" : "rpc",
 "counterpartypassword" : "1234",
 "counterpartytransactionencoding" : "auto",
+"counterpartydblocation" : "c:/coding/counterparty.db",
 
-"fluentHost" : "http://localhost:8888" ,
+"fluentHost" : "http://localhost:8888",
 
-"rippleRestHost" : "http://localhost:5990" ,
-"rippleHost" : "http://localhost:51235" 
-
+"rippleHost" : "http://localhost:5005" 
 }

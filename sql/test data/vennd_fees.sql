@@ -16,6 +16,24 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `fees`
+--
+
+DROP TABLE IF EXISTS `fees`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `fees` (
+  `rowid` bigint(20) NOT NULL AUTO_INCREMENT,
+  `blockId` varchar(200) DEFAULT NULL,
+  `txid` varchar(200) DEFAULT NULL,
+  `feeAsset` varchar(200) DEFAULT NULL,
+  `feeAmount` bigint(20) DEFAULT NULL,
+  PRIMARY KEY (`rowid`),
+  KEY `fees1` (`blockId`,`txid`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
 -- Dumping data for table `fees`
 --
 
@@ -33,4 +51,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2015-10-03  9:23:07
+-- Dump completed on 2015-12-11  3:48:26

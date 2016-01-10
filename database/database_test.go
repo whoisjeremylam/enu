@@ -100,7 +100,7 @@ func TestInsertActivationandInsertPayment(t *testing.T) {
 	InsertActivation(ctx, "TestAccessKey", activationId, "BlockchainId", "AddressToActive", 100)
 
 	// Insert a corresponding payment
-	InsertPayment(ctx, "TestAccessKey", 0, activationId, "InternalAddress", "AddressToActive", "BTC", 1, "testing", 0, 1500, "")
+	InsertPayment(ctx, "TestAccessKey", 0, "testblockchain", activationId, "InternalAddress", "AddressToActive", "BTC", "", 1, "testing", 0, 1500, "")
 
 	// need to cover more columns and how to test that payment actually works?
 
@@ -194,4 +194,39 @@ func TestUpdateDividendWithErrorByDividendId(t *testing.T) {
 	if err == nil || err.Error() != consts.GenericErrors.NotFound.Description {
 		t.Errorf("Expected: %s, Got: %s", consts.GenericErrors.NotFound.Description, err)
 	}
+}
+
+// Also tests insert payment
+func TestInsertTrustAsset(t *testing.T) {
+	activationId := "test_" + enulib.GenerateActivationId()
+	requestId := "test_" + enulib.GenerateRequestId()
+
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, consts.RequestIdKey, requestId)
+
+	// Insert trustasset
+	InsertTrustAsset(ctx, "TestAccessKey", activationId, "BlockchainId", "coolasset", "niceissuer", 1000000)
+
+	// Retrieve the trustasset
+	//	payment := GetPaymentByPaymentId(ctx, "TestAccessKey", activationId)
+	//	if payment.SourceAddress != "InternalAddress" || payment.DestinationAddress != "AddressToActive" || payment.Asset != "BTC" || payment.Amount != 1 || payment.TxFee != 1500 || payment.PaymentTag != "" {
+	//		t.Errorf("Expected: %s, %s, %s, %d, %d, %s, %s. Got: %s, %s, %s, %d, %d, %s, %s", "InternalAddress", "AddressToActive", "BTC", 1, 1500, "", payment.SourceAddress, payment.DestinationAddress, payment.Asset, payment.Amount, payment.TxFee, payment.PaymentTag)
+	//	}
+}
+
+//
+func TestGetAssetByAssetId(t *testing.T) {
+	var assetId string = "1e33a6997f0ab51d30713ede33abd0c5"
+	var accessKey string = "71625888dc50d8915b871912aa6bbdce67fd1ed77d409ef1cf0726c6d9d7cf16"
+	requestId := "test_" + enulib.GenerateRequestId()
+
+	ctx := context.TODO()
+	ctx = context.WithValue(ctx, consts.RequestIdKey, requestId)
+
+	assetRequest, err := GetAssetByAssetId(ctx, accessKey, assetId)
+	if err != nil {
+		t.Error(err.Error())
+	}
+
+	t.Logf("%+#v", assetRequest)
 }
