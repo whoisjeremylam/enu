@@ -1,6 +1,12 @@
 // models.go
 package enulib
 
+type AppError struct {
+	Error   error
+	Message string
+	Code    int
+}
+
 type Block struct {
 	BlockId  int64  `json:"blockId"`
 	Status   string `json:"status"`
@@ -85,12 +91,12 @@ type Address struct {
 }
 
 type AddressBalances struct {
-	BlockchainId         string   `json:"blockchainId"`
 	Address              string   `json:"address"`
 	NumberOfTransactions uint64   `json:"numberOfTransactions"`
 	Balances             []Amount `json:"balances"`
 	RequestId            string   `json:"requestId"`
 	Nonce                int64    `json:"nonce"`
+	BlockchainId         string   `json:"blockchainId"`
 }
 
 type Asset struct {
@@ -111,6 +117,7 @@ type Asset struct {
 	ErrorMessage            string `json:"errorMessage"`
 	RequestId               string `json:"requestId"`
 	Nonce                   int64  `json:"nonce"`
+	BlockchainId            string `json:"blockchainId"`
 }
 
 type ReturnCode struct {
