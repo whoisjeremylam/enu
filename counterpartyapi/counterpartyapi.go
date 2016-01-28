@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	_ "code.google.com/p/go-sqlite/go1/sqlite3"
+	_ "github.com/mxk/go-sqlite/sqlite3"
 
 	"github.com/vennd/enu/consts"
 	"github.com/vennd/enu/counterpartycrypto"
