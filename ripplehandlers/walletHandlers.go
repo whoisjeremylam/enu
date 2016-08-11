@@ -233,9 +233,9 @@ func ActivateAddress(c context.Context, w http.ResponseWriter, r *http.Request, 
 	vars := mux.Vars(r)
 	address := vars["address"]
 
-	if address == "" || len(address) != 34 {
+	if address == "" {
 		w.WriteHeader(http.StatusBadRequest)
-		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: -3, Description: "Incorrect value of address received in the request"}
+		returnCode := enulib.ReturnCode{RequestId: c.Value(consts.RequestIdKey).(string), Code: consts.GenericErrors.InvalidAddress.Code, Description: consts.GenericErrors.InvalidAddress.Description}
 		if err := json.NewEncoder(w).Encode(returnCode); err != nil {
 			log.FluentfContext(consts.LOGERROR, c, "Error in Encode(): %s", err.Error())
 			handlers.ReturnServerError(c, w)
