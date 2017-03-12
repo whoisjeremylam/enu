@@ -10,9 +10,9 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/txscript"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil"
 )
 
 // decodeHex decodes the passed hex string and returns the resulting bytes.  It

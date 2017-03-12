@@ -11,10 +11,10 @@ import (
 	"os"
 	"runtime"
 
-	"github.com/vennd/enu/consts"
+	"github.com/whoisjeremylam/enu/consts"
 
-	"github.com/vennd/enu/internal/github.com/nytlabs/gojsonexplode"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/github.com/nytlabs/gojsonexplode"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 // Globals

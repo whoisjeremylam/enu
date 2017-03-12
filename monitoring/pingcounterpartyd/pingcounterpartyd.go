@@ -8,13 +8,13 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/counterpartyapi"
-	"github.com/vennd/enu/counterpartycrypto"
-	"github.com/vennd/enu/enulib"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/counterpartyapi"
+	"github.com/whoisjeremylam/enu/counterpartycrypto"
+	"github.com/whoisjeremylam/enu/enulib"
+	"github.com/whoisjeremylam/enu/log"
 
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"

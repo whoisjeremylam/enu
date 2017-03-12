@@ -7,7 +7,7 @@ package btclog
 import (
 	"fmt"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/seelog"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/seelog"
 )
 
 // Ensure SubsystemLogger implements the Logger interface.

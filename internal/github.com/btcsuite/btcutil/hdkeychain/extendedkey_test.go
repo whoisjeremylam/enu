@@ -15,8 +15,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // TestBIP0032Vectors tests the vectors provided by [BIP32] to ensure the

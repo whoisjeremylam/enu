@@ -8,8 +8,8 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
 )
 
 // This example demonstrates signing a message with a secp256k1 private key that

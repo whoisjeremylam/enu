@@ -9,14 +9,14 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/log"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcjson"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcrpcclient"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcjson"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcrpcclient"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 // Globals

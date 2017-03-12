@@ -21,7 +21,7 @@ import (
 	"math"
 	"strconv"
 
-	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
+	"github.com/whoisjeremylam/enu/internal/github.com/gorilla/securecookie"
 )
 
 type Mneumonic []uint32

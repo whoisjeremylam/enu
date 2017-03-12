@@ -7,8 +7,8 @@ package txscript_test
 import (
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/txscript"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
 )
 
 // TestBadPC sets the pc to a deliberately bad result then confirms that Step()

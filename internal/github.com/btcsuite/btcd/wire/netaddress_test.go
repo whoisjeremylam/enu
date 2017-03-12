@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/davecgh/go-spew/spew"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/davecgh/go-spew/spew"
 )
 
 // TestNetAddress tests the NetAddress API.

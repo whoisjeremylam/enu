@@ -6,12 +6,12 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/internal/github.com/vennd/mneumonic"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/internal/github.com/vennd/mneumonic"
+	"github.com/whoisjeremylam/enu/log"
 
-	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 type RippleWallet struct {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 func ExampleWithTimeout() {

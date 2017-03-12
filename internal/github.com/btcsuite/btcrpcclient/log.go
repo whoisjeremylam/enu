@@ -8,7 +8,7 @@ import (
 	"errors"
 	"io"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btclog"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btclog"
 )
 
 // log is a logger that is initialized with no output filters.  This

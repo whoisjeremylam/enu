@@ -19,7 +19,7 @@ package spew_test
 import (
 	"bytes"
 	"fmt"
-	"github.com/vennd/enu/internal/github.com/davecgh/go-spew/spew"
+	"github.com/whoisjeremylam/enu/internal/github.com/davecgh/go-spew/spew"
 	"io/ioutil"
 	"os"
 	"testing"

@@ -21,9 +21,9 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcjson"
-	"github.com/vennd/enu/internal/github.com/btcsuite/go-socks/socks"
-	"github.com/vennd/enu/internal/github.com/btcsuite/websocket"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcjson"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/go-socks/socks"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/websocket"
 )
 
 var (

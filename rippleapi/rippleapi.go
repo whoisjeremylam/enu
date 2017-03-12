@@ -14,9 +14,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/log"
 )
 
 var DefaultFee = "10000"

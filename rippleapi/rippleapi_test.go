@@ -3,11 +3,11 @@ package rippleapi
 import (
 	"testing"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/enulib"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/enulib"
 	"log"
 
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 var account string = "rE1Lec75PEmeDFwAuumto2Nbo8ZwG3aT9V"

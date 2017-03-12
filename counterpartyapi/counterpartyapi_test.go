@@ -6,11 +6,11 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/counterpartycrypto"
-	"github.com/vennd/enu/enulib"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/counterpartycrypto"
+	"github.com/whoisjeremylam/enu/enulib"
 
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 var c context.Context

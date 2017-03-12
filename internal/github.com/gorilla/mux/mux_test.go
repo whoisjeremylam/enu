@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/gorilla/context"
+	"github.com/whoisjeremylam/enu/internal/github.com/gorilla/context"
 )
 
 type routeTest struct {

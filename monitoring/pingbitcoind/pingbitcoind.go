@@ -8,9 +8,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/vennd/enu/bitcoinapi"
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/bitcoinapi"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/log"
 )
 
 // This application is to be used for monitoring purposes of bitcoind or btcd.

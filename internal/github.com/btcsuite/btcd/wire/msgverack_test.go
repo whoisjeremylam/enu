@@ -9,8 +9,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/davecgh/go-spew/spew"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/davecgh/go-spew/spew"
 )
 
 // TestVerAck tests the MsgVerAck API.

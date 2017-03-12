@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/txscript"
 )
 
 // TestScriptBuilderAddOp tests that pushing opcodes to a script via the

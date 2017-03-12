@@ -8,11 +8,11 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/txscript"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil"
 )
 
 // This example demonstrates creating a script which pays to a bitcoin address.

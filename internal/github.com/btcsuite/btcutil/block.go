@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
 )
 
 // OutOfRangeError describes an error due to accessing an element that is out

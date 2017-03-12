@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
 )
 
 // ScriptFlags is a bitmask defining additional operations or tests that will be

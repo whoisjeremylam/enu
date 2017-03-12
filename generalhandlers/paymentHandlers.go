@@ -4,15 +4,15 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/vennd/enu/bitcoinapi"
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/database"
-	"github.com/vennd/enu/enulib"
-	"github.com/vennd/enu/handlers"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/bitcoinapi"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/database"
+	"github.com/whoisjeremylam/enu/enulib"
+	"github.com/whoisjeremylam/enu/handlers"
+	"github.com/whoisjeremylam/enu/log"
 
-	"github.com/vennd/enu/internal/github.com/gorilla/mux"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/github.com/gorilla/mux"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 func GetPayment(c context.Context, w http.ResponseWriter, r *http.Request, m map[string]interface{}) *enulib.AppError {

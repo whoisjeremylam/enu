@@ -8,10 +8,10 @@ import (
 	"bytes"
 	"errors"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil/base58"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil/base58"
 )
 
 // ErrMalformedPrivateKey describes an error where a WIF-encoded private

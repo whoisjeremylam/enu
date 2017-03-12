@@ -17,7 +17,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
 )
 
 func main() {

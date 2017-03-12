@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/vennd/enu/enulib"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/enulib"
+	"github.com/whoisjeremylam/enu/log"
 )
 
 var isInit = false

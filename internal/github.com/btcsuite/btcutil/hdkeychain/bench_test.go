@@ -7,7 +7,7 @@ package hdkeychain_test
 import (
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil/hdkeychain"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil/hdkeychain"
 )
 
 // bip0032MasterPriv1 is the master private extended key from the first set of

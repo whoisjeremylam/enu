@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcjson"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcjson"
 )
 
 // TestChainSvrCustomResults ensures any results that have custom marshalling

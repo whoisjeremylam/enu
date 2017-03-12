@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vennd/enu/counterpartycrypto"
-	//	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/counterpartycrypto"
+	//	"github.com/whoisjeremylam/enu/log"
 )
 
 func TestCounterpartyWalletCreate(t *testing.T) {

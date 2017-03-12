@@ -7,7 +7,7 @@ package wire_test
 import (
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
 )
 
 // TestServiceFlagStringer tests the stringized output for service flag types.

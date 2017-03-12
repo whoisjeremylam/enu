@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vennd/enu/enulib"
+	"github.com/whoisjeremylam/enu/enulib"
 )
 
 var passphrase string = "attention stranger fate plain huge poetry view precious drug world try age"

@@ -29,7 +29,7 @@ package gojsonschema
 import (
 	"errors"
 
-	"github.com/vennd/enu/internal/github.com/xeipuuv/gojsonreference"
+	"github.com/whoisjeremylam/enu/internal/github.com/xeipuuv/gojsonreference"
 )
 
 type schemaPoolDocument struct {

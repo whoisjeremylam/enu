@@ -22,17 +22,17 @@ import (
 
 	_ "github.com/mxk/go-sqlite/sqlite3"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/counterpartycrypto"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/counterpartycrypto"
+	"github.com/whoisjeremylam/enu/log"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/txscript"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
-	"github.com/vennd/enu/internal/github.com/gorilla/securecookie"
-	"github.com/vennd/enu/internal/golang.org/x/net/context"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/txscript"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/whoisjeremylam/enu/internal/github.com/gorilla/securecookie"
+	"github.com/whoisjeremylam/enu/internal/golang.org/x/net/context"
 )
 
 var Counterparty_DefaultDustSize uint64 = 5430

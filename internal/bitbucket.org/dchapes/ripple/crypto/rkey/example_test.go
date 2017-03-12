@@ -1,7 +1,7 @@
 package rkey_test
 
 import (
-	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
+	"github.com/whoisjeremylam/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
 	"fmt"
 )
 

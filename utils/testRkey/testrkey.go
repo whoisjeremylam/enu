@@ -1,12 +1,12 @@
 package main
 
 import (
-	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
+	"github.com/whoisjeremylam/enu/internal/bitbucket.org/dchapes/ripple/crypto/rkey"
 	"fmt"
 	"log"
 	"math/big"
 
-	"github.com/vennd/enu/ripplecrypto"
+	"github.com/whoisjeremylam/enu/ripplecrypto"
 )
 
 func main() {

@@ -6,8 +6,8 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/log"
 )
 
 func printHeader(f *os.File) {

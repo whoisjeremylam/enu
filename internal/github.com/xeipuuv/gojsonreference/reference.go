@@ -27,7 +27,7 @@ package gojsonreference
 
 import (
 	"errors"
-	"github.com/vennd/enu/internal/github.com/xeipuuv/gojsonpointer"
+	"github.com/whoisjeremylam/enu/internal/github.com/xeipuuv/gojsonpointer"
 	"net/url"
 	"path/filepath"
 	"runtime"

@@ -3,8 +3,8 @@ package main
 import (
 	//	"net/http"
 
-	"github.com/vennd/enu/handlers"
-	"github.com/vennd/enu/internal/github.com/gorilla/mux"
+	"github.com/whoisjeremylam/enu/handlers"
+	"github.com/whoisjeremylam/enu/internal/github.com/gorilla/mux"
 )
 
 func NewRouter() *mux.Router {

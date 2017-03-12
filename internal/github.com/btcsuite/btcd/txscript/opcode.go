@@ -11,10 +11,10 @@ import (
 	"fmt"
 	"hash"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/fastsha256"
-	"github.com/vennd/enu/internal/github.com/btcsuite/golangcrypto/ripemd160"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/fastsha256"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/golangcrypto/ripemd160"
 )
 
 // An opcode defines the information related to a txscript opcode.  opfunc if

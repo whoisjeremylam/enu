@@ -11,10 +11,10 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/chaincfg"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
-	"github.com/vennd/enu/internal/github.com/btcsuite/golangcrypto/ripemd160"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/chaincfg"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/golangcrypto/ripemd160"
 )
 
 // invalidNet is an invalid bitcoin network.

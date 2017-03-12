@@ -11,7 +11,7 @@ import (
 	"io"
 	"math"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/fastsha256"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/fastsha256"
 )
 
 // Maximum payload size for a variable length integer.

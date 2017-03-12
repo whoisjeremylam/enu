@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil"
-	"github.com/vennd/enu/internal/github.com/davecgh/go-spew/spew"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil"
+	"github.com/whoisjeremylam/enu/internal/github.com/davecgh/go-spew/spew"
 )
 
 // TestBlock tests the API for Block.

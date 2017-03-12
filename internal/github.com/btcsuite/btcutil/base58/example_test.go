@@ -7,7 +7,7 @@ package base58_test
 import (
 	"fmt"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcutil/base58"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcutil/base58"
 )
 
 // This example demonstrates how to decode modified base58 encoded data.

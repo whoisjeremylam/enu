@@ -1,10 +1,10 @@
 package rkey
 
 import (
-	"github.com/vennd/enu/internal/bitbucket.org/dchapes/ripple/crypto/sha512half"
+	"github.com/whoisjeremylam/enu/internal/bitbucket.org/dchapes/ripple/crypto/sha512half"
 	"crypto/ecdsa"
 	"encoding/binary"
-	"github.com/vennd/enu/internal/github.com/sour-is/koblitz/kelliptic"
+	"github.com/whoisjeremylam/enu/internal/github.com/sour-is/koblitz/kelliptic"
 	"math/big"
 )
 

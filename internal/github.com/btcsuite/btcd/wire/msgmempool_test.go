@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/wire"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/wire"
 )
 
 func TestMemPool(t *testing.T) {

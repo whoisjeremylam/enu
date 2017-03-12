@@ -8,9 +8,9 @@ import (
 	"os"
 	//	"strconv"
 
-	"github.com/vennd/enu/consts"
-	"github.com/vennd/enu/database"
-	"github.com/vennd/enu/log"
+	"github.com/whoisjeremylam/enu/consts"
+	"github.com/whoisjeremylam/enu/database"
+	"github.com/whoisjeremylam/enu/log"
 )
 
 type ApiKey struct {

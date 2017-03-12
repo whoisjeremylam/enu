@@ -10,7 +10,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/seelog"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/seelog"
 )
 
 // Disabled is a default logger that can be used to disable all logging output.

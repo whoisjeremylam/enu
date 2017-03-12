@@ -8,8 +8,8 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/vennd/enu/internal/github.com/btcsuite/btcd/btcec"
-	"github.com/vennd/enu/internal/github.com/davecgh/go-spew/spew"
+	"github.com/whoisjeremylam/enu/internal/github.com/btcsuite/btcd/btcec"
+	"github.com/whoisjeremylam/enu/internal/github.com/davecgh/go-spew/spew"
 )
 
 type pubKeyTest struct {
